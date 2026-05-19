@@ -26,7 +26,7 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 登出按鈕嘅點擊事件 (雙擊 btnLogout 就會自動產生呢個 block)
+        // 登出按鈕嘅點擊事件
         private void btnLogout_Click(object sender, EventArgs e)
         {
             // 彈出確認視窗
@@ -42,10 +42,25 @@ namespace ITP4915M_Group11
             }
         }
 
+        // 點擊「員工及系統設定」按鈕
         private void btnStaff_Click(object sender, EventArgs e)
         {
-            Form3 staffForm = new Form3(); // 如果你改咗名，記得將 Form3 換成你個名
-            staffForm.ShowDialog();        // ShowDialog 代表打開新視窗嗰陣，鎖住舊視窗
+            Form3 staffForm = new Form3(); // 打開員工管理 Form3
+            staffForm.ShowDialog();        // ShowDialog 代表打開新視窗嗰陣，鎖住舊選單視窗
+        }
+
+        private void Form2_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        // =========================================================
+        // 🎯 點擊「產品管理」按鈕，全自動連接到啱啱搞掂嘅 Form4
+        // =========================================================
+        private void btnProduct_Click(object sender, EventArgs e)
+        {
+            Form4 productForm = new Form4(); // 宣告並建立產品管理 Form4 視窗物件
+            productForm.ShowDialog();        // 用 ShowDialog() 打開，鎖住 Form2 主選單，防止用家重複開幾十個 Form4
         }
     }
 }

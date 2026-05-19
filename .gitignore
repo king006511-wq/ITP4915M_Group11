@@ -1,0 +1,18 @@
+# Visual Studio 忽略檔案
+bin/
+obj/
+.vs/
+*.suo
+*.vsidx
+*.pdb
+*.exe
+*.dll
+*.cache
+*.user
+*.log
+
+# 其他常見忽略
+packages/
+node_modules/
+*.bak
+*.backup

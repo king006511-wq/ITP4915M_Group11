@@ -62,6 +62,7 @@
             this.btnProduct.TabIndex = 2;
             this.btnProduct.Text = "Products Management";
             this.btnProduct.UseVisualStyleBackColor = true;
+            this.btnProduct.Click += new System.EventHandler(this.btnProduct_Click);
             // 
             // btnStaff
             // 
@@ -95,6 +96,7 @@
             this.Controls.Add(this.lblWelcome);
             this.Name = "Form2";
             this.Text = "Form2";
+            this.Load += new System.EventHandler(this.Form2_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
