@@ -26,10 +26,10 @@ namespace ITP4915M_Group11
         {
             // Populate delivery method drop-down options as expected by local logistics operations
             cboMethod.Items.Clear();
-            cboMethod.Items.Add("噸車 / Heavy Truck");
-            cboMethod.Items.Add("客貨車 / Light Van");
-            cboMethod.Items.Add("速遞 / Motorcycle Express");
-            cboMethod.Items.Add("客戶自取 / Self-Pickup");
+            cboMethod.Items.Add("Heavy Truck");
+            cboMethod.Items.Add("Light Van");
+            cboMethod.Items.Add("Motorcycle Express");
+            cboMethod.Items.Add("Self-Pickup");
             cboMethod.SelectedIndex = 0;
 
             // Restrict delivery scheduling to current date or future dates to enforce data integrity
@@ -54,14 +54,14 @@ namespace ITP4915M_Group11
                     }
 
                     // Apply descriptive bilingual headers onto the dynamically bound schema
-                    if (dgvPendingOrders.Columns.Contains("OrderID")) dgvPendingOrders.Columns["OrderID"].HeaderText = "訂單編號 (Order ID)";
-                    if (dgvPendingOrders.Columns.Contains("CustomerID")) dgvPendingOrders.Columns["CustomerID"].HeaderText = "客戶編號 (Customer ID)";
-                    if (dgvPendingOrders.Columns.Contains("OrderDate")) dgvPendingOrders.Columns["OrderDate"].HeaderText = "訂單日期 (Order Date)";
-                    if (dgvPendingOrders.Columns.Contains("Status")) dgvPendingOrders.Columns["Status"].HeaderText = "狀態 (Status)";
+                    if (dgvPendingOrders.Columns.Contains("OrderID")) dgvPendingOrders.Columns["OrderID"].HeaderText = "Order ID";
+                    if (dgvPendingOrders.Columns.Contains("CustomerID")) dgvPendingOrders.Columns["CustomerID"].HeaderText = "Customer ID";
+                    if (dgvPendingOrders.Columns.Contains("OrderDate")) dgvPendingOrders.Columns["OrderDate"].HeaderText = "Order Date";
+                    if (dgvPendingOrders.Columns.Contains("Status")) dgvPendingOrders.Columns["Status"].HeaderText = "Status";
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("加載待出貨訂單時發生錯誤 / Error loading pending orders:\n" + ex.Message, "系統錯誤 (Database Error)", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Error loading pending orders:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -85,16 +85,16 @@ namespace ITP4915M_Group11
             // Test Case Validation: Enforce order row targeting allocation
             if (dgvPendingOrders.SelectedRows.Count == 0)
             {
-                MessageBox.Show("請先從列表中選擇一張待發貨的訂單！\nPlease select a pending order from the list.",
-                                "提示 / Prompt", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select a pending order from the list.",
+                                "Prompt", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             // Test Case Validation: Verify that mandatory dispatch parameter logs are filled
             if (string.IsNullOrWhiteSpace(txtDriverName.Text))
             {
-                MessageBox.Show("請填寫司機姓名！\nPlease specify the driver's name.",
-                                "輸入錯誤 / Input Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Please specify the driver's name.",
+                                "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -137,11 +137,11 @@ namespace ITP4915M_Group11
 
                         trans.Commit();
 
-                        MessageBox.Show($"發貨憑證生成成功！\nDelivery Note Generated Successfully!\n\n" +
-                                        $"發貨單號 (DN ID): {deliveryNoteID}\n" +
-                                        $"對應訂單 (Order ID): {selectedOrderID}\n\n" +
-                                        $"已自動輸出「送貨單」與「簽收回條」。",
-                                        "操作成功 / Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show($"Delivery Note Generated Successfully!\n\n" +
+                                        $"DN ID: {deliveryNoteID}\n" +
+                                        $"Order ID: {selectedOrderID}\n\n" +
+                                        $"\"Delivery note\" and \"receipt\" have been generated automatically.",
+                                        "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                         // Refresh component view states
                         txtDriverName.Clear();
@@ -150,7 +150,7 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("儲存物流紀錄時系統出錯 / Transaction execution failed:\n" + ex.Message, "系統錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Transaction execution failed:\n" + ex.Message, "System error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

@@ -38,14 +38,12 @@
             // 
             this.grpPendingOrders.Controls.Add(this.dgvPendingOrders);
             this.grpPendingOrders.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.grpPendingOrders.Location = new System.Drawing.Point(16, 15);
-            this.grpPendingOrders.Margin = new System.Windows.Forms.Padding(4);
+            this.grpPendingOrders.Location = new System.Drawing.Point(12, 12);
             this.grpPendingOrders.Name = "grpPendingOrders";
-            this.grpPendingOrders.Padding = new System.Windows.Forms.Padding(4);
-            this.grpPendingOrders.Size = new System.Drawing.Size(1030, 275);
+            this.grpPendingOrders.Size = new System.Drawing.Size(772, 220);
             this.grpPendingOrders.TabIndex = 0;
             this.grpPendingOrders.TabStop = false;
-            this.grpPendingOrders.Text = "1. 待發貨訂單列表 (Pending Orders Ready for Dispatch)";
+            this.grpPendingOrders.Text = "1. Pending Orders Ready for Dispatch";
             // 
             // dgvPendingOrders
             // 
@@ -53,14 +51,15 @@
             this.dgvPendingOrders.AllowUserToDeleteRows = false;
             this.dgvPendingOrders.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dgvPendingOrders.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvPendingOrders.Location = new System.Drawing.Point(12, 31);
+            this.dgvPendingOrders.Location = new System.Drawing.Point(9, 25);
+            this.dgvPendingOrders.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.dgvPendingOrders.MultiSelect = false;
             this.dgvPendingOrders.Name = "dgvPendingOrders";
             this.dgvPendingOrders.ReadOnly = true;
             this.dgvPendingOrders.RowHeadersWidth = 51;
             this.dgvPendingOrders.RowTemplate.Height = 27;
             this.dgvPendingOrders.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvPendingOrders.Size = new System.Drawing.Size(1005, 227);
+            this.dgvPendingOrders.Size = new System.Drawing.Size(754, 182);
             this.dgvPendingOrders.TabIndex = 0;
             this.dgvPendingOrders.SelectionChanged += new System.EventHandler(this.dgvPendingOrders_SelectionChanged);
             // 
@@ -75,76 +74,82 @@
             this.grpDispatchConfig.Controls.Add(this.lblDriverName);
             this.grpDispatchConfig.Controls.Add(this.txtDriverName);
             this.grpDispatchConfig.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.grpDispatchConfig.Location = new System.Drawing.Point(16, 305);
-            this.grpDispatchConfig.Margin = new System.Windows.Forms.Padding(4);
+            this.grpDispatchConfig.Location = new System.Drawing.Point(12, 244);
             this.grpDispatchConfig.Name = "grpDispatchConfig";
-            this.grpDispatchConfig.Padding = new System.Windows.Forms.Padding(4);
-            this.grpDispatchConfig.Size = new System.Drawing.Size(1030, 160);
+            this.grpDispatchConfig.Size = new System.Drawing.Size(772, 128);
             this.grpDispatchConfig.TabIndex = 1;
             this.grpDispatchConfig.TabStop = false;
-            this.grpDispatchConfig.Text = "2. 發貨參數設定 (Dispatch Configuration)";
+            this.grpDispatchConfig.Text = "2. Dispatch Configuration";
             // 
             // lblDispatchID
             // 
-            this.lblDispatchID.Location = new System.Drawing.Point(20, 42);
+            this.lblDispatchID.Location = new System.Drawing.Point(15, 34);
+            this.lblDispatchID.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblDispatchID.Name = "lblDispatchID";
-            this.lblDispatchID.Size = new System.Drawing.Size(220, 25);
+            this.lblDispatchID.Size = new System.Drawing.Size(165, 20);
             this.lblDispatchID.TabIndex = 0;
-            this.lblDispatchID.Text = "發貨單號 (Dispatch ID):";
+            this.lblDispatchID.Text = "Dispatch ID:";
             // 
             // txtDispatchID
             // 
-            this.txtDispatchID.Location = new System.Drawing.Point(245, 39);
+            this.txtDispatchID.Location = new System.Drawing.Point(184, 31);
+            this.txtDispatchID.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.txtDispatchID.Name = "txtDispatchID";
             this.txtDispatchID.ReadOnly = true;
-            this.txtDispatchID.Size = new System.Drawing.Size(250, 30);
+            this.txtDispatchID.Size = new System.Drawing.Size(188, 25);
             this.txtDispatchID.TabIndex = 1;
             // 
             // lblEstDelivery
             // 
-            this.lblEstDelivery.Location = new System.Drawing.Point(540, 42);
+            this.lblEstDelivery.Location = new System.Drawing.Point(405, 34);
+            this.lblEstDelivery.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblEstDelivery.Name = "lblEstDelivery";
-            this.lblEstDelivery.Size = new System.Drawing.Size(220, 25);
+            this.lblEstDelivery.Size = new System.Drawing.Size(165, 20);
             this.lblEstDelivery.TabIndex = 2;
-            this.lblEstDelivery.Text = "預計送貨日期 (Est Date):";
+            this.lblEstDelivery.Text = "Est Date:";
             // 
             // dtpEstDelivery
             // 
             this.dtpEstDelivery.Format = System.Windows.Forms.DateTimePickerFormat.Short;
-            this.dtpEstDelivery.Location = new System.Drawing.Point(765, 39);
+            this.dtpEstDelivery.Location = new System.Drawing.Point(574, 31);
+            this.dtpEstDelivery.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.dtpEstDelivery.Name = "dtpEstDelivery";
-            this.dtpEstDelivery.Size = new System.Drawing.Size(240, 30);
+            this.dtpEstDelivery.Size = new System.Drawing.Size(181, 25);
             this.dtpEstDelivery.TabIndex = 3;
             // 
             // lblMethod
             // 
-            this.lblMethod.Location = new System.Drawing.Point(20, 102);
+            this.lblMethod.Location = new System.Drawing.Point(15, 82);
+            this.lblMethod.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblMethod.Name = "lblMethod";
-            this.lblMethod.Size = new System.Drawing.Size(220, 25);
+            this.lblMethod.Size = new System.Drawing.Size(165, 20);
             this.lblMethod.TabIndex = 4;
-            this.lblMethod.Text = "送貨方式 (Delivery Method):";
+            this.lblMethod.Text = "Delivery Method:";
             // 
             // cboMethod
             // 
             this.cboMethod.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboMethod.Location = new System.Drawing.Point(245, 99);
+            this.cboMethod.Location = new System.Drawing.Point(184, 79);
+            this.cboMethod.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.cboMethod.Name = "cboMethod";
-            this.cboMethod.Size = new System.Drawing.Size(250, 31);
+            this.cboMethod.Size = new System.Drawing.Size(188, 25);
             this.cboMethod.TabIndex = 5;
             // 
             // lblDriverName
             // 
-            this.lblDriverName.Location = new System.Drawing.Point(540, 102);
+            this.lblDriverName.Location = new System.Drawing.Point(405, 82);
+            this.lblDriverName.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblDriverName.Name = "lblDriverName";
-            this.lblDriverName.Size = new System.Drawing.Size(220, 25);
+            this.lblDriverName.Size = new System.Drawing.Size(165, 20);
             this.lblDriverName.TabIndex = 6;
-            this.lblDriverName.Text = "司機姓名 (Driver Name):";
+            this.lblDriverName.Text = "Driver Name:";
             // 
             // txtDriverName
             // 
-            this.txtDriverName.Location = new System.Drawing.Point(765, 99);
+            this.txtDriverName.Location = new System.Drawing.Point(574, 79);
+            this.txtDriverName.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.txtDriverName.Name = "txtDriverName";
-            this.txtDriverName.Size = new System.Drawing.Size(240, 30);
+            this.txtDriverName.Size = new System.Drawing.Size(181, 25);
             this.txtDriverName.TabIndex = 7;
             // 
             // btnGenerateDeliveryNote
@@ -153,27 +158,29 @@
             this.btnGenerateDeliveryNote.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnGenerateDeliveryNote.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.btnGenerateDeliveryNote.ForeColor = System.Drawing.Color.White;
-            this.btnGenerateDeliveryNote.Location = new System.Drawing.Point(496, 485);
+            this.btnGenerateDeliveryNote.Location = new System.Drawing.Point(372, 388);
+            this.btnGenerateDeliveryNote.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnGenerateDeliveryNote.Name = "btnGenerateDeliveryNote";
-            this.btnGenerateDeliveryNote.Size = new System.Drawing.Size(550, 52);
+            this.btnGenerateDeliveryNote.Size = new System.Drawing.Size(412, 42);
             this.btnGenerateDeliveryNote.TabIndex = 2;
-            this.btnGenerateDeliveryNote.Text = "生成發貨單與回條 (Generate Delivery Note && Reply Slip)";
+            this.btnGenerateDeliveryNote.Text = "Generate Delivery Note && Reply Slip";
             this.btnGenerateDeliveryNote.UseVisualStyleBackColor = false;
             this.btnGenerateDeliveryNote.Click += new System.EventHandler(this.btnGenerateDeliveryNote_Click);
             // 
             // LogisticsForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1062, 553);
+            this.ClientSize = new System.Drawing.Size(796, 442);
             this.Controls.Add(this.btnGenerateDeliveryNote);
             this.Controls.Add(this.grpDispatchConfig);
             this.Controls.Add(this.grpPendingOrders);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.MaximizeBox = false;
             this.Name = "LogisticsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "物流管理 - 生成發貨單 (Logistics Processing System)";
+            this.Text = "Logistics Processing System";
             this.Load += new System.EventHandler(this.LogisticsForm_Load);
             this.grpPendingOrders.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvPendingOrders)).EndInit();
