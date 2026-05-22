@@ -7,7 +7,7 @@ namespace ITP4915M_Group11
 {
     public partial class EmployeeManagement : Form
     {
-        // 統一放連線字串
+        // Centralized connection string
         private string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         public EmployeeManagement()
@@ -15,7 +15,7 @@ namespace ITP4915M_Group11
             InitializeComponent();
         }
 
-        // 一打開視窗就會自動行呢度
+        // Runs when the form loads
         private void Form3_Load(object sender, EventArgs e)
         {
             if (cboRole.Items.Count > 0)
@@ -25,7 +25,7 @@ namespace ITP4915M_Group11
             LoadStaffData();
         }
 
-        // 載入數據功能
+        // Load staff data
         private void LoadStaffData()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -33,7 +33,7 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT StaffID AS '員工編號', Name AS '姓名', Password AS '密碼', Role AS '職位' FROM staff";
+                    string query = "SELECT StaffID AS 'StaffID', Name AS 'Name', Password AS 'Password', Role AS 'Role' FROM staff";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
                         using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
@@ -46,17 +46,17 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("載入員工資料失敗：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to load staff data: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 新增員工功能
+        // Add new staff
         private void btnAddStaff_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
             {
-                MessageBox.Show("唔該填晒所有欄位！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please fill out all fields!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -77,7 +77,7 @@ namespace ITP4915M_Group11
                         int rowsAffected = cmd.ExecuteNonQuery();
                         if (rowsAffected > 0)
                         {
-                            MessageBox.Show("成功新增員工！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show("Successfully added staff!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             ClearFields();
                             LoadStaffData();
                         }
@@ -85,17 +85,17 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("新增失敗：\n" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Add failed:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 修改資料功能
+        // Update staff
         private void btnUpdate_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
             {
-                MessageBox.Show("唔該先喺表格點選要修改嘅員工，並填妥資料！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select a staff from the table and fill in the data first!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -116,7 +116,7 @@ namespace ITP4915M_Group11
                         int rowsAffected = cmd.ExecuteNonQuery();
                         if (rowsAffected > 0)
                         {
-                            MessageBox.Show("員工資料修改成功！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show("Staff data updated successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             ClearFields();
                             LoadStaffData();
                         }
@@ -124,33 +124,33 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("修改失敗：\n" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Update failed:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 【大結局功能】撳「刪除員工」掣會行呢度
+        // Delete staff
         private void btnDelete_Click(object sender, EventArgs e)
         {
-            // 1. 防呆：確保選取咗人先可以刪除
+            // 1. Guard clause: ensure a staff is selected
             if (string.IsNullOrWhiteSpace(txtStaffID.Text))
             {
-                MessageBox.Show("唔該先喺表格點選你想刪除嘅員工！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select the staff you want to delete from the table!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 2. 彈出雙重確認視窗，安全第一
+            // 2. Show double-confirmation dialog
             DialogResult result = MessageBox.Show(
-                $"你確定要永久刪除員工 [{txtName.Text}] (編號: {txtStaffID.Text}) 嗎？\n呢個操作無法復原！",
-                "警告",
+                $"Are you sure you want to permanently delete staff [{txtName.Text}] (ID: {txtStaffID.Text})?\nThis action cannot be undone!",
+                "Warning",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning
             );
 
-            // 如果用戶選擇「是 (Yes)」，先會真正去 Database 執行刪除
+            // If the user selects "Yes", the deletion will actually be executed in the Database
             if (result == DialogResult.Yes)
             {
-                // 3. 寫 DELETE SQL 語句
+                // 3. Write DELETE SQL statement
                 string query = "DELETE FROM staff WHERE StaffID = @id";
 
                 using (MySqlConnection conn = new MySqlConnection(connString))
@@ -166,36 +166,36 @@ namespace ITP4915M_Group11
 
                             if (rowsAffected > 0)
                             {
-                                MessageBox.Show("員工已成功刪除！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                ClearFields();   // 清空輸入框
-                                LoadStaffData(); // 即時更新大表格
+                                MessageBox.Show("Staff deleted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                ClearFields();   // Clear input fields
+                                LoadStaffData(); // Refresh table
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("刪除失敗：\n" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Delete failed:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
         }
 
-        // 點擊表格行，自動填入資料
+        // Populate fields when clicking a row in the DataGridView
         private void dgvStaff_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex >= 0)
             {
                 DataGridViewRow row = dgvStaff.Rows[e.RowIndex];
-                txtStaffID.Text = row.Cells["員工編號"].Value.ToString();
-                txtName.Text = row.Cells["姓名"].Value.ToString();
-                txtPassword.Text = row.Cells["密碼"].Value.ToString();
-                cboRole.Text = row.Cells["職位"].Value.ToString();
+                txtStaffID.Text = row.Cells["StaffID"].Value.ToString();
+                txtName.Text = row.Cells["Name"].Value.ToString();
+                txtPassword.Text = row.Cells["Password"].Value.ToString();
+                cboRole.Text = row.Cells["Role"].Value.ToString();
 
-                txtStaffID.ReadOnly = true; // 修改/刪除時，員工編號設為唯讀
+                txtStaffID.ReadOnly = true; // Make StaffID read-only when editing/deleting
             }
         }
 
-        // 清空欄位小功能
+        // Clear input fields
         private void ClearFields()
         {
             txtStaffID.Clear();

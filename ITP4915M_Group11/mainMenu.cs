@@ -12,14 +12,14 @@ namespace ITP4915M_Group11
         {
             InitializeComponent();
 
-            // 接收資料
+        // Receive data
             currentStaffName = name;
             currentStaffRole = role;
 
-            // 1. 設定頂部歡迎字句
-            lblWelcome.Text = $"歡迎回來，{currentStaffName}！ (權限: {currentStaffRole})";
+            // 1. Set welcome message
+            lblWelcome.Text = $"Welcome back, {currentStaffName}! (Role: {currentStaffRole})";
 
-            // 2. 權限控制：如果唔係 Manager，就收埋「員工及系統設定」個掣
+            // 2. Permission control: hide staff settings button if not a Manager
             if (currentStaffRole != "Manager")
             {
                 btnStaff.Visible = false;
@@ -28,7 +28,7 @@ namespace ITP4915M_Group11
 
         private void btnLogout_Click(object sender, EventArgs e)
         {
-            DialogResult result = MessageBox.Show("確定要登出嗎？", "登出", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            DialogResult result = MessageBox.Show("Are you sure you want to logout?", "Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
                 Login loginForm = new Login();

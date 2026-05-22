@@ -7,7 +7,7 @@ namespace ITP4915M_Group11
 {
     public partial class ProductManagement : Form
     {
-        // 統一資料庫連線字串
+        // Centralized database connection string
         private string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         public ProductManagement()
@@ -16,7 +16,7 @@ namespace ITP4915M_Group11
         }
 
         // =========================================================
-        // 🔄 核心數據載入邏輯
+        // Core data loading logic
         // =========================================================
         private void LoadProductData()
         {
@@ -25,7 +25,7 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT PartID AS '產品編號', Name AS '產品名稱', Description AS '產品描述', StockLevel AS '庫存量', DefaultPrice AS '標準售價' FROM product_part";
+                    string query = "SELECT PartID AS 'PartID', Name AS 'Name', Description AS 'Description', StockLevel AS 'StockLevel', DefaultPrice AS 'DefaultPrice' FROM product_part";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
                         using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
@@ -38,47 +38,47 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("無法載入產品資料，請確保 XAMPP 已開啟：\n" + ex.Message, "系統錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Unable to load product data, please ensure XAMPP is running:\n" + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
         // =========================================================
-        // 👻 終極收網防線：包攬所有可能被 Designer 殘留記錄嘅事件名稱
+        // Catch-all for possible Designer-generated event handler names
         // =========================================================
 
-        // 1. 視窗載入事件 (攔截所有 Load 變體)
+// 1. Form load events (catch all Load variants)
         private void Form4_Load(object sender, EventArgs e) { LoadProductData(); }
         private void Form4_Load_1(object sender, EventArgs e) { LoadProductData(); }
 
-        // 2. 新增產品按鈕 (攔截所有 Add 變體)
+// 2. Add product buttons (catch all Add variants)
         private void button1_Click(object sender, EventArgs e) { ExecuteAddProduct(); }
         private void btnAddProduct_Click(object sender, EventArgs e) { ExecuteAddProduct(); }
 
-        // 3. 修改產品按鈕 (攔截所有 Update 變體)
+// 3. Update product buttons (catch all Update variants)
         private void button2_Click(object sender, EventArgs e) { ExecuteUpdateProduct(); }
         private void btnUpdateProduct_Click(object sender, EventArgs e) { ExecuteUpdateProduct(); }
 
-        // 4. 刪除產品按鈕 (攔截所有 Delete 變體)
+// 4. Delete product buttons (catch all Delete variants)
         private void button3_Click(object sender, EventArgs e) { ExecuteDeleteProduct(); }
         private void btnDeleteProduct_Click(object sender, EventArgs e) { ExecuteDeleteProduct(); }
 
-        // 5. 大表格點擊事件 (攔截所有 Grid 變體，防止報錯找不到方法)
+// 5. Main grid click events (catch all Grid variants to avoid missing handler errors)
         private void dgvProducts_CellContentClick(object sender, DataGridViewCellEventArgs e) { HandleGridClick(e.RowIndex); }
         private void dgvProducts_CellClick(object sender, DataGridViewCellEventArgs e) { HandleGridClick(e.RowIndex); }
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e) { HandleGridClick(e.RowIndex); }
 
 
         // =========================================================
-        // 🛠️ 真正執行核心 CRUD 運作的功能實體
+        // Core CRUD execution methods
         // =========================================================
 
-        // 【新增執行】
+        // Add product execution
         private void ExecuteAddProduct()
         {
             if (string.IsNullOrWhiteSpace(txtPartID.Text) || string.IsNullOrWhiteSpace(txtPartName.Text))
             {
-                MessageBox.Show("產品編號同名稱唔可以空白！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Part ID and Name cannot be empty!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -99,8 +99,8 @@ namespace ITP4915M_Group11
 
                         int rows = cmd.ExecuteNonQuery();
                         if (rows > 0)
-                        {
-                            MessageBox.Show("🎉 產品新增成功！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                {
+                    MessageBox.Show("Product added successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             ClearFields();
                             LoadProductData();
                         }
@@ -108,17 +108,17 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("新增產品失敗，產品編號可能重複：\n" + ex.Message, "SQL 錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to add product, PartID might be duplicated:\n" + ex.Message, "SQL Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 【修改執行】
+        // Update product execution
         private void ExecuteUpdateProduct()
         {
             if (string.IsNullOrWhiteSpace(txtPartID.Text) || string.IsNullOrWhiteSpace(txtPartName.Text))
             {
-                MessageBox.Show("唔該先喺上方表格點選你想修改嘅產品！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select a product from the table above to edit!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -140,7 +140,7 @@ namespace ITP4915M_Group11
                         int rows = cmd.ExecuteNonQuery();
                         if (rows > 0)
                         {
-                            MessageBox.Show("✏️ 產品資料更新成功！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show("Product updated successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             ClearFields();
                             LoadProductData();
                         }
@@ -148,21 +148,21 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("更新產品失敗：\n" + ex.Message, "SQL 錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to update product:\n" + ex.Message, "SQL Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 【刪除執行】
+        // Delete product execution
         private void ExecuteDeleteProduct()
         {
             if (string.IsNullOrWhiteSpace(txtPartID.Text))
             {
-                MessageBox.Show("唔該先喺上方表格選擇你想刪除嘅產品！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select the product you want to delete from the table above!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            DialogResult confirm = MessageBox.Show($"你確定要刪除產品編號 [{txtPartID.Text}] 嗎？", "確認刪除", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            DialogResult confirm = MessageBox.Show($"Are you sure you want to delete product [{txtPartID.Text}]?", "Confirm Deletion", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
             if (confirm == DialogResult.Yes)
             {
@@ -180,25 +180,25 @@ namespace ITP4915M_Group11
                             int rows = cmd.ExecuteNonQuery();
                             if (rows > 0)
                             {
-                                MessageBox.Show("🗑️ 產品已成功移除！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                MessageBox.Show("Product removed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                                 ClearFields();
                                 LoadProductData();
                             }
                             else
                             {
-                                MessageBox.Show("❌ 刪除失敗！資料庫找不到該產品編號。", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                MessageBox.Show("Delete failed! Product ID not found in database.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                         }
                     }
-                    catch (Exception ex)
+                        catch (Exception ex)
                     {
-                        MessageBox.Show("資料庫執行刪除時出錯！" + ex.Message, "SQL 錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Error executing delete in database: " + ex.Message, "SQL Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
         }
 
-        // 【大表格點擊回填數據邏輯】
+        // Logic for populating input fields when clicking a row in the main DataGridView
         private void HandleGridClick(int rowIndex)
         {
             if (rowIndex >= 0 && dgvProducts != null)
@@ -206,19 +206,19 @@ namespace ITP4915M_Group11
                 try
                 {
                     DataGridViewRow row = dgvProducts.Rows[rowIndex];
-                    txtPartID.Text = row.Cells["產品編號"].Value?.ToString();
-                    txtPartName.Text = row.Cells["產品名稱"].Value?.ToString();
-                    txtDescription.Text = row.Cells["產品描述"].Value?.ToString();
-                    txtStockLevel.Text = row.Cells["庫存量"].Value?.ToString();
-                    txtDefaultPrice.Text = row.Cells["標準售價"].Value?.ToString();
+                    txtPartID.Text = row.Cells["PartID"].Value?.ToString();
+                    txtPartName.Text = row.Cells["Name"].Value?.ToString();
+                    txtDescription.Text = row.Cells["Description"].Value?.ToString();
+                    txtStockLevel.Text = row.Cells["StockLevel"].Value?.ToString();
+                    txtDefaultPrice.Text = row.Cells["DefaultPrice"].Value?.ToString();
 
-                    txtPartID.ReadOnly = true; // 修改模式下鎖定 Primary Key
+                    txtPartID.ReadOnly = true; // Lock primary key in edit mode
                 }
                 catch { }
             }
         }
 
-        // 清空所有輸入框
+        // Clear all input fields
         private void ClearFields()
         {
             txtPartID.Clear();
@@ -229,7 +229,7 @@ namespace ITP4915M_Group11
             txtPartID.ReadOnly = false;
         }
 
-        // 雙重保險線：如果 Designer 沒有成功綁定表格點擊，用 Code 強制綁定
+        // Safety net: bind grid click handler in code if Designer didn't
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
