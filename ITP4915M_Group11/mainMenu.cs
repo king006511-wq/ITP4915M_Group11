@@ -50,7 +50,7 @@ namespace ITP4915M_Group11
 
         private void btnProduct_Click(object sender, EventArgs e)
         {
-            Form4 productForm = new Form4();
+            productManagement productForm = new productManagement();
             productForm.ShowDialog();
         }
     }

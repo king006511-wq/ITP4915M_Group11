@@ -1,6 +1,6 @@
 ﻿namespace ITP4915M_Group11
 {
-    partial class Form4
+    partial class productManagement
     {
         /// <summary>
         /// Required designer variable.
@@ -116,7 +116,7 @@
             this.txtDescription.Size = new System.Drawing.Size(100, 29);
             this.txtDescription.TabIndex = 8;
             // 
-            // Form4
+            // productManagement
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -130,8 +130,8 @@
             this.Controls.Add(this.txtPartName);
             this.Controls.Add(this.txtPartID);
             this.Controls.Add(this.dgvProducts);
-            this.Name = "Form4";
-            this.Text = "Form4";
+            this.Name = "productManagement";
+            this.Text = "productManagement";
             this.Load += new System.EventHandler(this.Form4_Load_1);
             ((System.ComponentModel.ISupportInitialize)(this.dgvProducts)).EndInit();
             this.ResumeLayout(false);
