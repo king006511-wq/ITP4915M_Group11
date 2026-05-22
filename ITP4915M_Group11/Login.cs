@@ -1,4 +1,4 @@
-﻿using MySql.Data.MySqlClient;
+using MySql.Data.MySqlClient;
 using System;
 using System.Windows.Forms;
 
@@ -6,10 +6,10 @@ using System.Windows.Forms;
 namespace ITP4915M_Group11
 {
     // 呢個就係包住你所有 Code 嗰間「屋」
-    public partial class Form1 : Form
+    public partial class Login : Form
     {
-        // 呢個係 Form1 嘅建構子，用嚟載入你畫嘅 UI (千祈唔可以刪除)
-        public Form1()
+        // 呢個係 Login 嘅建構子，用嚟載入你畫嘅 UI (千祈唔可以刪除)
+        public Login()
         {
             InitializeComponent();
         }
@@ -73,6 +73,11 @@ namespace ITP4915M_Group11
                     MessageBox.Show("系統連線出錯：" + ex.Message, "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private void txtUser_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

@@ -33,8 +33,8 @@ namespace ITP4915M_Group11
             DialogResult result = MessageBox.Show("確定要登出嗎？", "登出", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                // 打開返 Form1 (登入介面)
-                Form1 loginForm = new Form1();
+                // 打開返 Login (登入介面)
+                Login loginForm = new Login();
                 loginForm.Show();
 
                 // 關閉目前嘅 Form2

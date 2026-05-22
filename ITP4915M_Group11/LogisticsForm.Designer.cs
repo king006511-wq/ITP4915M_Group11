@@ -52,7 +52,7 @@
             this.dgvPendingOrders.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dgvPendingOrders.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvPendingOrders.Location = new System.Drawing.Point(9, 25);
-            this.dgvPendingOrders.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.dgvPendingOrders.Margin = new System.Windows.Forms.Padding(2);
             this.dgvPendingOrders.MultiSelect = false;
             this.dgvPendingOrders.Name = "dgvPendingOrders";
             this.dgvPendingOrders.ReadOnly = true;
@@ -93,7 +93,7 @@
             // txtDispatchID
             // 
             this.txtDispatchID.Location = new System.Drawing.Point(184, 31);
-            this.txtDispatchID.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.txtDispatchID.Margin = new System.Windows.Forms.Padding(2);
             this.txtDispatchID.Name = "txtDispatchID";
             this.txtDispatchID.ReadOnly = true;
             this.txtDispatchID.Size = new System.Drawing.Size(188, 25);
@@ -112,7 +112,7 @@
             // 
             this.dtpEstDelivery.Format = System.Windows.Forms.DateTimePickerFormat.Short;
             this.dtpEstDelivery.Location = new System.Drawing.Point(574, 31);
-            this.dtpEstDelivery.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.dtpEstDelivery.Margin = new System.Windows.Forms.Padding(2);
             this.dtpEstDelivery.Name = "dtpEstDelivery";
             this.dtpEstDelivery.Size = new System.Drawing.Size(181, 25);
             this.dtpEstDelivery.TabIndex = 3;
@@ -130,7 +130,7 @@
             // 
             this.cboMethod.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboMethod.Location = new System.Drawing.Point(184, 79);
-            this.cboMethod.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.cboMethod.Margin = new System.Windows.Forms.Padding(2);
             this.cboMethod.Name = "cboMethod";
             this.cboMethod.Size = new System.Drawing.Size(188, 25);
             this.cboMethod.TabIndex = 5;
@@ -147,7 +147,7 @@
             // txtDriverName
             // 
             this.txtDriverName.Location = new System.Drawing.Point(574, 79);
-            this.txtDriverName.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.txtDriverName.Margin = new System.Windows.Forms.Padding(2);
             this.txtDriverName.Name = "txtDriverName";
             this.txtDriverName.Size = new System.Drawing.Size(181, 25);
             this.txtDriverName.TabIndex = 7;
@@ -159,7 +159,7 @@
             this.btnGenerateDeliveryNote.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.btnGenerateDeliveryNote.ForeColor = System.Drawing.Color.White;
             this.btnGenerateDeliveryNote.Location = new System.Drawing.Point(372, 388);
-            this.btnGenerateDeliveryNote.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnGenerateDeliveryNote.Margin = new System.Windows.Forms.Padding(2);
             this.btnGenerateDeliveryNote.Name = "btnGenerateDeliveryNote";
             this.btnGenerateDeliveryNote.Size = new System.Drawing.Size(412, 42);
             this.btnGenerateDeliveryNote.TabIndex = 2;
@@ -171,12 +171,12 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(796, 442);
+            this.ClientSize = new System.Drawing.Size(804, 442);
             this.Controls.Add(this.btnGenerateDeliveryNote);
             this.Controls.Add(this.grpDispatchConfig);
             this.Controls.Add(this.grpPendingOrders);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.MaximizeBox = false;
             this.Name = "LogisticsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
