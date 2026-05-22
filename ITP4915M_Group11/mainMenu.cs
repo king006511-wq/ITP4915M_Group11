@@ -39,7 +39,7 @@ namespace ITP4915M_Group11
 
         private void btnStaff_Click(object sender, EventArgs e)
         {
-            Form3 staffForm = new Form3();
+            employeeManagement staffForm = new employeeManagement();
             staffForm.ShowDialog();
         }
 

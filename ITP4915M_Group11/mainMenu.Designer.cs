@@ -39,26 +39,29 @@ namespace ITP4915M_Group11
             // 
             this.lblWelcome.AutoSize = true;
             this.lblWelcome.Font = new System.Drawing.Font("新細明體", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.lblWelcome.Location = new System.Drawing.Point(134, 29);
+            this.lblWelcome.Location = new System.Drawing.Point(11, 9);
+            this.lblWelcome.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblWelcome.Name = "lblWelcome";
-            this.lblWelcome.Size = new System.Drawing.Size(83, 30);
+            this.lblWelcome.Size = new System.Drawing.Size(53, 20);
             this.lblWelcome.TabIndex = 0;
             this.lblWelcome.Text = "label1";
             // 
             // btnOrder
             // 
-            this.btnOrder.Location = new System.Drawing.Point(139, 117);
+            this.btnOrder.Location = new System.Drawing.Point(54, 70);
+            this.btnOrder.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnOrder.Name = "btnOrder";
-            this.btnOrder.Size = new System.Drawing.Size(212, 36);
+            this.btnOrder.Size = new System.Drawing.Size(141, 24);
             this.btnOrder.TabIndex = 1;
             this.btnOrder.Text = "Order Management";
             this.btnOrder.UseVisualStyleBackColor = true;
             // 
             // btnProduct
             // 
-            this.btnProduct.Location = new System.Drawing.Point(139, 211);
+            this.btnProduct.Location = new System.Drawing.Point(54, 114);
+            this.btnProduct.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnProduct.Name = "btnProduct";
-            this.btnProduct.Size = new System.Drawing.Size(212, 41);
+            this.btnProduct.Size = new System.Drawing.Size(141, 27);
             this.btnProduct.TabIndex = 2;
             this.btnProduct.Text = "Products Management";
             this.btnProduct.UseVisualStyleBackColor = true;
@@ -66,9 +69,10 @@ namespace ITP4915M_Group11
             // 
             // btnStaff
             // 
-            this.btnStaff.Location = new System.Drawing.Point(139, 294);
+            this.btnStaff.Location = new System.Drawing.Point(54, 165);
+            this.btnStaff.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnStaff.Name = "btnStaff";
-            this.btnStaff.Size = new System.Drawing.Size(212, 46);
+            this.btnStaff.Size = new System.Drawing.Size(141, 31);
             this.btnStaff.TabIndex = 3;
             this.btnStaff.Text = "Staff and System Settings";
             this.btnStaff.UseVisualStyleBackColor = true;
@@ -76,9 +80,10 @@ namespace ITP4915M_Group11
             // 
             // btnLogout
             // 
-            this.btnLogout.Location = new System.Drawing.Point(573, 379);
+            this.btnLogout.Location = new System.Drawing.Point(309, 167);
+            this.btnLogout.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnLogout.Name = "btnLogout";
-            this.btnLogout.Size = new System.Drawing.Size(73, 43);
+            this.btnLogout.Size = new System.Drawing.Size(49, 29);
             this.btnLogout.TabIndex = 4;
             this.btnLogout.Text = "Logout";
             this.btnLogout.UseVisualStyleBackColor = true;
@@ -86,14 +91,15 @@ namespace ITP4915M_Group11
             // 
             // mainMenu
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(434, 261);
             this.Controls.Add(this.btnLogout);
             this.Controls.Add(this.btnStaff);
             this.Controls.Add(this.btnProduct);
             this.Controls.Add(this.btnOrder);
             this.Controls.Add(this.lblWelcome);
+            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "mainMenu";
             this.Text = "mainMenu";
             this.Load += new System.EventHandler(this.Form2_Load);

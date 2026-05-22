@@ -1,16 +1,16 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Windows.Forms;
 using MySql.Data.MySqlClient;
 
 namespace ITP4915M_Group11
 {
-    public partial class Form3 : Form
+    public partial class employeeManagement : Form
     {
         // 統一放連線字串
         private string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
-        public Form3()
+        public employeeManagement()
         {
             InitializeComponent();
         }

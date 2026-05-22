@@ -1,6 +1,6 @@
-﻿namespace ITP4915M_Group11
+namespace ITP4915M_Group11
 {
-    partial class Form3
+    partial class employeeManagement
     {
         /// <summary>
         /// Required designer variable.
@@ -152,7 +152,7 @@
             this.btnDelete.UseVisualStyleBackColor = true;
             this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
             // 
-            // Form3
+            // employeeManagement
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -169,8 +169,8 @@
             this.Controls.Add(this.lblName);
             this.Controls.Add(this.lblStaffID);
             this.Controls.Add(this.dgvStaff);
-            this.Name = "Form3";
-            this.Text = "Form3";
+            this.Name = "employeeManagement";
+            this.Text = "employeeManagement";
             this.Load += new System.EventHandler(this.Form3_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dgvStaff)).EndInit();
             this.ResumeLayout(false);
