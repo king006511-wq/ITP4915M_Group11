@@ -1,6 +1,6 @@
-﻿namespace ITP4915M_Group11
+namespace ITP4915M_Group11
 {
-    partial class Form2
+    partial class mainMenu
     {
         /// <summary>
         /// Required designer variable.
@@ -84,7 +84,7 @@
             this.btnLogout.UseVisualStyleBackColor = true;
             this.btnLogout.Click += new System.EventHandler(this.btnLogout_Click);
             // 
-            // Form2
+            // mainMenu
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -94,8 +94,8 @@
             this.Controls.Add(this.btnProduct);
             this.Controls.Add(this.btnOrder);
             this.Controls.Add(this.lblWelcome);
-            this.Name = "Form2";
-            this.Text = "Form2";
+            this.Name = "mainMenu";
+            this.Text = "mainMenu";
             this.Load += new System.EventHandler(this.Form2_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
