@@ -67,6 +67,17 @@ namespace ITP4915M_Group11
             this.btnProduct.UseVisualStyleBackColor = true;
             this.btnProduct.Click += new System.EventHandler(this.btnProduct_Click);
             // 
+            // btnOrderProcessing
+            // 
+            this.btnOrderProcessing = new System.Windows.Forms.Button();
+            this.btnOrderProcessing.Location = new System.Drawing.Point(54, 200);
+            this.btnOrderProcessing.Name = "btnOrderProcessing";
+            this.btnOrderProcessing.Size = new System.Drawing.Size(141, 27);
+            this.btnOrderProcessing.TabIndex = 5;
+            this.btnOrderProcessing.Text = "Order Processing";
+            this.btnOrderProcessing.UseVisualStyleBackColor = true;
+            this.btnOrderProcessing.Click += new System.EventHandler(this.btnOrderProcessing_Click);
+            // 
             // btnStaff
             // 
             this.btnStaff.Location = new System.Drawing.Point(54, 165);
@@ -93,11 +104,12 @@ namespace ITP4915M_Group11
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(434, 261);
+            this.ClientSize = new System.Drawing.Size(434, 320);
             this.Controls.Add(this.btnLogout);
             this.Controls.Add(this.btnStaff);
             this.Controls.Add(this.btnProduct);
             this.Controls.Add(this.btnOrder);
+            this.Controls.Add(this.btnOrderProcessing);
             this.Controls.Add(this.lblWelcome);
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "MainMenu";
@@ -115,5 +127,6 @@ namespace ITP4915M_Group11
         private System.Windows.Forms.Button btnProduct;
         private System.Windows.Forms.Button btnStaff;
         private System.Windows.Forms.Button btnLogout;
+        private System.Windows.Forms.Button btnOrderProcessing;
     }
 }

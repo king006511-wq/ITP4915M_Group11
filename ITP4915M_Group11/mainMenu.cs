@@ -43,6 +43,12 @@ namespace ITP4915M_Group11
             staffForm.ShowDialog();
         }
 
+        private void btnOrderProcessing_Click(object sender, EventArgs e)
+        {
+            OrderProcessingForm orderForm = new OrderProcessingForm();
+            orderForm.ShowDialog();
+        }
+
         private void Form2_Load(object sender, EventArgs e)
         {
 
