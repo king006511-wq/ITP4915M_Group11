@@ -1,6 +1,6 @@
 ﻿namespace ITP4915M_Group11
 {
-    partial class productManagement
+    partial class ProductManagement
     {
         /// <summary>
         /// Required designer variable.
@@ -130,8 +130,8 @@
             this.Controls.Add(this.txtPartName);
             this.Controls.Add(this.txtPartID);
             this.Controls.Add(this.dgvProducts);
-            this.Name = "productManagement";
-            this.Text = "productManagement";
+            this.Name = "ProductManagement";
+            this.Text = "ProductManagement";
             this.Load += new System.EventHandler(this.Form4_Load_1);
             ((System.ComponentModel.ISupportInitialize)(this.dgvProducts)).EndInit();
             this.ResumeLayout(false);

@@ -3,12 +3,12 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class mainMenu : Form
+    public partial class MainMenu : Form
     {
         private string currentStaffName;
         private string currentStaffRole;
 
-        public mainMenu(string name, string role)
+        public MainMenu(string name, string role)
         {
             InitializeComponent();
 
@@ -39,7 +39,7 @@ namespace ITP4915M_Group11
 
         private void btnStaff_Click(object sender, EventArgs e)
         {
-            employeeManagement staffForm = new employeeManagement();
+            EmployeeManagement staffForm = new EmployeeManagement();
             staffForm.ShowDialog();
         }
 
@@ -50,7 +50,7 @@ namespace ITP4915M_Group11
 
         private void btnProduct_Click(object sender, EventArgs e)
         {
-            productManagement productForm = new productManagement();
+            ProductManagement productForm = new ProductManagement();
             productForm.ShowDialog();
         }
     }

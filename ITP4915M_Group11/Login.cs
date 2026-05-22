@@ -56,7 +56,7 @@ namespace ITP4915M_Group11
                                                 "登入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                                 // --- 重點修改：將 staffName 同 staffRole 放入括號帶過去！ ---
-                                mainMenu mainMenu = new mainMenu(staffName, staffRole);
+                                MainMenu mainMenu = new MainMenu(staffName, staffRole);
                                 mainMenu.Show();
                                 this.Hide();
                             }

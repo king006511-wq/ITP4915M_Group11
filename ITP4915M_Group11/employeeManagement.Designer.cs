@@ -1,6 +1,6 @@
 namespace ITP4915M_Group11
 {
-    partial class employeeManagement
+    partial class EmployeeManagement
     {
         /// <summary>
         /// Required designer variable.
@@ -169,8 +169,8 @@ namespace ITP4915M_Group11
             this.Controls.Add(this.lblName);
             this.Controls.Add(this.lblStaffID);
             this.Controls.Add(this.dgvStaff);
-            this.Name = "employeeManagement";
-            this.Text = "employeeManagement";
+            this.Name = "EmployeeManagement";
+            this.Text = "EmployeeManagement";
             this.Load += new System.EventHandler(this.Form3_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dgvStaff)).EndInit();
             this.ResumeLayout(false);

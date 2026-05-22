@@ -5,12 +5,12 @@ using MySql.Data.MySqlClient;
 
 namespace ITP4915M_Group11
 {
-    public partial class productManagement : Form
+    public partial class ProductManagement : Form
     {
         // 統一資料庫連線字串
         private string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
-        public productManagement()
+        public ProductManagement()
         {
             InitializeComponent();
         }

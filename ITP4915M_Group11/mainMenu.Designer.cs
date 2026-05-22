@@ -1,6 +1,6 @@
 namespace ITP4915M_Group11
 {
-    partial class mainMenu
+    partial class MainMenu
     {
         /// <summary>
         /// Required designer variable.
@@ -100,8 +100,8 @@ namespace ITP4915M_Group11
             this.Controls.Add(this.btnOrder);
             this.Controls.Add(this.lblWelcome);
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.Name = "mainMenu";
-            this.Text = "mainMenu";
+            this.Name = "MainMenu";
+            this.Text = "MainMenu";
             this.Load += new System.EventHandler(this.Form2_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
