@@ -101,6 +101,18 @@
     <Compile Include="AfterServiceForm.Designer.cs">
       <DependentUpon>AfterServiceForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="CreateOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CreateOrder.Designer.cs">
+      <DependentUpon>CreateOrder.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EditOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EditOrder.Designer.cs">
+      <DependentUpon>EditOrder.cs</DependentUpon>
+    </Compile>
     <Compile Include="employeeManagement.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -155,6 +167,21 @@
     <Compile Include="RawMaterialRequestForm.Designer.cs">
       <DependentUpon>RawMaterialRequestForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ViewOrders.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewOrders.Designer.cs">
+      <DependentUpon>ViewOrders.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="CreateOrder.resx">
+      <DependentUpon>CreateOrder.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EditOrder.resx">
+      <DependentUpon>EditOrder.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OrderManagementForm.resx">
+      <DependentUpon>OrderManagementForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="productManagement.resx">
       <DependentUpon>productManagement.cs</DependentUpon>
     </EmbeddedResource>
@@ -174,6 +201,9 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="ViewOrders.resx">
+      <DependentUpon>ViewOrders.cs</DependentUpon>
+    </EmbeddedResource>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
