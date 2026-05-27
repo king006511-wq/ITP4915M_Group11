@@ -176,14 +176,29 @@
     <Compile Include="ViewOrders.Designer.cs">
       <DependentUpon>ViewOrders.cs</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="AfterServiceForm.resx">
+      <DependentUpon>AfterServiceForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="CreateOrder.resx">
       <DependentUpon>CreateOrder.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="EditOrder.resx">
       <DependentUpon>EditOrder.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="employeeManagement.resx">
+      <DependentUpon>employeeManagement.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GoodsReceivedForm.resx">
+      <DependentUpon>GoodsReceivedForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LogisticsForm.resx">
+      <DependentUpon>LogisticsForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="OrderManagementForm.resx">
       <DependentUpon>OrderManagementForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ProcurementForm.resx">
+      <DependentUpon>ProcurementForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="productManagement.resx">
       <DependentUpon>productManagement.cs</DependentUpon>
@@ -204,6 +219,9 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="RawMaterialRequestForm.resx">
+      <DependentUpon>RawMaterialRequestForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ViewOrders.resx">
       <DependentUpon>ViewOrders.cs</DependentUpon>
     </EmbeddedResource>

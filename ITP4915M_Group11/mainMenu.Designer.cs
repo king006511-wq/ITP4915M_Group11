@@ -33,6 +33,7 @@ namespace ITP4915M_Group11
             this.btnProduct = new System.Windows.Forms.Button();
             this.btnStaff = new System.Windows.Forms.Button();
             this.btnLogout = new System.Windows.Forms.Button();
+            this.btnOrderProcessing = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblWelcome
@@ -49,7 +50,7 @@ namespace ITP4915M_Group11
             // btnOrder
             // 
             this.btnOrder.Location = new System.Drawing.Point(54, 70);
-            this.btnOrder.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnOrder.Margin = new System.Windows.Forms.Padding(2);
             this.btnOrder.Name = "btnOrder";
             this.btnOrder.Size = new System.Drawing.Size(141, 24);
             this.btnOrder.TabIndex = 1;
@@ -59,7 +60,7 @@ namespace ITP4915M_Group11
             // btnProduct
             // 
             this.btnProduct.Location = new System.Drawing.Point(54, 114);
-            this.btnProduct.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnProduct.Margin = new System.Windows.Forms.Padding(2);
             this.btnProduct.Name = "btnProduct";
             this.btnProduct.Size = new System.Drawing.Size(141, 27);
             this.btnProduct.TabIndex = 2;
@@ -67,21 +68,10 @@ namespace ITP4915M_Group11
             this.btnProduct.UseVisualStyleBackColor = true;
             this.btnProduct.Click += new System.EventHandler(this.btnProduct_Click);
             // 
-            // btnOrderProcessing
-            // 
-            this.btnOrderProcessing = new System.Windows.Forms.Button();
-            this.btnOrderProcessing.Location = new System.Drawing.Point(54, 200);
-            this.btnOrderProcessing.Name = "btnOrderProcessing";
-            this.btnOrderProcessing.Size = new System.Drawing.Size(141, 27);
-            this.btnOrderProcessing.TabIndex = 5;
-            this.btnOrderProcessing.Text = "Order Processing";
-            this.btnOrderProcessing.UseVisualStyleBackColor = true;
-            this.btnOrderProcessing.Click += new System.EventHandler(this.btnOrderProcessing_Click);
-            // 
             // btnStaff
             // 
             this.btnStaff.Location = new System.Drawing.Point(54, 165);
-            this.btnStaff.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnStaff.Margin = new System.Windows.Forms.Padding(2);
             this.btnStaff.Name = "btnStaff";
             this.btnStaff.Size = new System.Drawing.Size(141, 31);
             this.btnStaff.TabIndex = 3;
@@ -92,7 +82,7 @@ namespace ITP4915M_Group11
             // btnLogout
             // 
             this.btnLogout.Location = new System.Drawing.Point(309, 167);
-            this.btnLogout.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnLogout.Margin = new System.Windows.Forms.Padding(2);
             this.btnLogout.Name = "btnLogout";
             this.btnLogout.Size = new System.Drawing.Size(49, 29);
             this.btnLogout.TabIndex = 4;
@@ -100,18 +90,28 @@ namespace ITP4915M_Group11
             this.btnLogout.UseVisualStyleBackColor = true;
             this.btnLogout.Click += new System.EventHandler(this.btnLogout_Click);
             // 
-            // mainMenu
+            // btnOrderProcessing
+            // 
+            this.btnOrderProcessing.Location = new System.Drawing.Point(54, 200);
+            this.btnOrderProcessing.Name = "btnOrderProcessing";
+            this.btnOrderProcessing.Size = new System.Drawing.Size(141, 27);
+            this.btnOrderProcessing.TabIndex = 5;
+            this.btnOrderProcessing.Text = "Order Processing";
+            this.btnOrderProcessing.UseVisualStyleBackColor = true;
+            this.btnOrderProcessing.Click += new System.EventHandler(this.btnOrderProcessing_Click);
+            // 
+            // MainMenu
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(434, 320);
+            this.ClientSize = new System.Drawing.Size(904, 511);
             this.Controls.Add(this.btnLogout);
             this.Controls.Add(this.btnStaff);
             this.Controls.Add(this.btnProduct);
             this.Controls.Add(this.btnOrder);
             this.Controls.Add(this.btnOrderProcessing);
             this.Controls.Add(this.lblWelcome);
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "MainMenu";
             this.Text = "MainMenu";
             this.Load += new System.EventHandler(this.Form2_Load);

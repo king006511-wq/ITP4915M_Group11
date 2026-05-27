@@ -46,69 +46,77 @@ namespace ITP4915M_Group11
             // dgvStaff
             // 
             this.dgvStaff.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvStaff.Location = new System.Drawing.Point(12, 12);
+            this.dgvStaff.Location = new System.Drawing.Point(680, 11);
+            this.dgvStaff.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.dgvStaff.Name = "dgvStaff";
             this.dgvStaff.RowHeadersWidth = 62;
             this.dgvStaff.RowTemplate.Height = 31;
-            this.dgvStaff.Size = new System.Drawing.Size(716, 374);
+            this.dgvStaff.Size = new System.Drawing.Size(213, 133);
             this.dgvStaff.TabIndex = 0;
             this.dgvStaff.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvStaff_CellContentClick);
             // 
             // lblStaffID
             // 
             this.lblStaffID.AutoSize = true;
-            this.lblStaffID.Location = new System.Drawing.Point(89, 424);
+            this.lblStaffID.Location = new System.Drawing.Point(15, 19);
+            this.lblStaffID.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblStaffID.Name = "lblStaffID";
-            this.lblStaffID.Size = new System.Drawing.Size(60, 18);
+            this.lblStaffID.Size = new System.Drawing.Size(39, 12);
             this.lblStaffID.TabIndex = 1;
             this.lblStaffID.Text = "StaffID";
             // 
             // lblName
             // 
             this.lblName.AutoSize = true;
-            this.lblName.Location = new System.Drawing.Point(89, 508);
+            this.lblName.Location = new System.Drawing.Point(15, 75);
+            this.lblName.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblName.Name = "lblName";
-            this.lblName.Size = new System.Drawing.Size(49, 18);
+            this.lblName.Size = new System.Drawing.Size(32, 12);
             this.lblName.TabIndex = 2;
             this.lblName.Text = "Name";
             // 
             // lblPassword
             // 
             this.lblPassword.AutoSize = true;
-            this.lblPassword.Location = new System.Drawing.Point(83, 586);
+            this.lblPassword.Location = new System.Drawing.Point(11, 127);
+            this.lblPassword.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblPassword.Name = "lblPassword";
-            this.lblPassword.Size = new System.Drawing.Size(73, 18);
+            this.lblPassword.Size = new System.Drawing.Size(48, 12);
             this.lblPassword.TabIndex = 3;
             this.lblPassword.Text = "Password";
             // 
             // lblRole
             // 
             this.lblRole.AutoSize = true;
-            this.lblRole.Location = new System.Drawing.Point(89, 654);
+            this.lblRole.Location = new System.Drawing.Point(15, 172);
+            this.lblRole.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblRole.Name = "lblRole";
-            this.lblRole.Size = new System.Drawing.Size(40, 18);
+            this.lblRole.Size = new System.Drawing.Size(27, 12);
             this.lblRole.TabIndex = 4;
             this.lblRole.Text = "Role";
             // 
             // txtStaffID
             // 
-            this.txtStaffID.Location = new System.Drawing.Point(228, 413);
+            this.txtStaffID.Location = new System.Drawing.Point(108, 11);
+            this.txtStaffID.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.txtStaffID.Name = "txtStaffID";
-            this.txtStaffID.Size = new System.Drawing.Size(121, 29);
+            this.txtStaffID.Size = new System.Drawing.Size(82, 22);
             this.txtStaffID.TabIndex = 5;
             // 
             // txtName
             // 
-            this.txtName.Location = new System.Drawing.Point(228, 508);
+            this.txtName.Location = new System.Drawing.Point(108, 75);
+            this.txtName.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.txtName.Name = "txtName";
-            this.txtName.Size = new System.Drawing.Size(121, 29);
+            this.txtName.Size = new System.Drawing.Size(82, 22);
             this.txtName.TabIndex = 6;
             // 
             // txtPassword
             // 
-            this.txtPassword.Location = new System.Drawing.Point(228, 586);
+            this.txtPassword.Location = new System.Drawing.Point(108, 127);
+            this.txtPassword.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.txtPassword.Name = "txtPassword";
-            this.txtPassword.Size = new System.Drawing.Size(121, 29);
+            this.txtPassword.Size = new System.Drawing.Size(82, 22);
             this.txtPassword.TabIndex = 7;
             // 
             // cboRole
@@ -117,16 +125,18 @@ namespace ITP4915M_Group11
             this.cboRole.Items.AddRange(new object[] {
             "Manager",
             "Staff"});
-            this.cboRole.Location = new System.Drawing.Point(228, 654);
+            this.cboRole.Location = new System.Drawing.Point(108, 172);
+            this.cboRole.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.cboRole.Name = "cboRole";
-            this.cboRole.Size = new System.Drawing.Size(121, 26);
+            this.cboRole.Size = new System.Drawing.Size(82, 20);
             this.cboRole.TabIndex = 8;
             // 
             // btnAddStaff
             // 
-            this.btnAddStaff.Location = new System.Drawing.Point(580, 644);
+            this.btnAddStaff.Location = new System.Drawing.Point(343, 165);
+            this.btnAddStaff.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnAddStaff.Name = "btnAddStaff";
-            this.btnAddStaff.Size = new System.Drawing.Size(217, 39);
+            this.btnAddStaff.Size = new System.Drawing.Size(145, 26);
             this.btnAddStaff.TabIndex = 9;
             this.btnAddStaff.Text = "Add New Employee";
             this.btnAddStaff.UseVisualStyleBackColor = true;
@@ -134,9 +144,10 @@ namespace ITP4915M_Group11
             // 
             // btnUpdate
             // 
-            this.btnUpdate.Location = new System.Drawing.Point(92, 738);
+            this.btnUpdate.Location = new System.Drawing.Point(17, 228);
+            this.btnUpdate.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnUpdate.Name = "btnUpdate";
-            this.btnUpdate.Size = new System.Drawing.Size(178, 31);
+            this.btnUpdate.Size = new System.Drawing.Size(119, 21);
             this.btnUpdate.TabIndex = 10;
             this.btnUpdate.Text = "Edit Employee";
             this.btnUpdate.UseVisualStyleBackColor = true;
@@ -144,19 +155,20 @@ namespace ITP4915M_Group11
             // 
             // btnDelete
             // 
-            this.btnDelete.Location = new System.Drawing.Point(580, 738);
+            this.btnDelete.Location = new System.Drawing.Point(343, 228);
+            this.btnDelete.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(178, 31);
+            this.btnDelete.Size = new System.Drawing.Size(119, 21);
             this.btnDelete.TabIndex = 11;
             this.btnDelete.Text = "Delete Employee";
             this.btnDelete.UseVisualStyleBackColor = true;
             this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
             // 
-            // employeeManagement
+            // EmployeeManagement
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1092, 801);
+            this.ClientSize = new System.Drawing.Size(904, 511);
             this.Controls.Add(this.btnDelete);
             this.Controls.Add(this.btnUpdate);
             this.Controls.Add(this.btnAddStaff);
@@ -169,6 +181,7 @@ namespace ITP4915M_Group11
             this.Controls.Add(this.lblName);
             this.Controls.Add(this.lblStaffID);
             this.Controls.Add(this.dgvStaff);
+            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "EmployeeManagement";
             this.Text = "EmployeeManagement";
             this.Load += new System.EventHandler(this.Form3_Load);
