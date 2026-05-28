@@ -29,17 +29,6 @@
         private void InitializeComponent()
         {
             this.pnlMainContainer = new System.Windows.Forms.Panel();
-            this.pnlSidebar = new System.Windows.Forms.Panel();
-            this.btnLogout = new System.Windows.Forms.Button();
-            this.btnAfterService = new System.Windows.Forms.Button();
-            this.btnProcurement = new System.Windows.Forms.Button();
-            this.btnMaterialRequest = new System.Windows.Forms.Button();
-            this.btnGoodsReceived = new System.Windows.Forms.Button();
-            this.btnStaff = new System.Windows.Forms.Button();
-            this.btnProduct = new System.Windows.Forms.Button();
-            this.btnOrder = new System.Windows.Forms.Button();
-            this.btnOrderProcessing = new System.Windows.Forms.Button();
-            this.lblWelcome = new System.Windows.Forms.Label();
             this.button1 = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
             this.label6 = new System.Windows.Forms.Label();
@@ -51,9 +40,20 @@
             this.label1 = new System.Windows.Forms.Label();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.dgvPOItems = new System.Windows.Forms.DataGridView();
+            this.pnlSidebar = new System.Windows.Forms.Panel();
+            this.btnLogout = new System.Windows.Forms.Button();
+            this.btnAfterService = new System.Windows.Forms.Button();
+            this.btnProcurement = new System.Windows.Forms.Button();
+            this.btnMaterialRequest = new System.Windows.Forms.Button();
+            this.btnGoodsReceived = new System.Windows.Forms.Button();
+            this.btnStaff = new System.Windows.Forms.Button();
+            this.btnProduct = new System.Windows.Forms.Button();
+            this.btnOrder = new System.Windows.Forms.Button();
+            this.btnOrderProcessing = new System.Windows.Forms.Button();
+            this.lblWelcome = new System.Windows.Forms.Label();
             this.pnlMainContainer.SuspendLayout();
-            this.pnlSidebar.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPOItems)).BeginInit();
+            this.pnlSidebar.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlMainContainer
@@ -71,10 +71,109 @@
             this.pnlMainContainer.Controls.Add(this.textBox1);
             this.pnlMainContainer.Controls.Add(this.dgvPOItems);
             this.pnlMainContainer.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pnlMainContainer.Location = new System.Drawing.Point(220, 0);
+            this.pnlMainContainer.Location = new System.Drawing.Point(330, 0);
+            this.pnlMainContainer.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.pnlMainContainer.Name = "pnlMainContainer";
-            this.pnlMainContainer.Size = new System.Drawing.Size(684, 511);
+            this.pnlMainContainer.Size = new System.Drawing.Size(1026, 766);
             this.pnlMainContainer.TabIndex = 48;
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(232, 548);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(140, 28);
+            this.button1.TabIndex = 58;
+            this.button1.Text = "Cancel";
+            this.button1.UseVisualStyleBackColor = true;
+            // 
+            // button2
+            // 
+            this.button2.Location = new System.Drawing.Point(72, 548);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(140, 28);
+            this.button2.TabIndex = 57;
+            this.button2.Text = "Search";
+            this.button2.UseVisualStyleBackColor = true;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(68, 315);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(50, 18);
+            this.label6.TabIndex = 56;
+            this.label6.Text = "Status";
+            // 
+            // comboBox2
+            // 
+            this.comboBox2.FormattingEnabled = true;
+            this.comboBox2.Location = new System.Drawing.Point(68, 336);
+            this.comboBox2.Name = "comboBox2";
+            this.comboBox2.Size = new System.Drawing.Size(121, 26);
+            this.comboBox2.TabIndex = 55;
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(69, 382);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(116, 18);
+            this.label11.TabIndex = 54;
+            this.label11.Text = "Delivery Date :";
+            // 
+            // dateTimePicker3
+            // 
+            this.dateTimePicker3.Location = new System.Drawing.Point(68, 404);
+            this.dateTimePicker3.Name = "dateTimePicker3";
+            this.dateTimePicker3.Size = new System.Drawing.Size(200, 29);
+            this.dateTimePicker3.TabIndex = 53;
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(68, 252);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(136, 18);
+            this.label9.TabIndex = 52;
+            this.label9.Text = "Dealer / Customer";
+            // 
+            // comboBox5
+            // 
+            this.comboBox5.FormattingEnabled = true;
+            this.comboBox5.Location = new System.Drawing.Point(68, 273);
+            this.comboBox5.Name = "comboBox5";
+            this.comboBox5.Size = new System.Drawing.Size(164, 26);
+            this.comboBox5.TabIndex = 51;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(72, 189);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(118, 18);
+            this.label1.TabIndex = 50;
+            this.label1.Text = "Enter OrderID :";
+            // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(68, 213);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(134, 29);
+            this.textBox1.TabIndex = 49;
+            // 
+            // dgvPOItems
+            // 
+            this.dgvPOItems.AllowUserToAddRows = false;
+            this.dgvPOItems.AllowUserToDeleteRows = false;
+            this.dgvPOItems.ColumnHeadersHeight = 34;
+            this.dgvPOItems.Location = new System.Drawing.Point(700, 192);
+            this.dgvPOItems.Name = "dgvPOItems";
+            this.dgvPOItems.ReadOnly = true;
+            this.dgvPOItems.RowHeadersWidth = 62;
+            this.dgvPOItems.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.dgvPOItems.Size = new System.Drawing.Size(260, 180);
+            this.dgvPOItems.TabIndex = 48;
+            this.dgvPOItems.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvPOItems_CellContentClick);
             // 
             // pnlSidebar
             // 
@@ -91,8 +190,9 @@
             this.pnlSidebar.Controls.Add(this.lblWelcome);
             this.pnlSidebar.Dock = System.Windows.Forms.DockStyle.Left;
             this.pnlSidebar.Location = new System.Drawing.Point(0, 0);
+            this.pnlSidebar.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.pnlSidebar.Name = "pnlSidebar";
-            this.pnlSidebar.Size = new System.Drawing.Size(220, 511);
+            this.pnlSidebar.Size = new System.Drawing.Size(330, 766);
             this.pnlSidebar.TabIndex = 49;
             // 
             // btnLogout
@@ -102,9 +202,10 @@
             this.btnLogout.FlatAppearance.BorderSize = 0;
             this.btnLogout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnLogout.ForeColor = System.Drawing.Color.White;
-            this.btnLogout.Location = new System.Drawing.Point(0, 461);
+            this.btnLogout.Location = new System.Drawing.Point(0, 691);
+            this.btnLogout.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnLogout.Name = "btnLogout";
-            this.btnLogout.Size = new System.Drawing.Size(220, 50);
+            this.btnLogout.Size = new System.Drawing.Size(330, 75);
             this.btnLogout.TabIndex = 9;
             this.btnLogout.Text = "登出";
             this.btnLogout.UseVisualStyleBackColor = false;
@@ -115,9 +216,10 @@
             this.btnAfterService.FlatAppearance.BorderSize = 0;
             this.btnAfterService.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnAfterService.ForeColor = System.Drawing.Color.White;
-            this.btnAfterService.Location = new System.Drawing.Point(0, 385);
+            this.btnAfterService.Location = new System.Drawing.Point(0, 581);
+            this.btnAfterService.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnAfterService.Name = "btnAfterService";
-            this.btnAfterService.Size = new System.Drawing.Size(220, 45);
+            this.btnAfterService.Size = new System.Drawing.Size(330, 68);
             this.btnAfterService.TabIndex = 7;
             this.btnAfterService.Text = "   ☎️ 客戶售後服務";
             this.btnAfterService.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -129,9 +231,10 @@
             this.btnProcurement.FlatAppearance.BorderSize = 0;
             this.btnProcurement.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnProcurement.ForeColor = System.Drawing.Color.White;
-            this.btnProcurement.Location = new System.Drawing.Point(0, 340);
+            this.btnProcurement.Location = new System.Drawing.Point(0, 513);
+            this.btnProcurement.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnProcurement.Name = "btnProcurement";
-            this.btnProcurement.Size = new System.Drawing.Size(220, 45);
+            this.btnProcurement.Size = new System.Drawing.Size(330, 68);
             this.btnProcurement.TabIndex = 6;
             this.btnProcurement.Text = "   📄 採購控制台";
             this.btnProcurement.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -143,9 +246,10 @@
             this.btnMaterialRequest.FlatAppearance.BorderSize = 0;
             this.btnMaterialRequest.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnMaterialRequest.ForeColor = System.Drawing.Color.White;
-            this.btnMaterialRequest.Location = new System.Drawing.Point(0, 295);
+            this.btnMaterialRequest.Location = new System.Drawing.Point(0, 445);
+            this.btnMaterialRequest.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnMaterialRequest.Name = "btnMaterialRequest";
-            this.btnMaterialRequest.Size = new System.Drawing.Size(220, 45);
+            this.btnMaterialRequest.Size = new System.Drawing.Size(330, 68);
             this.btnMaterialRequest.TabIndex = 5;
             this.btnMaterialRequest.Text = "   ⚠️ 工廠物料請求";
             this.btnMaterialRequest.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -157,9 +261,10 @@
             this.btnGoodsReceived.FlatAppearance.BorderSize = 0;
             this.btnGoodsReceived.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnGoodsReceived.ForeColor = System.Drawing.Color.White;
-            this.btnGoodsReceived.Location = new System.Drawing.Point(0, 250);
+            this.btnGoodsReceived.Location = new System.Drawing.Point(0, 377);
+            this.btnGoodsReceived.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnGoodsReceived.Name = "btnGoodsReceived";
-            this.btnGoodsReceived.Size = new System.Drawing.Size(220, 45);
+            this.btnGoodsReceived.Size = new System.Drawing.Size(330, 68);
             this.btnGoodsReceived.TabIndex = 4;
             this.btnGoodsReceived.Text = "   📥 倉儲收貨入庫";
             this.btnGoodsReceived.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -171,9 +276,10 @@
             this.btnStaff.FlatAppearance.BorderSize = 0;
             this.btnStaff.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnStaff.ForeColor = System.Drawing.Color.White;
-            this.btnStaff.Location = new System.Drawing.Point(0, 205);
+            this.btnStaff.Location = new System.Drawing.Point(0, 309);
+            this.btnStaff.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnStaff.Name = "btnStaff";
-            this.btnStaff.Size = new System.Drawing.Size(220, 45);
+            this.btnStaff.Size = new System.Drawing.Size(330, 68);
             this.btnStaff.TabIndex = 8;
             this.btnStaff.Text = "   👥 系統員工管理";
             this.btnStaff.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -185,9 +291,10 @@
             this.btnProduct.FlatAppearance.BorderSize = 0;
             this.btnProduct.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnProduct.ForeColor = System.Drawing.Color.White;
-            this.btnProduct.Location = new System.Drawing.Point(0, 160);
+            this.btnProduct.Location = new System.Drawing.Point(0, 241);
+            this.btnProduct.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnProduct.Name = "btnProduct";
-            this.btnProduct.Size = new System.Drawing.Size(220, 45);
+            this.btnProduct.Size = new System.Drawing.Size(330, 68);
             this.btnProduct.TabIndex = 3;
             this.btnProduct.Text = "   📦 產品零件維護";
             this.btnProduct.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -199,9 +306,10 @@
             this.btnOrder.FlatAppearance.BorderSize = 0;
             this.btnOrder.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnOrder.ForeColor = System.Drawing.Color.White;
-            this.btnOrder.Location = new System.Drawing.Point(0, 115);
+            this.btnOrder.Location = new System.Drawing.Point(0, 173);
+            this.btnOrder.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnOrder.Name = "btnOrder";
-            this.btnOrder.Size = new System.Drawing.Size(220, 45);
+            this.btnOrder.Size = new System.Drawing.Size(330, 68);
             this.btnOrder.TabIndex = 2;
             this.btnOrder.Text = "   🚚 物流送貨處理";
             this.btnOrder.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -213,9 +321,10 @@
             this.btnOrderProcessing.FlatAppearance.BorderSize = 0;
             this.btnOrderProcessing.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnOrderProcessing.ForeColor = System.Drawing.Color.White;
-            this.btnOrderProcessing.Location = new System.Drawing.Point(0, 70);
+            this.btnOrderProcessing.Location = new System.Drawing.Point(0, 105);
+            this.btnOrderProcessing.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnOrderProcessing.Name = "btnOrderProcessing";
-            this.btnOrderProcessing.Size = new System.Drawing.Size(220, 45);
+            this.btnOrderProcessing.Size = new System.Drawing.Size(330, 68);
             this.btnOrderProcessing.TabIndex = 1;
             this.btnOrderProcessing.Text = "   🛒 銷售落單管理";
             this.btnOrderProcessing.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -226,135 +335,25 @@
             this.lblWelcome.Dock = System.Windows.Forms.DockStyle.Top;
             this.lblWelcome.Font = new System.Drawing.Font("新細明體", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
             this.lblWelcome.Location = new System.Drawing.Point(0, 0);
-            this.lblWelcome.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblWelcome.Name = "lblWelcome";
-            this.lblWelcome.Size = new System.Drawing.Size(220, 70);
+            this.lblWelcome.Size = new System.Drawing.Size(330, 105);
             this.lblWelcome.TabIndex = 0;
             this.lblWelcome.Text = "歡迎回來，使用者";
             this.lblWelcome.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(155, 365);
-            this.button1.Margin = new System.Windows.Forms.Padding(2);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(93, 19);
-            this.button1.TabIndex = 58;
-            this.button1.Text = "Cancel";
-            this.button1.UseVisualStyleBackColor = true;
-            // 
-            // button2
-            // 
-            this.button2.Location = new System.Drawing.Point(48, 365);
-            this.button2.Margin = new System.Windows.Forms.Padding(2);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(93, 19);
-            this.button2.TabIndex = 57;
-            this.button2.Text = "Search";
-            this.button2.UseVisualStyleBackColor = true;
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(45, 210);
-            this.label6.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(32, 12);
-            this.label6.TabIndex = 56;
-            this.label6.Text = "Status";
-            // 
-            // comboBox2
-            // 
-            this.comboBox2.FormattingEnabled = true;
-            this.comboBox2.Location = new System.Drawing.Point(45, 224);
-            this.comboBox2.Margin = new System.Windows.Forms.Padding(2);
-            this.comboBox2.Name = "comboBox2";
-            this.comboBox2.Size = new System.Drawing.Size(82, 20);
-            this.comboBox2.TabIndex = 55;
-            // 
-            // label11
-            // 
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(46, 255);
-            this.label11.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(75, 12);
-            this.label11.TabIndex = 54;
-            this.label11.Text = "Delivery Date :";
-            // 
-            // dateTimePicker3
-            // 
-            this.dateTimePicker3.Location = new System.Drawing.Point(45, 269);
-            this.dateTimePicker3.Margin = new System.Windows.Forms.Padding(2);
-            this.dateTimePicker3.Name = "dateTimePicker3";
-            this.dateTimePicker3.Size = new System.Drawing.Size(135, 22);
-            this.dateTimePicker3.TabIndex = 53;
-            // 
-            // label9
-            // 
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(45, 168);
-            this.label9.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(89, 12);
-            this.label9.TabIndex = 52;
-            this.label9.Text = "Dealer / Customer";
-            // 
-            // comboBox5
-            // 
-            this.comboBox5.FormattingEnabled = true;
-            this.comboBox5.Location = new System.Drawing.Point(45, 182);
-            this.comboBox5.Margin = new System.Windows.Forms.Padding(2);
-            this.comboBox5.Name = "comboBox5";
-            this.comboBox5.Size = new System.Drawing.Size(111, 20);
-            this.comboBox5.TabIndex = 51;
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(48, 126);
-            this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(78, 12);
-            this.label1.TabIndex = 50;
-            this.label1.Text = "Enter OrderID :";
-            // 
-            // textBox1
-            // 
-            this.textBox1.Location = new System.Drawing.Point(45, 142);
-            this.textBox1.Margin = new System.Windows.Forms.Padding(2);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(91, 22);
-            this.textBox1.TabIndex = 49;
-            // 
-            // dgvPOItems
-            // 
-            this.dgvPOItems.AllowUserToAddRows = false;
-            this.dgvPOItems.AllowUserToDeleteRows = false;
-            this.dgvPOItems.ColumnHeadersHeight = 34;
-            this.dgvPOItems.Location = new System.Drawing.Point(467, 128);
-            this.dgvPOItems.Margin = new System.Windows.Forms.Padding(2);
-            this.dgvPOItems.Name = "dgvPOItems";
-            this.dgvPOItems.ReadOnly = true;
-            this.dgvPOItems.RowHeadersWidth = 62;
-            this.dgvPOItems.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvPOItems.Size = new System.Drawing.Size(173, 120);
-            this.dgvPOItems.TabIndex = 48;
-            // 
             // ViewOrders
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(904, 511);
+            this.ClientSize = new System.Drawing.Size(1356, 766);
             this.Controls.Add(this.pnlMainContainer);
             this.Controls.Add(this.pnlSidebar);
-            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "ViewOrders";
             this.Text = "ViewOrders";
             this.pnlMainContainer.ResumeLayout(false);
             this.pnlMainContainer.PerformLayout();
-            this.pnlSidebar.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvPOItems)).EndInit();
+            this.pnlSidebar.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }

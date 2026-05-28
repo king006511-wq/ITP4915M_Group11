@@ -1,32 +1,270 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
 using System.Data;
-using System.Data.SqlClient;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
     public partial class GoodsReceivedForm : Form
     {
+        // ==========================================
+        // 🔒 Database Configuration
+        // ==========================================
         private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+
+        // ==========================================
+        // 🎨 Modern UI Element Variables
+        // ==========================================
+        private TextBox txtGRNID, txtPOID, txtPartID, txtQty, txtStaffResource;
+        private DataGridView dgvPOItems;
+        private Button btnConfirmReceive;
 
         public GoodsReceivedForm()
         {
             InitializeComponent();
+            InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
+            GenerateGRNID();             // Generate unique runtime sequence ID
+            LoadActivePurchaseOrders();  // Ingest pending PO records
         }
 
-        private void GoodsReceivedForm_Load(object sender, EventArgs e)
+        #region 🎨 Dynamic Premium English UI Construction
+        private void InitializePremiumModernUI()
         {
-            GenerateGRNID();
-            LoadActivePurchaseOrders();
+            // 1. Clear old control leftovers to prevent overlapping or designer mismatches
+            this.Controls.Clear();
+
+            // 2. Main Window Settings
+            this.Text = "Premium Living Furniture - Goods Received Note (GRN) Control";
+            this.Size = new Size(1180, 750);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = Color.FromArgb(249, 250, 251);
+            this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+
+            // 3. Left Sidebar Navigation Panel
+            Panel pnlSidebar = new Panel
+            {
+                Width = 260,
+                Dock = DockStyle.Left,
+                BackColor = Color.FromArgb(15, 23, 42)
+            };
+
+            Label lblLogo = new Label
+            {
+                Text = "Premium Living\nFurniture",
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = Color.White,
+                Location = new Point(20, 25),
+                Size = new Size(220, 60),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            pnlSidebar.Controls.Add(lblLogo);
+
+            string[] menuItems = {
+                "🛒 Sales Order Mgmt",
+                "🚚 Delivery Logistics",
+                "🛋️ Product Maintenance",
+                "👔 HR / Staff Mgmt",
+                "📦 Goods Received (GRN)",
+                "🏭 Material Requests",
+                "📊 Procurement Control",
+                "🔧 Customer Support",
+                "🚪 Logout System"
+            };
+
+            int btnTop = 110;
+            foreach (string item in menuItems)
+            {
+                Button btnMenu = new Button
+                {
+                    Text = "  " + item,
+                    Top = btnTop,
+                    Left = 12,
+                    Size = new Size(236, 48),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Cursor = Cursors.Hand
+                };
+                btnMenu.FlatAppearance.BorderSize = 0;
+
+                // Highlight current Goods Received (GRN) workspace
+                if (item.Contains("Goods Received (GRN)"))
+                {
+                    btnMenu.BackColor = Color.FromArgb(37, 99, 235);
+                    btnMenu.ForeColor = Color.White;
+                }
+                else
+                {
+                    btnMenu.BackColor = Color.Transparent;
+                    btnMenu.ForeColor = Color.FromArgb(148, 163, 184);
+                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(51, 65, 85); btnMenu.ForeColor = Color.White; };
+                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184); };
+                }
+
+                // Cross-Module Sidebar Routing Execution
+                btnMenu.Click += (s, e) => {
+                    Form targetForm = null;
+                    try
+                    {
+                        if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
+                        else if (item.Contains("Delivery Logistics")) targetForm = new LogisticsForm();
+                        else if (item.Contains("Product Maintenance")) targetForm = new ProductManagement();
+                        else if (item.Contains("Staff Mgmt")) targetForm = new EmployeeManagement();
+                        else if (item.Contains("Material Requests")) targetForm = new RawMaterialRequestForm();
+                        else if (item.Contains("Procurement")) targetForm = new ProcurementForm();
+                        else if (item.Contains("Support")) targetForm = new AfterServiceForm();
+                        else if (item.Contains("Logout")) { Application.Restart(); return; }
+
+                        if (targetForm != null && !(targetForm is GoodsReceivedForm))
+                        {
+                            this.Hide();
+                            targetForm.FormClosed += (senderForm, args) => this.Show();
+                            targetForm.Show();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Navigation routing failed: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+                pnlSidebar.Controls.Add(btnMenu);
+                btnTop += 55;
+            }
+            this.Controls.Add(pnlSidebar);
+
+            // 4. Right Workspace Body
+            Panel pnlMain = new Panel
+            {
+                Location = new Point(260, 0),
+                Size = new Size(900, 750)
+            };
+            this.Controls.Add(pnlMain);
+
+            Label lblHeader = new Label
+            {
+                Text = "Warehouse Stock Ingestion & GRN Center",
+                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(30, 20),
+                AutoSize = true
+            };
+            pnlMain.Controls.Add(lblHeader);
+
+            // 5. GRN Ingestion Processing Panel (Left Input Box Card)
+            Panel pnlCard = new Panel
+            {
+                Location = new Point(30, 85),
+                Size = new Size(420, 600),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+            pnlMain.Controls.Add(pnlCard);
+
+            Label lblCardTitle = new Label
+            {
+                Text = "📋 Stock Ingestion Parameters",
+                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(37, 99, 235),
+                Location = new Point(20, 15),
+                AutoSize = true
+            };
+            pnlCard.Controls.Add(lblCardTitle);
+
+            int startY = 65;
+
+            // Form Input Blocks
+            txtGRNID = CreateStyledTextBox(pnlCard, ref startY, "Goods Received ID (GRN ID):", true);
+            txtPOID = CreateStyledTextBox(pnlCard, ref startY, "Selected Purchase Order ID (PO ID):", true);
+            txtPartID = CreateStyledTextBox(pnlCard, ref startY, "Part ID / Code:", true);
+            txtQty = CreateStyledTextBox(pnlCard, ref startY, "Ingestion Quantity (Qty):", false);
+            txtStaffResource = CreateStyledTextBox(pnlCard, ref startY, "Warehouse Staff ID *:", false);
+
+            startY += 10;
+
+            // Action Button
+            btnConfirmReceive = new Button
+            {
+                Text = "📥 Confirm Ingestion & Add Stock",
+                Location = new Point(20, startY),
+                Size = new Size(375, 48),
+                BackColor = Color.FromArgb(16, 185, 129), // Bright success emerald green
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnConfirmReceive.FlatAppearance.BorderSize = 0;
+            btnConfirmReceive.Click += btnConfirmReceive_Click;
+            pnlCard.Controls.Add(btnConfirmReceive);
+
+            // 6. Data Grid View Panel (Right-side pending selection list)
+            Label lblGridTitle = new Label
+            {
+                Text = "📦 Pending Active Purchase Orders",
+                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(480, 85),
+                AutoSize = true
+            };
+            pnlMain.Controls.Add(lblGridTitle);
+
+            dgvPOItems = new DataGridView
+            {
+                Location = new Point(480, 125),
+                Size = new Size(390, 560),
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                AllowUserToAddRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                GridColor = Color.FromArgb(241, 245, 249)
+            };
+
+            // Modern Interactive DataGridView Layout Specifications
+            dgvPOItems.EnableHeadersVisualStyles = false;
+            dgvPOItems.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
+            dgvPOItems.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvPOItems.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvPOItems.ColumnHeadersHeight = 38;
+            dgvPOItems.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            dgvPOItems.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
+            dgvPOItems.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+
+            // Switch event mapping to modern row selection change for high accuracy mapping
+            dgvPOItems.SelectionChanged += dgvPOItems_SelectionChanged;
+
+            pnlMain.Controls.Add(dgvPOItems);
         }
 
+        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
+        {
+            Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 375, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White };
+            if (readOnly)
+            {
+                txt.ReadOnly = true;
+                txt.BackColor = Color.FromArgb(241, 245, 249);
+            }
+            container.Controls.Add(lbl);
+            container.Controls.Add(txt);
+            topY += 65;
+            return txt;
+        }
+        #endregion
+
+        #region 📦 Core Warehouse Stock Ingestion Logic
         private void GenerateGRNID()
         {
             txtGRNID.Text = "GRN-" + DateTime.Now.ToString("yyyyMM") + "-" + DateTime.Now.ToString("ddHHmmss");
         }
 
-        // 載入未處理入庫的採購單
         private void LoadActivePurchaseOrders()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -34,10 +272,10 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 撈出所有目前非 'Received' 完成狀態的採購單明細
-                    string query = @"SELECT po.PO_ID AS '採購單號', po.SupplierID AS '供應商', 
-                                            li.PartID AS '零件編號', p.Name AS '零件名稱', 
-                                            li.Quantity AS '採購數量', po.Status AS '狀態'
+                    // Refactored with clean English column aliases matching structural schemas
+                    string query = @"SELECT po.PO_ID AS 'PO_ID', po.SupplierID AS 'Supplier_ID', 
+                                            li.PartID AS 'Part_ID', p.Name AS 'Part_Name', 
+                                            li.Quantity AS 'Quantity', po.Status AS 'Status'
                                      FROM purchase_order po
                                      JOIN po_lineitem li ON po.PO_ID = li.PO_ID
                                      JOIN product_part p ON li.PartID = p.PartID
@@ -49,40 +287,53 @@ namespace ITP4915M_Group11
                         adapter.Fill(dt);
                         dgvPOItems.DataSource = dt;
                     }
+
+                    // Explicitly define English headers inside visual UI grid
+                    if (dgvPOItems.Columns.Contains("PO_ID")) dgvPOItems.Columns["PO_ID"].HeaderText = "PO ID";
+                    if (dgvPOItems.Columns.Contains("Supplier_ID")) dgvPOItems.Columns["Supplier_ID"].HeaderText = "Supplier ID";
+                    if (dgvPOItems.Columns.Contains("Part_ID")) dgvPOItems.Columns["Part_ID"].HeaderText = "Part ID";
+                    if (dgvPOItems.Columns.Contains("Part_Name")) dgvPOItems.Columns["Part_Name"].HeaderText = "Part Name";
+                    if (dgvPOItems.Columns.Contains("Quantity")) dgvPOItems.Columns["Quantity"].HeaderText = "Order Qty";
+                    if (dgvPOItems.Columns.Contains("Status")) dgvPOItems.Columns["Status"].HeaderText = "Status";
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("載入採購單失敗: " + ex.Message, "系統錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to load active purchase orders:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 當點擊表格中的某一筆採購明細，自動回填到收貨確認區
-        private void dgvPOItems_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void dgvPOItems_SelectionChanged(object sender, EventArgs e)
         {
-            if (e.RowIndex >= 0)
+            // Safeguard active selections and load parameters securely into the staging panel
+            if (dgvPOItems.SelectedRows.Count > 0)
             {
-                DataGridViewRow row = dgvPOItems.Rows[e.RowIndex];
-                txtPOID.Text = row.Cells["採購單號"].Value?.ToString() ?? "";
-                txtPartID.Text = row.Cells["零件編號"].Value?.ToString() ?? "";
-                txtQty.Text = row.Cells["採購數量"].Value?.ToString() ?? "";
+                DataGridViewRow row = dgvPOItems.SelectedRows[0];
+                txtPOID.Text = row.Cells["PO_ID"].Value?.ToString() ?? "";
+                txtPartID.Text = row.Cells["Part_ID"].Value?.ToString() ?? "";
+                txtQty.Text = row.Cells["Quantity"].Value?.ToString() ?? "";
+            }
+            else
+            {
+                txtPOID.Clear();
+                txtPartID.Clear();
+                txtQty.Clear();
             }
         }
 
-        // =========================================================
-        // 📥 核心功能：收貨入庫處理 (產生 GRN + 增加產品庫存)
-        // =========================================================
         private void btnConfirmReceive_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtPOID.Text) || string.IsNullOrWhiteSpace(txtPartID.Text) || string.IsNullOrWhiteSpace(txtStaffResource.Text))
             {
-                MessageBox.Show("請填寫收貨倉管員編號，並在大表格中選取一筆欲點收的採購項目！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please fill in the Warehouse Staff ID and select an active Purchase Order item from the list!",
+                                "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!int.TryParse(txtQty.Text.Trim(), out int qty) || qty <= 0)
             {
-                MessageBox.Show("進貨數量不正確！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please specify a valid positive integer quantity for stock ingestion!",
+                                "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -100,7 +351,7 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            // 步驟 1: 寫入 Goods Received Note 主檔 (grn 表)
+                            // Step 1: Commit record parameter into Goods Received Note ledger
                             string insertGrnSql = "INSERT INTO grn (GRN_ID, PO_ID, StaffID, ReceivedDate) VALUES (@GRN_ID, @PO_ID, @StaffID, NOW())";
                             using (MySqlCommand cmdGrn = new MySqlCommand(insertGrnSql, conn, trans))
                             {
@@ -110,7 +361,7 @@ namespace ITP4915M_Group11
                                 cmdGrn.ExecuteNonQuery();
                             }
 
-                            // 步驟 2: 把收進來的貨，【補回加進去】庫存表 (product_part.StockLevel)
+                            // Step 2: Increment inventory reserves inside core components tables
                             string addStockSql = "UPDATE product_part SET StockLevel = StockLevel + @Qty WHERE PartID = @PartID";
                             using (MySqlCommand cmdStock = new MySqlCommand(addStockSql, conn, trans))
                             {
@@ -119,7 +370,7 @@ namespace ITP4915M_Group11
                                 cmdStock.ExecuteNonQuery();
                             }
 
-                            // 步驟 3: 更新該採購單狀態為 'Received' 代表已經收貨結案
+                            // Step 3: Flag Purchase Order reference log tracking as 'Received'
                             string updatePOSql = "UPDATE purchase_order SET Status = 'Received' WHERE PO_ID = @PO_ID";
                             using (MySqlCommand cmdPO = new MySqlCommand(updatePOSql, conn, trans))
                             {
@@ -128,9 +379,12 @@ namespace ITP4915M_Group11
                             }
 
                             trans.Commit();
-                            MessageBox.Show($"收貨單庫存增補成功！\n收貨單號: {grnID}\n產品 [{partID}] 庫存已成功追加 {qty} 件。", "入庫成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show($"Inventory ingestion transaction committed successfully!\n\n" +
+                                            $"GRN ID: {grnID}\n" +
+                                            $"Part ID [{partID}] stock level successfully increased by {qty} units.",
+                                            "Ingestion Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            // 清空與重製 UI
+                            // Reset view component states
                             txtPOID.Clear();
                             txtPartID.Clear();
                             txtQty.Clear();
@@ -139,16 +393,17 @@ namespace ITP4915M_Group11
                         }
                         catch (Exception ex)
                         {
-                            trans.Rollback();
-                            throw new Exception("入庫程序出錯，已啟動回滾機制。詳情: " + ex.Message);
+                            trans.Rollback(); // Execute safe operational state recovery rollback
+                            throw new Exception("Stock ingestion transaction aborted. Control rolled back safely. Details:\n" + ex.Message);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "資料庫錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(ex.Message, "Transaction Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
+        #endregion
     }
 }

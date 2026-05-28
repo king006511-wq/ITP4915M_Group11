@@ -26,5 +26,10 @@ namespace ITP4915M_Group11
         {
 
         }
+
+        private void dgvPOItems_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
     }
 }

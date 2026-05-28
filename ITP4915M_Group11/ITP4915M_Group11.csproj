@@ -131,7 +131,12 @@
     <Compile Include="LogisticsForm.Designer.cs">
       <DependentUpon>LogisticsForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="MySqlStubs.cs" />
+    <Compile Include="MainDashboard.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainDashboard.Designer.cs">
+      <DependentUpon>MainDashboard.cs</DependentUpon>
+    </Compile>
     <Compile Include="OrderManagementForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -194,6 +199,9 @@
     <EmbeddedResource Include="LogisticsForm.resx">
       <DependentUpon>LogisticsForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="MainDashboard.resx">
+      <DependentUpon>MainDashboard.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="OrderManagementForm.resx">
       <DependentUpon>OrderManagementForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -240,4 +248,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>taskkill /f /im ITP4915M_Group11.exe /fi "STATUS eq RUNNING" 2&gt;nul || exit 0</PreBuildEvent>
+  </PropertyGroup>
 </Project>
