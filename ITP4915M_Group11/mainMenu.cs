@@ -79,5 +79,15 @@ namespace ITP4915M_Group11
                 this.Close(); // 關閉主選單，回到登入畫面
             }
         }
+
+        private void lblWelcome_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pnlMainContainer_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
     }
 }
