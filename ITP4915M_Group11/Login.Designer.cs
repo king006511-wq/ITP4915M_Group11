@@ -37,6 +37,7 @@ namespace ITP4915M_Group11
             this.ClientSize = new System.Drawing.Size(900, 480);
             this.Name = "Login";
             this.Text = "Login";
+            this.Load += new System.EventHandler(this.Login_Load);
             this.ResumeLayout(false);
 
         }

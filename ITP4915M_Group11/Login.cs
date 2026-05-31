@@ -110,6 +110,11 @@ namespace ITP4915M_Group11
                 }
             };
         }
+
+        private void Login_Load(object sender, EventArgs e)
+        {
+
+        }
         #endregion
 
         // ==========================================
@@ -134,31 +139,42 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
 
-                    // Querying database to match valid staff credentials
-                    string loginQuery = "SELECT COUNT(*) FROM staff WHERE StaffID = @user AND Password = @pass";
+                    // ⭐⭐⭐ 更新 SQL：提取所需的使用者詳細資料 ⭐⭐⭐
+                    // 假設你的 `staff` Table 有 Name 同 Department 欄位
+                    string loginQuery = "SELECT StaffID, Name, Department FROM staff WHERE StaffID = @user AND Password = @pass";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
                     {
                         cmd.Parameters.AddWithValue("@user", inputUser);
                         cmd.Parameters.AddWithValue("@pass", inputPass);
 
-                        int count = Convert.ToInt32(cmd.ExecuteScalar());
-
-                        if (count > 0)
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
                         {
-                            MessageBox.Show("Authentication Success!\nWelcome back to the Premium Living ERP system.", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            if (reader.Read()) // 如果有資料返回，表示登入成功
+                            {
+                                // ⭐⭐⭐ 寫入全局 Session ⭐⭐⭐
+                                UserSession.LoggedInStaffID = reader["StaffID"].ToString();
 
-                            // Seamlessly swap forms
-                            MainDashboard dashboard = new MainDashboard();
-                            dashboard.Show();
-                            this.Hide();
-                        }
-                        else
-                        {
-                            MessageBox.Show("Access Denied:\nInvalid Staff ID or Password. Please try again.", "Authentication Failed", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                            txtPass.Clear();
-                            if (txtPass.Text == "") { txtPass.Text = "Enter Password..."; txtPass.ForeColor = Color.Gray; txtPass.PasswordChar = '\0'; }
-                            txtUser.Focus();
+                                // 預防資料庫有啲欄位未設定或叫法唔同，如果冇呢啲欄位，請將呢兩行註解，或對應返 Database 欄位名稱
+                                UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
+                                UserSession.LoggedInDepartment = reader["Department"] != DBNull.Value ? reader["Department"].ToString() : "Unknown";
+                                UserSession.LoginTime = DateTime.Now;
+
+                                MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName}.", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                // Seamlessly swap forms
+                                MainDashboard dashboard = new MainDashboard();
+                                dashboard.FormClosed += (s, args) => this.Close(); // 確保閂 Dashboard 嗰陣成個程式會結束
+                                dashboard.Show();
+                                this.Hide();
+                            }
+                            else // 冇資料返回，表示帳號或密碼錯誤
+                            {
+                                MessageBox.Show("Access Denied:\nInvalid Staff ID or Password. Please try again.", "Authentication Failed", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                                txtPass.Clear();
+                                if (txtPass.Text == "") { txtPass.Text = "Enter Password..."; txtPass.ForeColor = Color.Gray; txtPass.PasswordChar = '\0'; }
+                                txtUser.Focus();
+                            }
                         }
                     }
                 }

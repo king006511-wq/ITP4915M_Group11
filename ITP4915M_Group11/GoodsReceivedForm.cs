@@ -26,6 +26,9 @@ namespace ITP4915M_Group11
             InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
             GenerateGRNID();             // Generate unique runtime sequence ID
             LoadActivePurchaseOrders();  // Ingest pending PO records
+
+            // 確保 Form_Load 事件有綁定
+            this.Load += GoodsReceivedForm_Load;
         }
 
         #region 🎨 Dynamic Premium English UI Construction
@@ -256,6 +259,26 @@ namespace ITP4915M_Group11
             container.Controls.Add(txt);
             topY += 65;
             return txt;
+        }
+
+        // ⭐⭐⭐ 自動填寫 User Session 嘅代碼 ⭐⭐⭐
+        private void GoodsReceivedForm_Load(object sender, EventArgs e)
+        {
+            // 檢查系統係咪已經有登入紀錄
+            if (UserSession.IsLoggedIn)
+            {
+                // 將儲存咗嘅 ID 放入 txtStaffResource
+                txtStaffResource.Text = UserSession.LoggedInStaffID;
+
+                // 鎖死個 TextBox，防止使用者亂改搞到 Database Error
+                txtStaffResource.ReadOnly = true;
+                txtStaffResource.BackColor = Color.FromArgb(241, 245, 249); // 轉灰底色
+            }
+            else
+            {
+                // 如果你測試緊未寫好 Login，可以畀個假 ID 頂住先，唔會阻住你試 Run
+                // txtStaffResource.Text = "S001";
+            }
         }
         #endregion
 

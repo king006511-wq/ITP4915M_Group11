@@ -175,6 +175,7 @@
     <Compile Include="RawMaterialRequestForm.Designer.cs">
       <DependentUpon>RawMaterialRequestForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="UserSession.cs" />
     <Compile Include="ViewOrders.cs">
       <SubType>Form</SubType>
     </Compile>
