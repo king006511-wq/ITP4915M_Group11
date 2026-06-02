@@ -181,8 +181,8 @@ namespace ITP4915M_Group11
             // Delivery Note ID (Auto-generated)
             txtDispatchID = CreateStyledTextBox(pnlCard, ref startY, "Delivery Note ID (DN ID):", true);
 
-            // Driver Name Label & TextBox
-            txtDriverName = CreateStyledTextBox(pnlCard, ref startY, "Driver Name *:", false);
+            // Driver Name Label & TextBox (Acts as Delivery Address/Driver metadata fields)
+            txtDriverName = CreateStyledTextBox(pnlCard, ref startY, "Delivery Address *:", false);
 
             // Delivery Method ComboBox
             Label lblMethod = new Label { Text = "Delivery Method:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
@@ -290,7 +290,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT OrderID, CustomerID, OrderDate, Status FROM orders WHERE Status = 'Packed';";
+                    // FIXED: Changed table from 'orders' to 'salesorder'
+                    string query = "SELECT OrderID, CustomerID, OrderDate, Status FROM salesorder WHERE Status = 'Packed';";
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
@@ -317,7 +318,8 @@ namespace ITP4915M_Group11
             if (dgvPendingOrders.SelectedRows.Count > 0)
             {
                 string trackingSeq = DateTime.Now.ToString("mmssfff");
-                txtDispatchID.Text = "DN-" + DateTime.Now.ToString("yyyy") + "-" + trackingSeq.Substring(0, 5);
+                // System uses exact varchar limitations
+                txtDispatchID.Text = "DN" + DateTime.Now.ToString("yy") + trackingSeq.Substring(0, 5);
             }
             else
             {
@@ -336,7 +338,7 @@ namespace ITP4915M_Group11
 
             if (string.IsNullOrWhiteSpace(txtDriverName.Text))
             {
-                MessageBox.Show("Please specify the driver's name!",
+                MessageBox.Show("Please specify the delivery address!",
                                 "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
@@ -345,8 +347,7 @@ namespace ITP4915M_Group11
             string selectedOrderID = dgvPendingOrders.SelectedRows[0].Cells["OrderID"].Value.ToString();
             string deliveryNoteID = txtDispatchID.Text;
             DateTime estDeliveryDate = dtpEstDelivery.Value;
-            string deliveryMethod = cboMethod.Text;
-            string driverName = txtDriverName.Text.Trim();
+            string deliveryAddress = txtDriverName.Text.Trim();
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
@@ -355,21 +356,22 @@ namespace ITP4915M_Group11
                     conn.Open();
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
-                        string insertSql = @"INSERT INTO delivery_note 
-                                            (DeliveryNoteID, OrderID, EstDeliveryDate, DeliveryMethod, DriverName, Status) 
-                                            VALUES (@dnID, @orderID, @estDate, @method, @driver, 'Dispatched');";
+                        // FIXED: Table name to 'deliverynote' and aligned column signatures (DeliveryNoteID, OrderID, StaffID, DeliveryDate, DeliveryAddress, DeliveryStatus)
+                        string insertSql = @"INSERT INTO deliverynote 
+                                            (DeliveryNoteID, OrderID, StaffID, DeliveryDate, DeliveryAddress, DeliveryStatus) 
+                                            VALUES (@dnID, @orderID, 'S001', @estDate, @address, 'Dispatched');";
 
                         using (MySqlCommand cmdInsert = new MySqlCommand(insertSql, conn, trans))
                         {
                             cmdInsert.Parameters.AddWithValue("@dnID", deliveryNoteID);
                             cmdInsert.Parameters.AddWithValue("@orderID", selectedOrderID);
-                            cmdInsert.Parameters.AddWithValue("@estDate", estDeliveryDate.ToString("yyyy-MM-dd"));
-                            cmdInsert.Parameters.AddWithValue("@method", deliveryMethod);
-                            cmdInsert.Parameters.AddWithValue("@driver", driverName);
+                            cmdInsert.Parameters.AddWithValue("@estDate", estDeliveryDate);
+                            cmdInsert.Parameters.AddWithValue("@address", deliveryAddress);
                             cmdInsert.ExecuteNonQuery();
                         }
 
-                        string updateSql = "UPDATE orders SET Status = 'Dispatched' WHERE OrderID = @orderID;";
+                        // FIXED: Table updated from 'orders' to 'salesorder'
+                        string updateSql = "UPDATE salesorder SET Status = 'Dispatched' WHERE OrderID = @orderID;";
                         using (MySqlCommand cmdUpdate = new MySqlCommand(updateSql, conn, trans))
                         {
                             cmdUpdate.Parameters.AddWithValue("@orderID", selectedOrderID);
@@ -381,7 +383,7 @@ namespace ITP4915M_Group11
                         MessageBox.Show($"Delivery Note Generated Successfully!\n\n" +
                                         $"DN ID: {deliveryNoteID}\n" +
                                         $"Order ID: {selectedOrderID}\n\n" +
-                                        $"The system has automatically outputted the Delivery Note and Receipt Note.",
+                                        $"The system has automatically outputted the Delivery Note.",
                                         "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                         txtDriverName.Clear();

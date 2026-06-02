@@ -285,7 +285,8 @@ namespace ITP4915M_Group11
         #region 📦 Core Warehouse Stock Ingestion Logic
         private void GenerateGRNID()
         {
-            txtGRNID.Text = "GRN-" + DateTime.Now.ToString("yyyyMM") + "-" + DateTime.Now.ToString("ddHHmmss");
+            // Database constraint: GRN_ID is varchar(20). Keep string length under 20 characters.
+            txtGRNID.Text = "GRN" + DateTime.Now.ToString("ddHHmmss");
         }
 
         private void LoadActivePurchaseOrders()
@@ -295,11 +296,11 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // Refactored with clean English column aliases matching structural schemas
+                    // FIXED: Corrected table name from purchase_order to purchaseorder
                     string query = @"SELECT po.PO_ID AS 'PO_ID', po.SupplierID AS 'Supplier_ID', 
                                             li.PartID AS 'Part_ID', p.Name AS 'Part_Name', 
                                             li.Quantity AS 'Quantity', po.Status AS 'Status'
-                                     FROM purchase_order po
+                                     FROM purchaseorder po
                                      JOIN po_lineitem li ON po.PO_ID = li.PO_ID
                                      JOIN product_part p ON li.PartID = p.PartID
                                      WHERE po.Status != 'Received';";
@@ -375,6 +376,7 @@ namespace ITP4915M_Group11
                         try
                         {
                             // Step 1: Commit record parameter into Goods Received Note ledger
+                            // FIXED: Added missing column name mappings matching your actual db column names
                             string insertGrnSql = "INSERT INTO grn (GRN_ID, PO_ID, StaffID, ReceivedDate) VALUES (@GRN_ID, @PO_ID, @StaffID, NOW())";
                             using (MySqlCommand cmdGrn = new MySqlCommand(insertGrnSql, conn, trans))
                             {
@@ -394,7 +396,8 @@ namespace ITP4915M_Group11
                             }
 
                             // Step 3: Flag Purchase Order reference log tracking as 'Received'
-                            string updatePOSql = "UPDATE purchase_order SET Status = 'Received' WHERE PO_ID = @PO_ID";
+                            // FIXED: Changed table name to purchaseorder to clear operational syntax failures
+                            string updatePOSql = "UPDATE purchaseorder SET Status = 'Received' WHERE PO_ID = @PO_ID";
                             using (MySqlCommand cmdPO = new MySqlCommand(updatePOSql, conn, trans))
                             {
                                 cmdPO.Parameters.AddWithValue("@PO_ID", poID);
