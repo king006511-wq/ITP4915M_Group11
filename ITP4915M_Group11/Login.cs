@@ -141,7 +141,7 @@ namespace ITP4915M_Group11
 
                     // ⭐⭐⭐ 更新 SQL：提取所需的使用者詳細資料 ⭐⭐⭐
                     // 假設你的 `staff` Table 有 Name 同 Department 欄位
-                    string loginQuery = "SELECT StaffID, Name, Department FROM staff WHERE StaffID = @user AND Password = @pass";
+                    string loginQuery = "SELECT StaffID, Name, Password FROM staff WHERE StaffID = @user AND Password = @pass";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
                     {
@@ -157,7 +157,7 @@ namespace ITP4915M_Group11
 
                                 // 預防資料庫有啲欄位未設定或叫法唔同，如果冇呢啲欄位，請將呢兩行註解，或對應返 Database 欄位名稱
                                 UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
-                                UserSession.LoggedInDepartment = reader["Department"] != DBNull.Value ? reader["Department"].ToString() : "Unknown";
+                                UserSession.LoggedInDepartment = reader["Password"] != DBNull.Value ? reader["Password"].ToString() : "Unknown";
                                 UserSession.LoginTime = DateTime.Now;
 
                                 MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName}.", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
