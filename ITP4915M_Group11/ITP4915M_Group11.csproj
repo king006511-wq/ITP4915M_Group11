@@ -101,18 +101,6 @@
     <Compile Include="AfterServiceForm.Designer.cs">
       <DependentUpon>AfterServiceForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="CreateOrder.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="CreateOrder.Designer.cs">
-      <DependentUpon>CreateOrder.cs</DependentUpon>
-    </Compile>
-    <Compile Include="EditOrder.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="EditOrder.Designer.cs">
-      <DependentUpon>EditOrder.cs</DependentUpon>
-    </Compile>
     <Compile Include="employeeManagement.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -161,12 +149,6 @@
     <Compile Include="Login.Designer.cs">
       <DependentUpon>Login.cs</DependentUpon>
     </Compile>
-    <Compile Include="mainMenu.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="mainMenu.Designer.cs">
-      <DependentUpon>mainMenu.cs</DependentUpon>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RawMaterialRequestForm.cs">
@@ -184,12 +166,6 @@
     </Compile>
     <EmbeddedResource Include="AfterServiceForm.resx">
       <DependentUpon>AfterServiceForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="CreateOrder.resx">
-      <DependentUpon>CreateOrder.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="EditOrder.resx">
-      <DependentUpon>EditOrder.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="employeeManagement.resx">
       <DependentUpon>employeeManagement.cs</DependentUpon>
@@ -215,9 +191,6 @@
     <EmbeddedResource Include="Login.resx">
       <DependentUpon>Login.cs</DependentUpon>
       <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <EmbeddedResource Include="mainMenu.resx">
-      <DependentUpon>mainMenu.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
