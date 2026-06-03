@@ -91,11 +91,20 @@ namespace ITP4915M_Group11
                 };
                 btnMenu.FlatAppearance.BorderSize = 0;
 
-                // 🌟 當前頁面：高亮顯示 Procurement Control
+                // 🌟 當前頁面：高亮顯示 Procurement Control；Logout 顯示為危險紅
                 if (item.Contains("Procurement Control"))
                 {
                     btnMenu.BackColor = Color.FromArgb(37, 99, 235); // 寶藍色
                     btnMenu.ForeColor = Color.White;
+                }
+                else if (item.Contains("Logout") || item.Contains("Logout System"))
+                {
+                    // 使用指定的紅色 (239,68,68)
+                    btnMenu.BackColor = Color.FromArgb(239, 68, 68);
+                    btnMenu.ForeColor = Color.White;
+                    // 較淺的 hover 效果
+                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(220, 38, 38); };
+                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.FromArgb(239, 68, 68); };
                 }
                 else
                 {
