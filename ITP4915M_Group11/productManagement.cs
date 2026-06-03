@@ -48,11 +48,18 @@ namespace ITP4915M_Group11
                 btnMenu.FlatAppearance.BorderSize = 0;
                 btnMenu.FlatAppearance.MouseOverBackColor = Color.FromArgb(31, 41, 55);
 
+
                 if (item.Contains("Product Maintenance"))
                 {
                     btnMenu.BackColor = Color.FromArgb(37, 99, 235);
                     btnMenu.ForeColor = Color.White;
                     btnMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                }
+                else if (item.Contains("Logout"))
+                {
+                    btnMenu.BackColor = Color.FromArgb(239, 68, 68);
+                    btnMenu.ForeColor = Color.White;
+                    btnMenu.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
                 }
 
                 btnMenu.Click += (s, e) => {

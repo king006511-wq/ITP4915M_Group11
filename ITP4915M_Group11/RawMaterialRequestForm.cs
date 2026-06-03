@@ -57,10 +57,16 @@ namespace ITP4915M_Group11
                 Button btnMenu = new Button { Text = "  " + item, Top = btnTop, Left = 12, Size = new Size(236, 48), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.Hand };
                 btnMenu.FlatAppearance.BorderSize = 0;
 
-                // Highlight current active module
+                // Highlight current active module; Logout shown as danger red
                 if (item.Contains("Material Requests"))
                 {
                     btnMenu.BackColor = Color.FromArgb(37, 99, 235); btnMenu.ForeColor = Color.White;
+                }
+                else if (item.Contains("Logout"))
+                {
+                    btnMenu.BackColor = Color.FromArgb(239, 68, 68); btnMenu.ForeColor = Color.White;
+                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(220, 38, 38); };
+                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.FromArgb(239, 68, 68); };
                 }
                 else
                 {

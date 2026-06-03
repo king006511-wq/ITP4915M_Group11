@@ -91,11 +91,18 @@ namespace ITP4915M_Group11
                 };
                 btnMenu.FlatAppearance.BorderSize = 0;
 
-                // Highlight current HR / Staff Management workspace
+                // Highlight current HR / Staff Management workspace; Logout shown as danger red
                 if (item.Contains("HR / Staff Mgmt"))
                 {
                     btnMenu.BackColor = Color.FromArgb(37, 99, 235);
                     btnMenu.ForeColor = Color.White;
+                }
+                else if (item.Contains("Logout"))
+                {
+                    btnMenu.BackColor = Color.FromArgb(239, 68, 68);
+                    btnMenu.ForeColor = Color.White;
+                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(220, 38, 38); };
+                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.FromArgb(239, 68, 68); };
                 }
                 else
                 {
