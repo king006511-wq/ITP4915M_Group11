@@ -12,6 +12,7 @@ namespace ITP4915M_Group11
         // 🔒 Database Configuration
         // ==========================================
         private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private DataTable originalComplaintsTable = new DataTable();
 
         // ==========================================
         // 🎨 Modern UI Element Variables
@@ -26,6 +27,7 @@ namespace ITP4915M_Group11
             InitializeComponent();
             InitializePremiumModernUI();
             SetupDropdowns();
+            EnsureComplaintTableExists(); // 🛠️ Automatically creates the missing schema from the SQL dump
             GenerateNewTicketID();
             LoadComplaints();
         }
@@ -129,9 +131,10 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(cboStatus);
             startY += 75;
 
-            // Multiline Description Box
-            Label lblDesc = new Label { Text = "Complaint Description / Notes *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            // Description Box transformed into an active Real-time History Filter
+            Label lblDesc = new Label { Text = "🔍 Live Filter History (Type ID to search):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235) };
             txtDescription = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 90, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            txtDescription.TextChanged += txtDescription_TextChanged; // Real-time search connection
             pnlCard.Controls.Add(lblDesc);
             pnlCard.Controls.Add(txtDescription);
             startY += 125;
@@ -166,7 +169,8 @@ namespace ITP4915M_Group11
 
         private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
         {
-            Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            Label lbl = new Label { Text = labelText, Location = Point.Empty, AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            lbl.Location = new Point(20, topY);
             TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
             container.Controls.Add(lbl); container.Controls.Add(txt);
@@ -187,6 +191,37 @@ namespace ITP4915M_Group11
             txtComplaintID.Text = "COMP-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
         }
 
+        // 🛠️ Structural Integrity Protection: Builds missing schema layout automatically
+        private void EnsureComplaintTableExists()
+        {
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string createTableQuery = @"
+                        CREATE TABLE IF NOT EXISTS `complaint` (
+                          `ComplaintID` varchar(30) NOT NULL,
+                          `CustomerID` varchar(15) NOT NULL,
+                          `OrderID` varchar(20) DEFAULT NULL,
+                          `Date` datetime NOT NULL,
+                          `Status` varchar(20) NOT NULL,
+                          PRIMARY KEY (`ComplaintID`),
+                          FOREIGN KEY (`CustomerID`) REFERENCES `customer` (`CustomerID`),
+                          FOREIGN KEY (`OrderID`) REFERENCES `orders` (`OrderID`)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+                    using (MySqlCommand cmd = new MySqlCommand(createTableQuery, conn))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to verify system tables:\n" + ex.Message, "Database Initialization Alert", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
         private void LoadComplaints()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -194,22 +229,41 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT ComplaintID, CustomerID, OrderID, Description, ResolutionStatus FROM complaint ORDER BY ComplaintDate DESC";
+                    string query = "SELECT ComplaintID, CustomerID, OrderID, Date, Status FROM complaint ORDER BY Date DESC";
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
-                        DataTable dt = new DataTable();
-                        adapter.Fill(dt);
-                        dgvComplaints.DataSource = dt;
+                        originalComplaintsTable = new DataTable();
+                        adapter.Fill(originalComplaintsTable);
+                        dgvComplaints.DataSource = originalComplaintsTable;
                     }
 
                     // English Header Mapping
                     if (dgvComplaints.Columns.Contains("ComplaintID")) dgvComplaints.Columns["ComplaintID"].HeaderText = "Ticket ID";
                     if (dgvComplaints.Columns.Contains("CustomerID")) dgvComplaints.Columns["CustomerID"].HeaderText = "Customer ID";
-                    if (dgvComplaints.Columns.Contains("ResolutionStatus")) dgvComplaints.Columns["ResolutionStatus"].HeaderText = "Status";
-                    if (dgvComplaints.Columns.Contains("OrderID")) dgvComplaints.Columns["OrderID"].Visible = false; // Hide from grid to save space
-                    if (dgvComplaints.Columns.Contains("Description")) dgvComplaints.Columns["Description"].Visible = false; // Hide long text from grid
+                    if (dgvComplaints.Columns.Contains("OrderID")) dgvComplaints.Columns["OrderID"].HeaderText = "Order ID";
+                    if (dgvComplaints.Columns.Contains("Date")) dgvComplaints.Columns["Date"].HeaderText = "Created Date";
+                    if (dgvComplaints.Columns.Contains("Status")) dgvComplaints.Columns["Status"].HeaderText = "Status";
                 }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Database Load Error: " + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void txtDescription_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvComplaints.DataSource is DataTable dt)
+            {
+                string keyword = txtDescription.Text.Trim().Replace("'", "''");
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    dt.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    dt.DefaultView.RowFilter = string.Format("ComplaintID LIKE '%{0}%' OR CustomerID LIKE '%{0}%' OR OrderID LIKE '%{0}%'", keyword);
+                }
             }
         }
 
@@ -221,18 +275,20 @@ namespace ITP4915M_Group11
                 txtComplaintID.Text = row.Cells["ComplaintID"].Value?.ToString() ?? "";
                 txtCustomerID.Text = row.Cells["CustomerID"].Value?.ToString() ?? "";
                 txtOrderID.Text = row.Cells["OrderID"].Value?.ToString() ?? "";
-                txtDescription.Text = row.Cells["Description"].Value?.ToString() ?? "";
 
-                string status = row.Cells["ResolutionStatus"].Value?.ToString();
+                string status = row.Cells["Status"].Value?.ToString();
                 if (cboStatus.Items.Contains(status)) cboStatus.Text = status;
             }
         }
 
         private void btnSubmitComplaint_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtCustomerID.Text) || string.IsNullOrWhiteSpace(txtDescription.Text) || string.IsNullOrWhiteSpace(cboStatus.Text))
+            string customerID = txtCustomerID.Text.Trim();
+            string orderID = txtOrderID.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(customerID) || string.IsNullOrWhiteSpace(cboStatus.Text))
             {
-                MessageBox.Show("Please provide at least the Customer ID, Resolution Status, and Complaint Description!", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please provide at least the Customer ID and Resolution Status!", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -241,17 +297,43 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // Powerful UPSERT statement (Insert if new, Update if exists)
-                    string sql = @"INSERT INTO complaint (ComplaintID, CustomerID, OrderID, ComplaintDate, Description, ResolutionStatus) 
-                                   VALUES (@CID, @CustID, @OID, NOW(), @Desc, @Status)
-                                   ON DUPLICATE KEY UPDATE ResolutionStatus = @Status, Description = @Desc, OrderID = @OID;";
+
+                    // Verification Check: Customer presence inside base schema records
+                    string checkCustSql = "SELECT COUNT(*) FROM customer WHERE CustomerID = @CustID";
+                    using (MySqlCommand cmdCheckCust = new MySqlCommand(checkCustSql, conn))
+                    {
+                        cmdCheckCust.Parameters.AddWithValue("@CustID", customerID);
+                        if (Convert.ToInt32(cmdCheckCust.ExecuteScalar()) == 0)
+                        {
+                            MessageBox.Show($"Customer ID '{customerID}' does not exist inside our system records!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
+                    // Verification Check: Order reference presence consistency if typed
+                    if (!string.IsNullOrWhiteSpace(orderID))
+                    {
+                        string checkOrderSql = "SELECT COUNT(*) FROM orders WHERE OrderID = @OrderID";
+                        using (MySqlCommand cmdCheckOrder = new MySqlCommand(checkOrderSql, conn))
+                        {
+                            cmdCheckOrder.Parameters.AddWithValue("@OrderID", orderID);
+                            if (Convert.ToInt32(cmdCheckOrder.ExecuteScalar()) == 0)
+                            {
+                                MessageBox.Show($"Associated Order ID '{orderID}' does not exist inside our records! Leave blank or provide a valid code mapping.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                    }
+
+                    string sql = @"INSERT INTO complaint (ComplaintID, CustomerID, OrderID, Date, Status) 
+                                   VALUES (@CID, @CustID, @OID, NOW(), @Status)
+                                   ON DUPLICATE KEY UPDATE Status = @Status, OrderID = @OID;";
 
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("@CID", txtComplaintID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@CustID", txtCustomerID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@OID", string.IsNullOrWhiteSpace(txtOrderID.Text) ? (object)DBNull.Value : txtOrderID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@Desc", txtDescription.Text.Trim());
+                        cmd.Parameters.AddWithValue("@CustID", customerID);
+                        cmd.Parameters.AddWithValue("@OID", string.IsNullOrWhiteSpace(orderID) ? (object)DBNull.Value : orderID);
                         cmd.Parameters.AddWithValue("@Status", cboStatus.Text);
                         cmd.ExecuteNonQuery();
                     }
@@ -271,7 +353,7 @@ namespace ITP4915M_Group11
             txtDescription.Clear();
             cboStatus.SelectedIndex = -1;
             dgvComplaints.ClearSelection();
-            GenerateNewTicketID(); // Regenerate a fresh unique ID for a new complaint
+            GenerateNewTicketID();
         }
         #endregion
     }

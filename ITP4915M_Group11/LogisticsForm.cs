@@ -21,6 +21,7 @@ namespace ITP4915M_Group11
         private DateTimePicker dtpEstDelivery;
         private DataGridView dgvPendingOrders;
         private Button btnGenerateDeliveryNote;
+        private Button btnCreateQuotation; // ✨ Added for Quotation Feature
 
         public LogisticsForm()
         {
@@ -38,7 +39,7 @@ namespace ITP4915M_Group11
 
             // 2. Main Window Settings
             this.Text = "Premium Living Furniture - Delivery Logistics Control";
-            this.Size = new Size(1180, 750);
+            this.Size = new Size(1180, 780); // Slightly increased height to elegantly fit the new button
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
@@ -166,7 +167,7 @@ namespace ITP4915M_Group11
             Panel pnlCard = new Panel
             {
                 Location = new Point(30, 85),
-                Size = new Size(420, 600),
+                Size = new Size(420, 620), // Height fine-tuned for extra button
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -188,7 +189,7 @@ namespace ITP4915M_Group11
             // Delivery Note ID (Auto-generated)
             txtDispatchID = CreateStyledTextBox(pnlCard, ref startY, "Delivery Note ID (DN ID):", true);
 
-            // Driver Name Label & TextBox (Acts as Delivery Address/Driver metadata fields)
+            // Delivery Address Input
             txtDriverName = CreateStyledTextBox(pnlCard, ref startY, "Delivery Address *:", false);
 
             // Delivery Method ComboBox
@@ -203,14 +204,14 @@ namespace ITP4915M_Group11
             dtpEstDelivery = new DateTimePicker { Location = new Point(20, startY + 22), Width = 375, Font = new Font("Segoe UI", 10.5F), Format = DateTimePickerFormat.Short };
             pnlCard.Controls.Add(lblDate);
             pnlCard.Controls.Add(dtpEstDelivery);
-            startY += 85;
+            startY += 75;
 
-            // Action Button
+            // Action Button 1: Generate Delivery Note
             btnGenerateDeliveryNote = new Button
             {
                 Text = "🚚 Generate Delivery Note",
                 Location = new Point(20, startY),
-                Size = new Size(375, 48),
+                Size = new Size(375, 45),
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -220,6 +221,23 @@ namespace ITP4915M_Group11
             btnGenerateDeliveryNote.FlatAppearance.BorderSize = 0;
             btnGenerateDeliveryNote.Click += btnGenerateDeliveryNote_Click;
             pnlCard.Controls.Add(btnGenerateDeliveryNote);
+            startY += 55;
+
+            // ✨ Action Button 2: Create Quotation Function Feature
+            btnCreateQuotation = new Button
+            {
+                Text = "📄 Create Order Quotation",
+                Location = new Point(20, startY),
+                Size = new Size(375, 45),
+                BackColor = Color.FromArgb(79, 70, 229), // Elite Indigo Theme
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCreateQuotation.FlatAppearance.BorderSize = 0;
+            btnCreateQuotation.Click += btnCreateQuotation_Click;
+            pnlCard.Controls.Add(btnCreateQuotation);
 
             // 6. Data Grid View Panel (Right-side list)
             Label lblGridTitle = new Label
@@ -277,7 +295,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 📦 Core Logistics Functional Logic
+        #region 📦 Core Logistics & Quotation Functional Logic
         private void SetupDispatchControls()
         {
             cboMethod.Items.Clear();
@@ -297,8 +315,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // FIXED: Changed table from 'orders' to 'salesorder'
-                    string query = "SELECT OrderID, CustomerID, OrderDate, Status FROM salesorder WHERE Status = 'Packed';";
+                    // CORRECTED: Restored query to use 'orders' as defined in premium_living_db structure
+                    string query = "SELECT OrderID, CustomerID, OrderDate, Status, TotalAmount FROM orders WHERE Status = 'Packed';";
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
@@ -307,11 +325,11 @@ namespace ITP4915M_Group11
                         dgvPendingOrders.DataSource = dt;
                     }
 
-                    // Pure English Header Customization
                     if (dgvPendingOrders.Columns.Contains("OrderID")) dgvPendingOrders.Columns["OrderID"].HeaderText = "Order ID";
                     if (dgvPendingOrders.Columns.Contains("CustomerID")) dgvPendingOrders.Columns["CustomerID"].HeaderText = "Customer ID";
                     if (dgvPendingOrders.Columns.Contains("OrderDate")) dgvPendingOrders.Columns["OrderDate"].HeaderText = "Order Date";
                     if (dgvPendingOrders.Columns.Contains("Status")) dgvPendingOrders.Columns["Status"].HeaderText = "Status";
+                    if (dgvPendingOrders.Columns.Contains("TotalAmount")) dgvPendingOrders.Columns["TotalAmount"].HeaderText = "Total Amount ($)";
                 }
                 catch (Exception ex)
                 {
@@ -325,7 +343,6 @@ namespace ITP4915M_Group11
             if (dgvPendingOrders.SelectedRows.Count > 0)
             {
                 string trackingSeq = DateTime.Now.ToString("mmssfff");
-                // System uses exact varchar limitations
                 txtDispatchID.Text = "DN" + DateTime.Now.ToString("yy") + trackingSeq.Substring(0, 5);
             }
             else
@@ -350,7 +367,6 @@ namespace ITP4915M_Group11
                 return;
             }
 
-            // Secure retrieval using database raw columns
             string selectedOrderID = dgvPendingOrders.SelectedRows[0].Cells["OrderID"].Value.ToString();
             string deliveryNoteID = txtDispatchID.Text;
             DateTime estDeliveryDate = dtpEstDelivery.Value;
@@ -363,10 +379,10 @@ namespace ITP4915M_Group11
                     conn.Open();
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
-                        // FIXED: Table name to 'deliverynote' and aligned column signatures (DeliveryNoteID, OrderID, StaffID, DeliveryDate, DeliveryAddress, DeliveryStatus)
-                        string insertSql = @"INSERT INTO deliverynote 
-                                            (DeliveryNoteID, OrderID, StaffID, DeliveryDate, DeliveryAddress, DeliveryStatus) 
-                                            VALUES (@dnID, @orderID, 'S001', @estDate, @address, 'Dispatched');";
+                        // CORRECTED: Aligned query signature with actual database schema (4 columns instead of 6 columns)
+                        string insertSql = @"INSERT INTO delivery_note 
+                                            (DeliveryNoteID, OrderID, DeliveryDate, DeliveryAddress) 
+                                            VALUES (@dnID, @orderID, @estDate, @address);";
 
                         using (MySqlCommand cmdInsert = new MySqlCommand(insertSql, conn, trans))
                         {
@@ -377,8 +393,8 @@ namespace ITP4915M_Group11
                             cmdInsert.ExecuteNonQuery();
                         }
 
-                        // FIXED: Table updated from 'orders' to 'salesorder'
-                        string updateSql = "UPDATE salesorder SET Status = 'Dispatched' WHERE OrderID = @orderID;";
+                        // CORRECTED: Updated table from 'salesorder' back to 'orders'
+                        string updateSql = "UPDATE orders SET Status = 'Dispatched' WHERE OrderID = @orderID;";
                         using (MySqlCommand cmdUpdate = new MySqlCommand(updateSql, conn, trans))
                         {
                             cmdUpdate.Parameters.AddWithValue("@orderID", selectedOrderID);
@@ -400,6 +416,76 @@ namespace ITP4915M_Group11
                 catch (Exception ex)
                 {
                     MessageBox.Show("Transaction execution failed:\n" + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        // ✨ ✨ New Core Function: Generate Quotation Calculation Module
+        private void btnCreateQuotation_Click(object sender, EventArgs e)
+        {
+            if (dgvPendingOrders.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select an item from the list to create a quote!", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string orderID = dgvPendingOrders.SelectedRows[0].Cells["OrderID"].Value.ToString();
+            string customerID = dgvPendingOrders.SelectedRows[0].Cells["CustomerID"].Value.ToString();
+            decimal baseAmount = Convert.ToDecimal(dgvPendingOrders.SelectedRows[0].Cells["TotalAmount"].Value);
+
+            string customerName = "Unknown Customer";
+            string customerType = "B2C"; // Fallback default value
+
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    // Fetch details live from matching records to customize calculation metrics
+                    string customerQuery = "SELECT Name, Type FROM customer WHERE CustomerID = @custID;";
+                    using (MySqlCommand cmd = new MySqlCommand(customerQuery, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@custID", customerID);
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                customerName = reader["Name"].ToString();
+                                customerType = reader["Type"].ToString();
+                            }
+                        }
+                    }
+
+                    // Strategic Rule Calculation Engine
+                    decimal discountRate = (customerType == "B2B") ? 0.10m : 0.00m; // 10% commercial rebate adjustment 
+                    decimal discountAmount = baseAmount * discountRate;
+                    decimal quoteFinalTotal = baseAmount - discountAmount;
+
+                    // Simulated System Form Generation Document View
+                    string quoteSummary = $"========================================\n" +
+                                          $"       PREMIUM LIVING FURNITURE LTD      \n" +
+                                          $"            OFFICIAL QUOTATION          \n" +
+                                          $"========================================\n" +
+                                          $"Quote Reference: QT-{DateTime.Now.ToString("yyyyMMdd")}-{orderID.Substring(orderID.Length - 4)}\n" +
+                                          $"Date Generated: {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}\n\n" +
+                                          $"Client ID: {customerID}\n" +
+                                          $"Client Name: {customerName}\n" +
+                                          $"Account Type: {customerType}\n" +
+                                          $"Source Order: {orderID}\n" +
+                                          $"----------------------------------------\n" +
+                                          $"Gross Total: ${baseAmount:N2}\n" +
+                                          $"Tier Discount Applied: {discountRate * 100}%\n" +
+                                          $"Total Saved: -${discountAmount:N2}\n" +
+                                          $"----------------------------------------\n" +
+                                          $"NET QUOTATION VALUE: ${quoteFinalTotal:N2}\n" +
+                                          $"========================================\n" +
+                                          $"Terms: Valid for 30 calendar days from issue.";
+
+                    MessageBox.Show(quoteSummary, "Quotation Document Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to pull analytical records for quotation engine:\n" + ex.Message, "Quotation Subsystem Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

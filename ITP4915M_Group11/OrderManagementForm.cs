@@ -189,11 +189,11 @@ namespace ITP4915M_Group11
             // 🌟 ENGLISH Elements Configuration
             string[] labels = {
                 "Order ID (Auto-generated):",
-                "Customer ID:",
-                "Staff ID (Handled by):",
-                "Select Product:",
+                "Customer ID *:",
+                "Staff ID (Handled by) *:",
+                "Select Product *:",
                 "Unit Price (HKD):",
-                "Quantity:",
+                "Quantity *:",
                 "Subtotal (HKD):"
             };
 
@@ -301,7 +301,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT PartID, Name, DefaultPrice FROM product_part";
+                    // IMPROVED: Fixed Column mapping error from 'Name' to 'PartName' to match SQL schema
+                    string query = "SELECT PartID, PartName, DefaultPrice FROM product_part";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
                         using (MySqlDataReader reader = cmd.ExecuteReader())
@@ -312,7 +313,7 @@ namespace ITP4915M_Group11
                                 cboProducts.Items.Add(new
                                 {
                                     ID = reader["PartID"].ToString(),
-                                    Name = reader["Name"].ToString(),
+                                    Name = reader["PartName"].ToString(),
                                     Price = Convert.ToDecimal(reader["DefaultPrice"])
                                 });
                             }
@@ -358,7 +359,10 @@ namespace ITP4915M_Group11
 
         private void btnCreateOrder_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtCustomerID.Text) || string.IsNullOrWhiteSpace(txtStaffID.Text))
+            string customerID = txtCustomerID.Text.Trim();
+            string staffID = txtStaffID.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(customerID) || string.IsNullOrWhiteSpace(staffID))
             {
                 MessageBox.Show("Please provide Customer ID and Staff ID!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -377,8 +381,6 @@ namespace ITP4915M_Group11
             dynamic product = cboProducts.SelectedItem;
             string partID = product.ID;
             string orderID = txtOrderID.Text.Trim();
-            string customerID = txtCustomerID.Text.Trim();
-            string staffID = txtStaffID.Text.Trim();
             decimal subtotal = qty * currentUnitPrice;
 
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -386,6 +388,31 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
+
+                    // IMPROVED: Added verification to check if the Customer ID exists in the system database
+                    string checkCustSql = "SELECT COUNT(*) FROM customer WHERE CustomerID = @CustomerID";
+                    using (MySqlCommand checkCustCmd = new MySqlCommand(checkCustSql, conn))
+                    {
+                        checkCustCmd.Parameters.AddWithValue("@CustomerID", customerID);
+                        if (Convert.ToInt32(checkCustCmd.ExecuteScalar()) == 0)
+                        {
+                            MessageBox.Show($"Customer ID '{customerID}' does not exist! Please check and try again.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                    }
+
+                    // IMPROVED: Added verification to check if the Staff ID exists in the system database
+                    string checkStaffSql = "SELECT COUNT(*) FROM staff WHERE StaffID = @StaffID";
+                    using (MySqlCommand checkStaffCmd = new MySqlCommand(checkStaffSql, conn))
+                    {
+                        checkStaffCmd.Parameters.AddWithValue("@StaffID", staffID);
+                        if (Convert.ToInt32(checkStaffCmd.ExecuteScalar()) == 0)
+                        {
+                            MessageBox.Show($"Staff ID '{staffID}' does not exist! Please check and try again.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                    }
+
                     string checkStockSql = "SELECT StockLevel FROM product_part WHERE PartID = @PartID";
                     using (MySqlCommand checkCmd = new MySqlCommand(checkStockSql, conn))
                     {
