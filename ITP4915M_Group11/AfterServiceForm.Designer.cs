@@ -25,6 +25,7 @@ namespace ITP4915M_Group11
             this.ClientSize = new System.Drawing.Size(904, 511);
             this.Name = "AfterServiceForm";
             this.Text = "After Service";
+            this.Load += new System.EventHandler(this.AfterServiceForm_Load);
             this.ResumeLayout(false);
 
         }

@@ -19,7 +19,7 @@ namespace ITP4915M_Group11
         private TextBox txtStaffID, txtName, txtPassword;
         private ComboBox cboRole;
         private DataGridView dgvStaff;
-        private Button btnAddStaff, btnUpdate, btnDelete;
+        private Button btnAddStaff, btnUpdate, btnDelete, btnReset; // 加入了 btnReset
 
         public EmployeeManagement()
         {
@@ -165,7 +165,7 @@ namespace ITP4915M_Group11
             Panel pnlCard = new Panel
             {
                 Location = new Point(30, 85),
-                Size = new Size(420, 600),
+                Size = new Size(420, 620), // 稍微加長以容納新按鈕
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -243,6 +243,26 @@ namespace ITP4915M_Group11
             btnDelete.FlatAppearance.BorderSize = 0;
             btnDelete.Click += btnDelete_Click;
             pnlCard.Controls.Add(btnDelete);
+            startY += 52;
+
+            // ✨ 新增的重置/清空按鈕
+            btnReset = new Button
+            {
+                Text = "🧹 Clear / Reset Fields",
+                Location = new Point(20, startY),
+                Size = new Size(375, 42),
+                BackColor = Color.FromArgb(100, 116, 139), // Slate Gray
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnReset.FlatAppearance.BorderSize = 0;
+            btnReset.Click += (s, e) => {
+                dgvStaff.ClearSelection(); // 取消選擇 DataGridView 的選項
+                ClearFields();             // 清空並解鎖 TextBoxes
+            };
+            pnlCard.Controls.Add(btnReset);
 
             // 7. Grid View Panel Container (Right Side List View)
             Label lblGridTitle = new Label
@@ -258,7 +278,7 @@ namespace ITP4915M_Group11
             dgvStaff = new DataGridView
             {
                 Location = new Point(480, 125),
-                Size = new Size(390, 560),
+                Size = new Size(390, 580),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
@@ -312,7 +332,7 @@ namespace ITP4915M_Group11
             cboRole.Items.Add("Warehouse Specialist");
             cboRole.Items.Add("Procurement Officer");
             cboRole.Items.Add("Factory Operator");
-            cboRole.SelectedIndex = 0;
+            if (cboRole.Items.Count > 0) cboRole.SelectedIndex = 0;
         }
 
         private void LoadStaffData()
@@ -338,6 +358,9 @@ namespace ITP4915M_Group11
                     if (dgvStaff.Columns.Contains("Name")) dgvStaff.Columns["Name"].HeaderText = "Employee Name";
                     if (dgvStaff.Columns.Contains("Password")) dgvStaff.Columns["Password"].HeaderText = "Security Password";
                     if (dgvStaff.Columns.Contains("Role")) dgvStaff.Columns["Role"].HeaderText = "Role Title";
+
+                    // ✨ 防止載入後自動選擇第一行並鎖死 StaffID
+                    dgvStaff.ClearSelection();
                 }
                 catch (Exception ex)
                 {
@@ -364,6 +387,11 @@ namespace ITP4915M_Group11
             {
                 ClearFields();
             }
+        }
+
+        private void EmployeeManagement_Load(object sender, EventArgs e)
+        {
+
         }
 
         private void btnAddStaff_Click(object sender, EventArgs e)
@@ -494,6 +522,7 @@ namespace ITP4915M_Group11
             txtPassword.Clear();
             if (cboRole.Items.Count > 0) cboRole.SelectedIndex = 0;
 
+            // ✨ 解除唯讀並將背景顏色變回白色
             txtStaffID.ReadOnly = false;
             txtStaffID.BackColor = Color.White;
         }

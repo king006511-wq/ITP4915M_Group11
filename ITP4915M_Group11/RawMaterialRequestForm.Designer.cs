@@ -25,6 +25,7 @@ namespace ITP4915M_Group11
             this.ClientSize = new System.Drawing.Size(904, 511);
             this.Name = "RawMaterialRequestForm";
             this.Text = "Raw Material Request";
+
             this.ResumeLayout(false);
 
         }

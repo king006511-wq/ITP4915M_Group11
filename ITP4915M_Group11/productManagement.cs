@@ -331,5 +331,10 @@ namespace ITP4915M_Group11
             dgvProductCatalog.ClearSelection();
         }
         #endregion
+
+        private void ProductManagement_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

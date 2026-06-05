@@ -24,7 +24,7 @@ namespace ITP4915M_Group11
         {
             InitializeComponent();
             InitializePremiumModernUI();
-            GenerateNewCardID();
+            GenerateNewCardID(); // 自動生成 RC011 呢類 ID
             LoadRequests();
         }
 
@@ -57,7 +57,6 @@ namespace ITP4915M_Group11
                 Button btnMenu = new Button { Text = "  " + item, Top = btnTop, Left = 12, Size = new Size(236, 48), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.Hand };
                 btnMenu.FlatAppearance.BorderSize = 0;
 
-                // Highlight current active module; Logout shown as danger red
                 if (item.Contains("Material Requests"))
                 {
                     btnMenu.BackColor = Color.FromArgb(37, 99, 235); btnMenu.ForeColor = Color.White;
@@ -119,7 +118,7 @@ namespace ITP4915M_Group11
 
             int startY = 60;
             txtCardID = CreateStyledTextBox(pnlCard, ref startY, "Reorder Card ID (Auto-Generated):", true);
-            txtPartID = CreateStyledTextBox(pnlCard, ref startY, "Part / Material ID (e.g., PART-A01) *:", false);
+            txtPartID = CreateStyledTextBox(pnlCard, ref startY, "Part / Material ID (e.g., P001) *:", false);
             txtQty = CreateStyledTextBox(pnlCard, ref startY, "Requested Quantity (Numeric) *:", false);
 
             // Buttons Array
@@ -146,7 +145,6 @@ namespace ITP4915M_Group11
             dgvRequests.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
             dgvRequests.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
 
-            // Replaces CellContentClick with robust full-row SelectionChanged
             dgvRequests.SelectionChanged += dgvRequests_SelectionChanged;
             pnlMain.Controls.Add(dgvRequests);
         }
@@ -163,10 +161,37 @@ namespace ITP4915M_Group11
         #endregion
 
         #region 📦 Core Application Logic
+
+        // ✨ 修復問題 1: 自動順序生成 RC011、RC012...
         private void GenerateNewCardID()
         {
-            // Generates a unique RC (Reorder Card) timestamped identifier
-            txtCardID.Text = "RC-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    // 去 Database 搵返現存最大嗰個 RC ID (排除帶有 '-' 符號嘅舊錯 record)
+                    string query = "SELECT ReOrderCardID FROM reorder_card WHERE ReOrderCardID NOT LIKE '%-%' ORDER BY ReOrderCardID DESC LIMIT 1";
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    {
+                        object result = cmd.ExecuteScalar();
+                        if (result != null && result.ToString().StartsWith("RC"))
+                        {
+                            string lastId = result.ToString(); // 抽到例如 "RC010"
+                            int number = int.Parse(lastId.Substring(2)); // 將 "010" 變做數字 10
+                            txtCardID.Text = "RC" + (number + 1).ToString("D3"); // 加 1 變成 11，再補零變成 "RC011"
+                        }
+                        else
+                        {
+                            txtCardID.Text = "RC001"; // 如果 Table 係空，就由 RC001 開始
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    txtCardID.Text = "RC001"; // Error fallback
+                }
+            }
         }
 
         private void LoadRequests()
@@ -176,7 +201,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // Fetch raw data without alias to avoid matching issues later, we format Headers in C#
                     string query = "SELECT ReOrderCardID, PartID, TriggerDate, RequestedQty, Status FROM reorder_card ORDER BY TriggerDate DESC";
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
@@ -185,10 +209,9 @@ namespace ITP4915M_Group11
                         dgvRequests.DataSource = dt;
                     }
 
-                    // Dynamically map Database Columns to English UI Headers
                     if (dgvRequests.Columns.Contains("ReOrderCardID")) dgvRequests.Columns["ReOrderCardID"].HeaderText = "Reorder ID";
                     if (dgvRequests.Columns.Contains("PartID")) dgvRequests.Columns["PartID"].HeaderText = "Target Part ID";
-                    if (dgvRequests.Columns.Contains("TriggerDate")) { dgvRequests.Columns["TriggerDate"].HeaderText = "Requested On"; dgvRequests.Columns["TriggerDate"].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm"; }
+                    if (dgvRequests.Columns.Contains("TriggerDate")) { dgvRequests.Columns["TriggerDate"].HeaderText = "Requested On"; dgvRequests.Columns["TriggerDate"].DefaultCellStyle.Format = "yyyy-MM-dd"; }
                     if (dgvRequests.Columns.Contains("RequestedQty")) dgvRequests.Columns["RequestedQty"].HeaderText = "Qty";
                     if (dgvRequests.Columns.Contains("Status")) dgvRequests.Columns["Status"].HeaderText = "Current Status";
                 }
@@ -198,7 +221,6 @@ namespace ITP4915M_Group11
 
         private void btnSubmitRequest_Click(object sender, EventArgs e)
         {
-            // Input Validation Shield
             if (string.IsNullOrWhiteSpace(txtPartID.Text) || !int.TryParse(txtQty.Text.Trim(), out int qty) || qty <= 0)
             {
                 MessageBox.Show("Please enter a valid Part ID and ensure the Request Quantity is a number greater than 0!", "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -210,31 +232,30 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // Status automatically starts as 'Pending' for Procurement Department to review
-                    string sql = "INSERT INTO reorder_card (ReOrderCardID, PartID, RequestedQty, Status) VALUES (@RCID, @PartID, @Qty, 'Pending')";
+                    // ✨ 修復問題 2: 喺 SQL 加入咗 TriggerDate，並將佢寫入 DataBase
+                    string sql = "INSERT INTO reorder_card (ReOrderCardID, PartID, TriggerDate, RequestedQty, Status) VALUES (@RCID, @PartID, @Date, @Qty, 'Pending')";
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("@RCID", txtCardID.Text.Trim());
                         cmd.Parameters.AddWithValue("@PartID", txtPartID.Text.Trim());
+                        cmd.Parameters.AddWithValue("@Date", DateTime.Now); // 將當時嘅系統時間塞入去
                         cmd.Parameters.AddWithValue("@Qty", qty);
                         cmd.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show("Material replenishment request successfully dispatched to the Procurement Division!", "Request Submitted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Material replenishment request successfully dispatched!", "Request Submitted", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     ClearFields();
                     LoadRequests();
                 }
                 catch (Exception ex)
                 {
-                    // Usually occurs due to Foreign Key constraint if the PartID doesn't exist in the database
-                    MessageBox.Show("Submission failed. Please verify if the provided Part ID strictly exists in the master catalog.\n\nSystem Notice: " + ex.Message, "Database Constraint Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Submission failed. Please verify if the provided Part ID strictly exists.\n\nError: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
         private void dgvRequests_SelectionChanged(object sender, EventArgs e)
         {
-            // Allows user to click on a past request to view its details in the left card (Read-only observation)
             if (dgvRequests.SelectedRows.Count > 0)
             {
                 DataGridViewRow row = dgvRequests.SelectedRows[0];
@@ -242,7 +263,6 @@ namespace ITP4915M_Group11
                 txtPartID.Text = row.Cells["PartID"].Value?.ToString() ?? "";
                 txtQty.Text = row.Cells["RequestedQty"].Value?.ToString() ?? "";
 
-                // Disable submit button when viewing past records to prevent duplicate ID crashes
                 btnSubmit.Enabled = false;
                 btnSubmit.BackColor = Color.LightGray;
             }
@@ -250,15 +270,13 @@ namespace ITP4915M_Group11
 
         private void ClearFields()
         {
-            // Resets the interface for a brand new request
             txtPartID.Clear();
             txtQty.Clear();
             dgvRequests.ClearSelection();
-            GenerateNewCardID();
+            GenerateNewCardID(); // 每次 Clear 完再重新計過下一個 ID 係咩
 
-            // Re-enable submit capabilities
             btnSubmit.Enabled = true;
-            btnSubmit.BackColor = Color.FromArgb(16, 185, 129); // Restore Emerald Green
+            btnSubmit.BackColor = Color.FromArgb(16, 185, 129);
         }
         #endregion
     }
