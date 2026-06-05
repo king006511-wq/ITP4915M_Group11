@@ -125,9 +125,7 @@
     <Compile Include="MainDashboard.Designer.cs">
       <DependentUpon>MainDashboard.cs</DependentUpon>
     </Compile>
-    <Compile Include="OrderManagementForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="OrderManagementForm.cs" />
     <Compile Include="OrderManagementForm.Designer.cs">
       <DependentUpon>OrderManagementForm.cs</DependentUpon>
     </Compile>

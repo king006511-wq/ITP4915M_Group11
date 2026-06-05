@@ -1,11 +1,22 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
+    // =======================================================
+    // 📦 輔助類別：用來承載下拉選單（ComboBox）的產品資料
+    // =======================================================
+    public class ProductItem
+    {
+        public string ID { get; set; }
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+    }
+
     public partial class OrderManagementForm : Form
     {
         // ==========================================
@@ -165,7 +176,7 @@ namespace ITP4915M_Group11
             };
             pnlMain.Controls.Add(lblHeader);
 
-            // 4. Input Card Panel (左側落單卡片 - 已加高到 600px 確保綠色掣完全顯示)
+            // 4. Input Card Panel (左側落單卡片)
             Panel pnlCard = new Panel
             {
                 Location = new Point(30, 85),
@@ -186,18 +197,17 @@ namespace ITP4915M_Group11
             };
             pnlCard.Controls.Add(lblCardTitle);
 
-            // 🌟 ENGLISH Elements Configuration
+            // 🌟 配合 CXXX 和 SXXX 的格式更新標籤文字
             string[] labels = {
                 "Order ID (Auto-generated):",
-                "Customer ID *:",
-                "Staff ID (Handled by) *:",
+                "Customer ID (e.g., C001) *:",
+                "Staff ID (e.g., S001) *:",
                 "Select Product *:",
                 "Unit Price (HKD):",
                 "Quantity *:",
                 "Subtotal (HKD):"
             };
 
-            // 已將起始點推高，並將間距縮窄
             int startY = 55;
 
             txtOrderID = CreateStyledTextBox(pnlCard, ref startY, labels[0], true);
@@ -208,7 +218,7 @@ namespace ITP4915M_Group11
             cboProducts = new ComboBox { Location = new Point(20, startY + 25), Width = 375, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F), BackColor = Color.White };
             cboProducts.SelectedIndexChanged += cboProducts_SelectedIndexChanged;
             pnlCard.Controls.Add(lblCbo); pnlCard.Controls.Add(cboProducts);
-            startY += 65; // 間距縮至 65
+            startY += 65;
 
             txtUnitPrice = CreateStyledTextBox(pnlCard, ref startY, labels[4], true);
             txtQty = CreateStyledTextBox(pnlCard, ref startY, labels[5], false);
@@ -217,7 +227,7 @@ namespace ITP4915M_Group11
             txtSubtotal.ForeColor = Color.FromArgb(220, 38, 38);
             txtSubtotal.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
 
-            // 綠色確定按鈕 - 而家夠位放得落啦！
+            // 綠色確定按鈕
             btnSubmitOrder = new Button
             {
                 Text = "🚀 Confirm and Submit Order",
@@ -233,7 +243,7 @@ namespace ITP4915M_Group11
             btnSubmitOrder.Click += btnCreateOrder_Click;
             pnlCard.Controls.Add(btnSubmitOrder);
 
-            // 5. Data View Panel (右側歷史紀錄 - 高度同步加到 600px 齊平)
+            // 5. Data View Panel (右側歷史紀錄)
             Label lblGridTitle = new Label
             {
                 Text = "📊 Order History (Premium Living)",
@@ -268,10 +278,12 @@ namespace ITP4915M_Group11
             dgvOrders.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
             dgvOrders.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
 
+            // 加入雙擊功能
+            dgvOrders.CellDoubleClick += dgvOrders_CellDoubleClick;
+
             pnlMain.Controls.Add(dgvOrders);
         }
 
-        // 間距亦同步修改為 65px
         private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
         {
             Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
@@ -288,10 +300,103 @@ namespace ITP4915M_Group11
         }
         #endregion
 
+        #region 🖱️ Grid Interactions (右邊表格點擊功能)
+        private void dgvOrders_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0)
+            {
+                DataGridViewRow row = dgvOrders.Rows[e.RowIndex];
+                string selectedOrderID = row.Cells["Order ID"].Value.ToString();
+
+                using (MySqlConnection conn = new MySqlConnection(connString))
+                {
+                    try
+                    {
+                        conn.Open();
+                        string query = @"
+                            SELECT o.OrderID, o.CustomerID, o.StaffID, l.PartID, l.Quantity 
+                            FROM orders o 
+                            INNER JOIN order_lineitem l ON o.OrderID = l.OrderID 
+                            WHERE o.OrderID = @OrderID LIMIT 1";
+
+                        using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@OrderID", selectedOrderID);
+                            using (MySqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    txtOrderID.Text = reader["OrderID"].ToString();
+                                    txtCustomerID.Text = reader["CustomerID"].ToString();
+                                    txtStaffID.Text = reader["StaffID"].ToString();
+                                    txtQty.Text = reader["Quantity"].ToString();
+
+                                    string partID = reader["PartID"].ToString();
+
+                                    // 自動選取對應的產品
+                                    foreach (ProductItem item in cboProducts.Items)
+                                    {
+                                        if (item.ID == partID)
+                                        {
+                                            cboProducts.SelectedItem = item;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error loading order details: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+        #endregion
+
         #region 💾 Core English-Only Data Logic 
+        // 🌟 修正：完美對接資料庫的 SO2026-XXXX 流水號生成
         private void GenerateOrderID()
         {
-            txtOrderID.Text = "ORD-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string currentYear = DateTime.Now.ToString("yyyy");
+                    string prefix = "SO" + currentYear + "-"; // "SO2026-"
+
+                    // 找出目前資料庫中今年最大的編號
+                    string query = "SELECT OrderID FROM orders WHERE OrderID LIKE @Prefix ORDER BY OrderID DESC LIMIT 1";
+
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Prefix", prefix + "%");
+                        object result = cmd.ExecuteScalar();
+
+                        if (result != null && result != DBNull.Value)
+                        {
+                            string lastID = result.ToString(); // 例如 "SO2026-0004"
+                            string seqStr = lastID.Replace(prefix, ""); // 提取出 "0004"
+                            if (int.TryParse(seqStr, out int seq))
+                            {
+                                // 序號自動加 1 并補齊 4 位數
+                                txtOrderID.Text = prefix + (seq + 1).ToString("D4");
+                                return;
+                            }
+                        }
+
+                        // 如果今年完全沒有單，預設由 0001 開始
+                        txtOrderID.Text = prefix + "0001";
+                    }
+                }
+                catch (Exception)
+                {
+                    // 萬一連唔到資料庫的備用安全格式
+                    txtOrderID.Text = "SO" + DateTime.Now.ToString("yyyy") + "-" + DateTime.Now.ToString("MMddHHmm");
+                }
+            }
         }
 
         private void LoadProductsToCombo()
@@ -301,25 +406,28 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // IMPROVED: Fixed Column mapping error from 'Name' to 'PartName' to match SQL schema
                     string query = "SELECT PartID, PartName, DefaultPrice FROM product_part";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
                         using (MySqlDataReader reader = cmd.ExecuteReader())
                         {
-                            cboProducts.Items.Clear();
+                            List<ProductItem> productList = new List<ProductItem>();
                             while (reader.Read())
                             {
-                                cboProducts.Items.Add(new
+                                productList.Add(new ProductItem
                                 {
                                     ID = reader["PartID"].ToString(),
                                     Name = reader["PartName"].ToString(),
                                     Price = Convert.ToDecimal(reader["DefaultPrice"])
                                 });
                             }
+
+                            cboProducts.DataSource = productList;
+                            cboProducts.DisplayMember = "Name";
+                            cboProducts.ValueMember = "ID";
                         }
                     }
-                    cboProducts.DisplayMember = "Name";
+                    cboProducts.SelectedIndex = -1;
                 }
                 catch (Exception ex)
                 {
@@ -332,7 +440,7 @@ namespace ITP4915M_Group11
         {
             if (cboProducts.SelectedItem != null)
             {
-                dynamic selectedProduct = cboProducts.SelectedItem;
+                ProductItem selectedProduct = (ProductItem)cboProducts.SelectedItem;
                 currentUnitPrice = selectedProduct.Price;
                 txtUnitPrice.Text = currentUnitPrice.ToString("F2");
                 CalculateSubtotal();
@@ -378,7 +486,7 @@ namespace ITP4915M_Group11
                 return;
             }
 
-            dynamic product = cboProducts.SelectedItem;
+            ProductItem product = (ProductItem)cboProducts.SelectedItem;
             string partID = product.ID;
             string orderID = txtOrderID.Text.Trim();
             decimal subtotal = qty * currentUnitPrice;
@@ -389,7 +497,7 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
 
-                    // IMPROVED: Added verification to check if the Customer ID exists in the system database
+                    // 驗證客戶
                     string checkCustSql = "SELECT COUNT(*) FROM customer WHERE CustomerID = @CustomerID";
                     using (MySqlCommand checkCustCmd = new MySqlCommand(checkCustSql, conn))
                     {
@@ -401,7 +509,7 @@ namespace ITP4915M_Group11
                         }
                     }
 
-                    // IMPROVED: Added verification to check if the Staff ID exists in the system database
+                    // 驗證員工
                     string checkStaffSql = "SELECT COUNT(*) FROM staff WHERE StaffID = @StaffID";
                     using (MySqlCommand checkStaffCmd = new MySqlCommand(checkStaffSql, conn))
                     {
@@ -413,6 +521,7 @@ namespace ITP4915M_Group11
                         }
                     }
 
+                    // 驗證庫存
                     string checkStockSql = "SELECT StockLevel FROM product_part WHERE PartID = @PartID";
                     using (MySqlCommand checkCmd = new MySqlCommand(checkStockSql, conn))
                     {
@@ -425,6 +534,7 @@ namespace ITP4915M_Group11
                         }
                     }
 
+                    // 開啟安全交易機制 (Transaction)
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
@@ -439,13 +549,13 @@ namespace ITP4915M_Group11
                                 cmdOrder.ExecuteNonQuery();
                             }
 
-                            string insertLineSql = "INSERT INTO order_lineitem (OrderID, PartID, Quantity, Subtotal) VALUES (@OrderID, @PartID, @Qty, @Subtotal)";
+                            string insertLineSql = "INSERT INTO order_lineitem (OrderID, PartID, Quantity, UnitPrice) VALUES (@OrderID, @PartID, @Qty, @UnitPrice)";
                             using (MySqlCommand cmdLine = new MySqlCommand(insertLineSql, conn, trans))
                             {
                                 cmdLine.Parameters.AddWithValue("@OrderID", orderID);
                                 cmdLine.Parameters.AddWithValue("@PartID", partID);
                                 cmdLine.Parameters.AddWithValue("@Qty", qty);
-                                cmdLine.Parameters.AddWithValue("@Subtotal", subtotal);
+                                cmdLine.Parameters.AddWithValue("@UnitPrice", currentUnitPrice);
                                 cmdLine.ExecuteNonQuery();
                             }
 
@@ -505,7 +615,9 @@ namespace ITP4915M_Group11
         private void ClearFields()
         {
             txtCustomerID.Clear();
+            txtStaffID.Clear();
             txtQty.Clear();
+            txtUnitPrice.Clear();
             txtSubtotal.Clear();
             cboProducts.SelectedIndex = -1;
         }
