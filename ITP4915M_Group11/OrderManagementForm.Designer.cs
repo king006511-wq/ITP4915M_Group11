@@ -25,6 +25,7 @@ namespace ITP4915M_Group11
             this.ClientSize = new System.Drawing.Size(904, 511);
             this.Name = "OrderManagementForm";
             this.Text = "Order Management";
+            this.Load += new System.EventHandler(this.OrderManagementForm_Load);
             this.ResumeLayout(false);
 
         }

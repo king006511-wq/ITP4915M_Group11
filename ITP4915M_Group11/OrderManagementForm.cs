@@ -19,27 +19,27 @@ namespace ITP4915M_Group11
 
     public partial class OrderManagementForm : Form
     {
-        // ==========================================\
+        // ==========================================
         // 🔒 Database Configuration (標準本地 XAMPP MySQL 連線字串)
-        // ==========================================\
+        // ==========================================
         private readonly string connString = "Server=localhost;Database=premium_living_db;Uid=root;Pwd=;port=3306;SslMode=Disabled;";
         private decimal currentUnitPrice = 0;
 
         // ✨ 核心記錄：當前登入的 Staff ID
         private string currentStaffID;
 
-        // ==========================================\
+        // ==========================================
         // 🎨 UI 元素控制變數
-        // ==========================================\
+        // ==========================================
         private TextBox txtOrderID, txtCustomerID, txtStaffID, txtQty, txtUnitPrice, txtSubtotal;
         private ComboBox cboProducts;
         private CheckBox chkRequireDelivery;
         private DataGridView dgvOrders;
-        private Button btnSubmitOrder, btnUpdateOrder, btnClear, btnCreateQuotation; // 🌟 新增了 btnUpdateOrder
+        private Button btnSubmitOrder, btnUpdateOrder, btnClear, btnCreateQuotation;
 
-        // ======================================================================\
+        // ======================================================================
         // ✅ 修正核心：動態支援 S 字頭員工編號
-        // ======================================================================\
+        // ======================================================================
 
         // 1️⃣ 預設無參數建構子：當沒有透過 Login 傳入時，預設使用 S001
         public OrderManagementForm() : this("S001")
@@ -104,26 +104,33 @@ namespace ITP4915M_Group11
                     btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184);
                 }
 
+                // ======================================================================
+                // 🚪 導航真實跳轉邏輯 (已完美修復 HR, GRN, Material 等)
+                // ======================================================================
                 btnMenu.Click += (s, e) => {
-                    string cleanItem = item.Trim();
-                    Form nextForm = null;
-
-                    switch (cleanItem)
+                    Form targetForm = null;
+                    try
                     {
-                        case "🛒 Sales Order Mgmt": return;
-                        case "🚚 Delivery Logistics": nextForm = new LogisticsForm(); break;
-                        case "🛋️ Product Maintenance": nextForm = new ProductManagement(); break;
-                        case "🚪 Logout System": Application.Restart(); return;
-                        default:
-                            MessageBox.Show($"The module [{cleanItem}] is currently under development or not yet linked.", "Module Under Construction", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            return;
+                        if (item.Contains("Sales Order")) { return; } // 已經喺呢版
+                        else if (item.Contains("Delivery Logistics") || item.Contains("Delivery")) { targetForm = new LogisticsForm(); }
+                        else if (item.Contains("Product Maintenance")) { targetForm = new ProductManagement(); }
+                        else if (item.Contains("HR") || item.Contains("Staff")) { targetForm = new EmployeeManagement(); }
+                        else if (item.Contains("Goods Received") || item.Contains("GRN")) { targetForm = new GoodsReceivedForm(); }
+                        else if (item.Contains("Material Requests") || item.Contains("Material")) { targetForm = new RawMaterialRequestForm(); }
+                        else if (item.Contains("Procurement Control") || item.Contains("Procurement")) { targetForm = new ProcurementForm(); }
+                        else if (item.Contains("Customer Support") || item.Contains("Support")) { targetForm = new AfterServiceForm(); }
+                        else if (item.Contains("Logout")) { Application.Restart(); return; }
+
+                        if (targetForm != null)
+                        {
+                            this.Hide();
+                            targetForm.FormClosed += (senderObj, args) => this.Close();
+                            targetForm.Show();
+                        }
                     }
-
-                    if (nextForm != null)
+                    catch (Exception ex)
                     {
-                        this.Hide();
-                        nextForm.FormClosed += (senderObj, args) => this.Close();
-                        nextForm.Show();
+                        MessageBox.Show("Navigation routing failed. Please ensure the Form class exists.\nError: " + ex.Message, "Routing Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 };
                 pnlSidebar.Controls.Add(btnMenu);
@@ -183,14 +190,14 @@ namespace ITP4915M_Group11
             startY += 40;
 
             // ======================================================================
-            // 🌟 按鈕區重新排版：新增 Update 按鈕
+            // 🌟 按鈕區
             // ======================================================================
             btnSubmitOrder = new Button { Text = "➕ Create", Location = new Point(20, startY), Size = new Size(115, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnSubmitOrder.Click += btnCreateOrder_Click;
             pnlCard.Controls.Add(btnSubmitOrder);
 
             btnUpdateOrder = new Button { Text = "✏️ Update", Location = new Point(145, startY), Size = new Size(125, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnUpdateOrder.Click += btnUpdateOrder_Click; // 綁定更新事件
+            btnUpdateOrder.Click += btnUpdateOrder_Click;
             pnlCard.Controls.Add(btnUpdateOrder);
 
             btnClear = new Button { Text = "🧹 Clear", Location = new Point(280, startY), Size = new Size(115, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
@@ -414,7 +421,9 @@ namespace ITP4915M_Group11
             string partID = product.ID;
             string orderID = txtOrderID.Text.Trim();
             decimal subtotal = qty * currentUnitPrice;
-            string orderStatus = chkRequireDelivery.Checked ? "Pending Delivery" : "Self-Pickup";
+
+            // ✅ 已修復：將狀態改為 "Self Pickup" (移除橫線以防止 DB Error)
+            string orderStatus = chkRequireDelivery.Checked ? "Pending Delivery" : "Self Pickup";
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
@@ -501,7 +510,7 @@ namespace ITP4915M_Group11
         }
 
         // ======================================================================
-        // ✏️ 更新現有訂單邏輯 (UPDATE) - 解決你的 Error!
+        // ✏️ 更新現有訂單邏輯 (UPDATE)
         // ======================================================================
         private void btnUpdateOrder_Click(object sender, EventArgs e)
         {
@@ -514,7 +523,9 @@ namespace ITP4915M_Group11
             ProductItem product = (ProductItem)cboProducts.SelectedItem;
             string partID = product.ID;
             decimal newSubtotal = newQty * currentUnitPrice;
-            string orderStatus = chkRequireDelivery.Checked ? "Pending Delivery" : "Self-Pickup";
+
+            // ✅ 已修復
+            string orderStatus = chkRequireDelivery.Checked ? "Pending Delivery" : "Self Pickup";
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
@@ -539,7 +550,7 @@ namespace ITP4915M_Group11
                         return;
                     }
 
-                    // 2. 計算數量差額 (正數代表買多咗要扣庫存，負數代表買少咗要加返庫存)
+                    // 2. 計算數量差額
                     int qtyDifference = newQty - oldQty;
 
                     if (qtyDifference > 0)
@@ -582,7 +593,7 @@ namespace ITP4915M_Group11
                                 cmdUpdateOrder.ExecuteNonQuery();
                             }
 
-                            // 5. 聰明地扣除/加回庫存 (product_part)
+                            // 5. 扣除/加回庫存 (product_part)
                             string updateStockSql = "UPDATE product_part SET StockLevel = StockLevel - @QtyDiff WHERE PartID = @PartID";
                             using (MySqlCommand cmdStock = new MySqlCommand(updateStockSql, conn, trans))
                             {

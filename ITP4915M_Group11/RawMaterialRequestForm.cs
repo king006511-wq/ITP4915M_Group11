@@ -219,6 +219,11 @@ namespace ITP4915M_Group11
             }
         }
 
+        private void RawMaterialRequestForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
         private void btnSubmitRequest_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtPartID.Text) || !int.TryParse(txtQty.Text.Trim(), out int qty) || qty <= 0)
