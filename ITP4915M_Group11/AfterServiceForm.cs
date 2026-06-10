@@ -145,7 +145,7 @@ namespace ITP4915M_Group11
             btnSubmit.Click += btnSubmitComplaint_Click;
             pnlCard.Controls.Add(btnSubmit);
 
-            btnClear = new Button { Text = "✨ Clear & New", Location = new Point(195, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(71, 85, 105), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnClear = new Button { Text = "✨ Add New Data", Location = new Point(195, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(71, 85, 105), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnClear.FlatAppearance.BorderSize = 0;
             btnClear.Click += (s, e) => ClearFields();
             pnlCard.Controls.Add(btnClear);
