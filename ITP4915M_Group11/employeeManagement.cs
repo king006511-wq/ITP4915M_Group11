@@ -344,43 +344,40 @@ namespace ITP4915M_Group11
                     conn.Open();
                     string query = "SELECT StaffID, Name, Password, Role FROM staff";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
                     {
-                        using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
-                        {
-                            DataTable dt = new DataTable();
-                            adapter.Fill(dt);
-                            dgvStaff.DataSource = dt;
-                        }
+                        DataTable dt = new DataTable();
+                        adapter.Fill(dt);
+                        dgvStaff.DataSource = dt;
                     }
 
-                    // Enforce structured explicit English columns headers
+                    if (dgvStaff.Columns.Contains("Password"))
+                        dgvStaff.Columns["Password"].Visible = false;
+
                     if (dgvStaff.Columns.Contains("StaffID")) dgvStaff.Columns["StaffID"].HeaderText = "Staff ID";
                     if (dgvStaff.Columns.Contains("Name")) dgvStaff.Columns["Name"].HeaderText = "Employee Name";
-                    if (dgvStaff.Columns.Contains("Password")) dgvStaff.Columns["Password"].HeaderText = "Security Password";
                     if (dgvStaff.Columns.Contains("Role")) dgvStaff.Columns["Role"].HeaderText = "Role Title";
 
-                    // ✨ 防止載入後自動選擇第一行並鎖死 StaffID
                     dgvStaff.ClearSelection();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Failed to load staff metadata:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to load staff data:\n" + ex.Message);
                 }
             }
         }
 
         private void dgvStaff_SelectionChanged(object sender, EventArgs e)
         {
-            // Fully tracking full row state changes instead of precise cell content link clicks
             if (dgvStaff.SelectedRows.Count > 0)
             {
                 DataGridViewRow row = dgvStaff.SelectedRows[0];
                 txtStaffID.Text = row.Cells["StaffID"].Value?.ToString() ?? "";
                 txtName.Text = row.Cells["Name"].Value?.ToString() ?? "";
-                txtPassword.Text = row.Cells["Password"].Value?.ToString() ?? "";
+                txtPassword.Clear(); // do not show stored password
                 cboRole.Text = row.Cells["Role"].Value?.ToString() ?? "";
 
-                txtStaffID.ReadOnly = true; // Lock identity primary key keyspace context from edits
+                txtStaffID.ReadOnly = true;
                 txtStaffID.BackColor = Color.FromArgb(241, 245, 249);
             }
             else
