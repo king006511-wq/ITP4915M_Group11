@@ -21,8 +21,7 @@ namespace ITP4915M_Group11
         private ComboBox cboMethod;
         private DateTimePicker dtpEstDelivery;
         private DataGridView dgvPendingOrders;
-        private Button btnGenerateDeliveryNote;
-        private Button btnCreateQuotation;
+        private Button btnGenerateDeliveryNote, btnViewDeliveryNote;
 
         public LogisticsForm()
         {
@@ -61,7 +60,7 @@ namespace ITP4915M_Group11
                 else if (item.Contains("Logout")) { btnMenu.BackColor = Color.FromArgb(239, 68, 68); btnMenu.ForeColor = Color.White; }
                 else { btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184); }
 
-                // Sidebar Navigation (修復版導航邏輯)
+                // 導航欄跳轉邏輯
                 btnMenu.Click += (s, e) => {
                     Form targetForm = null;
                     try
@@ -130,18 +129,20 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(lblDate); pnlCard.Controls.Add(dtpEstDelivery);
             startY += 75;
 
-            btnGenerateDeliveryNote = new Button { Text = "🚚 Generate Delivery Note", Location = new Point(20, startY), Size = new Size(375, 45), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // 派車發貨按鈕 (更新狀態)
+            btnGenerateDeliveryNote = new Button { Text = "🚚 Dispatch & Update Status", Location = new Point(20, startY), Size = new Size(375, 45), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnGenerateDeliveryNote.FlatAppearance.BorderSize = 0;
             btnGenerateDeliveryNote.Click += btnGenerateDeliveryNote_Click;
             pnlCard.Controls.Add(btnGenerateDeliveryNote);
             startY += 55;
 
-            btnCreateQuotation = new Button { Text = "📄 Create Order Quotation", Location = new Point(20, startY), Size = new Size(375, 45), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnCreateQuotation.FlatAppearance.BorderSize = 0;
-            btnCreateQuotation.Click += btnCreateQuotation_Click;
-            pnlCard.Controls.Add(btnCreateQuotation);
+            // ✨ 新增：彈出現代化送貨單 (Delivery Note)
+            btnViewDeliveryNote = new Button { Text = "📄 View / Print Delivery Note", Location = new Point(20, startY), Size = new Size(375, 45), BackColor = Color.FromArgb(13, 148, 136), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnViewDeliveryNote.FlatAppearance.BorderSize = 0;
+            btnViewDeliveryNote.Click += btnViewDeliveryNote_Click;
+            pnlCard.Controls.Add(btnViewDeliveryNote);
 
-            Label lblGridTitle = new Label { Text = "📦 Pending Packed Orders", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(480, 85), AutoSize = true };
+            Label lblGridTitle = new Label { Text = "📦 Pending Logistics Queue", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(480, 85), AutoSize = true };
             pnlMain.Controls.Add(lblGridTitle);
 
             dgvPendingOrders = new DataGridView { Location = new Point(480, 125), Size = new Size(390, 650), BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, GridColor = Color.FromArgb(241, 245, 249) };
@@ -172,7 +173,7 @@ namespace ITP4915M_Group11
         private void SetupDispatchControls()
         {
             cboMethod.Items.Clear();
-            cboMethod.Items.AddRange(new string[] { "Heavy Truck", "Light Van", "Motorcycle Express", "Self-Pickup" });
+            cboMethod.Items.AddRange(new string[] { "Heavy Truck (5.5T)", "Light Van", "Express Courier" });
             cboMethod.SelectedIndex = 0;
             dtpEstDelivery.MinDate = DateTime.Today;
         }
@@ -184,15 +185,20 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
+                    // 🌟 核心升級：只顯示 Sales Order 確認要送貨嘅單 (Pending Delivery)，唔會撈到 Self Pickup！
                     string query = @"SELECT o.OrderID, o.CustomerID, c.Name AS CustomerName, c.Address AS DeliveryAddress, o.OrderDate, o.Status, o.TotalAmount 
                                      FROM orders o INNER JOIN customer c ON o.CustomerID = c.CustomerID 
-                                     WHERE o.Status IN ('Pending', 'Processing', 'Packed');";
+                                     WHERE o.Status = 'Pending Delivery';";
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
+
+                        dgvPendingOrders.SelectionChanged -= dgvPendingOrders_SelectionChanged;
                         dgvPendingOrders.DataSource = dt;
+                        dgvPendingOrders.ClearSelection();
+                        dgvPendingOrders.SelectionChanged += dgvPendingOrders_SelectionChanged;
                     }
 
                     if (dgvPendingOrders.Columns.Count > 0)
@@ -209,16 +215,17 @@ namespace ITP4915M_Group11
                         if (dgvPendingOrders.Columns.Contains("Status")) dgvPendingOrders.Columns["Status"].Visible = false;
                     }
                 }
-                catch (Exception ex) { MessageBox.Show("Error loading pending orders:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                catch (Exception ex) { MessageBox.Show("Error loading pending delivery queue:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
         }
 
         private void dgvPendingOrders_SelectionChanged(object sender, EventArgs e)
         {
-            if (dgvPendingOrders.SelectedRows.Count > 0)
+            if (dgvPendingOrders.CurrentRow != null && dgvPendingOrders.CurrentRow.Index >= 0)
             {
-                DataGridViewRow row = dgvPendingOrders.SelectedRows[0];
-                string orderID = row.Cells["OrderID"].Value.ToString();
+                DataGridViewRow row = dgvPendingOrders.CurrentRow;
+                string orderID = row.Cells["OrderID"].Value?.ToString();
+                if (string.IsNullOrEmpty(orderID)) return;
 
                 txtShowOrderID.Text = orderID;
                 txtShowCustomer.Text = $"({row.Cells["CustomerID"].Value}) {row.Cells["CustomerName"].Value}";
@@ -233,13 +240,13 @@ namespace ITP4915M_Group11
                 if (!string.IsNullOrEmpty(existingDNID))
                 {
                     txtDispatchID.Text = existingDNID;
-                    btnGenerateDeliveryNote.Text = "🔄 Update Delivery Note";
+                    btnGenerateDeliveryNote.Text = "🔄 Update Dispatch Info";
                     btnGenerateDeliveryNote.BackColor = Color.FromArgb(245, 158, 11);
                 }
                 else
                 {
                     txtDispatchID.Text = FetchNextDeliveryNoteID();
-                    btnGenerateDeliveryNote.Text = "🚚 Generate Delivery Note";
+                    btnGenerateDeliveryNote.Text = "🚚 Dispatch & Update Status";
                     btnGenerateDeliveryNote.BackColor = Color.FromArgb(16, 185, 129);
                 }
 
@@ -252,6 +259,11 @@ namespace ITP4915M_Group11
             {
                 txtShowOrderID.Clear(); txtShowCustomer.Clear(); txtShowOrderDate.Clear(); txtDispatchID.Clear(); txtDriverName.Clear();
             }
+        }
+
+        private void LogisticsForm_Load(object sender, EventArgs e)
+        {
+
         }
 
         private string FetchExistingDeliveryNoteID(string orderID)
@@ -306,7 +318,7 @@ namespace ITP4915M_Group11
 
         private void btnGenerateDeliveryNote_Click(object sender, EventArgs e)
         {
-            if (dgvPendingOrders.SelectedRows.Count == 0)
+            if (string.IsNullOrWhiteSpace(txtShowOrderID.Text))
             {
                 MessageBox.Show("Please select a pending order from the list first!", "Prompt", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -314,11 +326,11 @@ namespace ITP4915M_Group11
 
             if (string.IsNullOrWhiteSpace(txtDriverName.Text))
             {
-                MessageBox.Show("Please specify the delivery address!", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Please specify the exact delivery address!", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            string selectedOrderID = dgvPendingOrders.SelectedRows[0].Cells["OrderID"].Value.ToString();
+            string selectedOrderID = txtShowOrderID.Text;
             string deliveryNoteID = txtDispatchID.Text;
             DateTime estDeliveryDate = dtpEstDelivery.Value;
             string deliveryAddress = txtDriverName.Text.Trim();
@@ -355,6 +367,7 @@ namespace ITP4915M_Group11
                             }
                         }
 
+                        // 🌟 派完車，將訂單狀態更新為 'Dispatched' (已發貨)
                         string updateOrderStatusSql = "UPDATE orders SET Status = 'Dispatched' WHERE OrderID = @orderID;";
                         using (MySqlCommand cmdOrderStatus = new MySqlCommand(updateOrderStatusSql, conn, trans))
                         {
@@ -363,8 +376,11 @@ namespace ITP4915M_Group11
                         }
 
                         trans.Commit();
-                        MessageBox.Show($"Delivery Note Handled Successfully!\n\nDN ID: {deliveryNoteID}\nOrder ID: {selectedOrderID}\n\nThe system has automatically updated the Delivery Note.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show($"Logistics sequence activated successfully!\n\nDN ID: {deliveryNoteID}\nOrder ID: {selectedOrderID}\n\nStatus is now [Dispatched].", "Dispatch Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                        txtShowOrderID.Clear();
+                        txtShowCustomer.Clear();
+                        txtShowOrderDate.Clear();
                         txtDriverName.Clear();
                         RefreshPendingOrdersGrid();
                     }
@@ -375,56 +391,25 @@ namespace ITP4915M_Group11
         #endregion
 
         // ======================================================================
-        // ✨ ✨ ✨ 觸發生成「色彩豐富、現代化」的 QuotationForm ✨ ✨ ✨
+        // ✨ ✨ ✨ 彈出「現代化 Delivery Note (送貨單)」獨立視窗 ✨ ✨ ✨
         // ======================================================================
-        private void btnCreateQuotation_Click(object sender, EventArgs e)
+        private void btnViewDeliveryNote_Click(object sender, EventArgs e)
         {
-            if (dgvPendingOrders.SelectedRows.Count == 0)
+            if (string.IsNullOrWhiteSpace(txtShowOrderID.Text))
             {
-                MessageBox.Show("Please select an item from the list to create a quote!", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select an order from the list to view its Delivery Note!", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string orderID = dgvPendingOrders.SelectedRows[0].Cells["OrderID"].Value.ToString();
-            string customerID = dgvPendingOrders.SelectedRows[0].Cells["CustomerID"].Value.ToString();
-            decimal baseAmount = Convert.ToDecimal(dgvPendingOrders.SelectedRows[0].Cells["TotalAmount"].Value);
+            string orderID = txtShowOrderID.Text;
+            string customerInfo = txtShowCustomer.Text;
+            string dnID = txtDispatchID.Text;
+            string address = string.IsNullOrWhiteSpace(txtDriverName.Text) ? "Pending Assignment" : txtDriverName.Text;
+            string method = cboMethod.Text;
+            string dDate = dtpEstDelivery.Value.ToString("yyyy-MM-dd");
 
-            string customerName = "Unknown Customer";
-            string customerType = "B2C";
-
-            using (MySqlConnection conn = new MySqlConnection(connString))
-            {
-                try
-                {
-                    conn.Open();
-                    string customerQuery = "SELECT Name, Type FROM customer WHERE CustomerID = @custID;";
-                    using (MySqlCommand cmd = new MySqlCommand(customerQuery, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@custID", customerID);
-                        using (MySqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                customerName = reader["Name"].ToString();
-                                customerType = reader["Type"].ToString();
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Database error while loading profile: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-            }
-
-            decimal discountRate = (customerType == "B2B") ? 0.10m : 0.00m;
-            decimal discountAmount = baseAmount * discountRate;
-            decimal quoteFinalTotal = baseAmount - discountAmount;
-            string quoteRef = $"QT-{DateTime.Now.ToString("yyyyMMdd")}-{orderID.Substring(Math.Max(0, orderID.Length - 4))}";
-
-            // 🚀 實例化並彈出豐富色彩版本的 QuotationForm
-            using (QuotationForm dialog = new QuotationForm(quoteRef, customerID, customerName, customerType, orderID, baseAmount, discountRate, discountAmount, quoteFinalTotal))
+            // 🚀 實例化並顯示高級送貨單介面
+            using (DeliveryNoteForm dialog = new DeliveryNoteForm(dnID, orderID, customerInfo, address, method, dDate))
             {
                 dialog.ShowDialog();
             }
@@ -432,80 +417,73 @@ namespace ITP4915M_Group11
     }
 
     // ======================================================================
-    // 💎 全新色彩豐富、高對比度的現代化 UI Form (Quotation 獨立視窗)
+    // 🚚 獨立送貨單視窗：湖水藍色、高級物流排版
     // ======================================================================
-    public class QuotationForm : Form
+    public class DeliveryNoteForm : Form
     {
-        public QuotationForm(string refNo, string cID, string cName, string cType, string sOrder, decimal gross, decimal discRate, decimal saved, decimal net)
+        public DeliveryNoteForm(string dnID, string orderID, string custInfo, string address, string method, string dDate)
         {
-            this.Text = "Official System Quotation Document";
-            this.Size = new Size(550, 700);
+            this.Text = "Official Delivery Note Document";
+            this.Size = new Size(580, 760);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.BackColor = Color.White;
 
-            // 🔵 頂部橫幅 (Header Banner) - 換上尊貴的皇家藍 (Royal Blue)
-            Panel pnlHeader = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.FromArgb(30, 64, 175) };
-            Label lblComp = new Label { Text = "PREMIUM LIVING FURNITURE LTD.", Font = new Font("Segoe UI", 15F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(25, 20), AutoSize = true };
-            // 副標題換上淺柔藍色，增加層次感
-            Label lblSub = new Label { Text = "Official Commercial Quotation Document", Font = new Font("Segoe UI", 10F, FontStyle.Regular), ForeColor = Color.FromArgb(191, 219, 254), Location = new Point(27, 53), AutoSize = true };
+            // 🔵 頂部橫幅 (Header Banner) - 換上專業的深海藍 (Deep Sea Blue)
+            Panel pnlHeader = new Panel { Dock = DockStyle.Top, Height = 105, BackColor = Color.FromArgb(15, 23, 42) };
+            Label lblComp = new Label { Text = "PREMIUM LIVING LOGISTICS", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(25, 20), AutoSize = true };
+            Label lblSub = new Label { Text = "OFFICIAL DELIVERY NOTE (CUSTOMER COPY)", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(14, 165, 233), Location = new Point(27, 56), AutoSize = true };
             pnlHeader.Controls.AddRange(new Control[] { lblComp, lblSub });
             this.Controls.Add(pnlHeader);
 
-            int currentY = 125;
+            int currentY = 135;
 
-            // 📑 Meta Section (單據資訊) - 搭配 海洋藍色 (Ocean Blue) 標籤
-            AddGroupHeader("DOCUMENT METADATA", ref currentY, Color.FromArgb(2, 132, 199));
-            AddDataRow("Quote Reference:", refNo, ref currentY, true, Color.FromArgb(15, 23, 42));
-            AddDataRow("Date Generated:", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ref currentY, false);
-            AddDataRow("Source Order ID:", sOrder, ref currentY, false);
+            // 📦 物流資訊區塊 (Logistics Metadata) - 搭配 天藍色 標籤
+            AddGroupHeader("DISPATCH METADATA", ref currentY, Color.FromArgb(14, 165, 233));
+            AddDataRow("Delivery Note No.:", dnID, ref currentY, true, Color.FromArgb(15, 23, 42));
+            AddDataRow("Source Order ID:", orderID, ref currentY, false);
+            AddDataRow("Dispatch Date:", DateTime.Now.ToString("yyyy-MM-dd"), ref currentY, false);
             currentY += 20;
 
-            // 👥 Customer Section (客戶資訊) - 搭配 活力紫色 (Vibrant Violet) 標籤
-            AddGroupHeader("CLIENT PROFILE", ref currentY, Color.FromArgb(124, 58, 237));
-            AddDataRow("Client ID:", cID, ref currentY, false);
-            AddDataRow("Client Name:", cName, ref currentY, true, Color.FromArgb(15, 23, 42));
-            AddDataRow("Account Tier Status:", $"{cType} VIP Account", ref currentY, false, Color.FromArgb(71, 85, 105));
-            currentY += 20;
+            // 📍 目的地資訊 (Destination Profile) - 搭配 翡翠綠 標籤
+            AddGroupHeader("DESTINATION PROFILE", ref currentY, Color.FromArgb(16, 185, 129));
+            AddDataRow("Recipient:", custInfo, ref currentY, true, Color.FromArgb(15, 23, 42));
 
-            // 💰 Financial Section (財務資訊) - 搭配 溫暖橙色 (Rich Orange) 標籤
-            AddGroupHeader("FINANCIAL BREAKDOWN", ref currentY, Color.FromArgb(234, 88, 12));
-            AddDataRow("Gross Subtotal Amount:", $"${gross:N2}", ref currentY, false);
-            // 鮮艷紅色顯示折扣金額
-            AddDataRow($"Tier Discount Applied ({discRate * 100:0}%):", $"-${saved:N2}", ref currentY, true, Color.FromArgb(225, 29, 72));
-            currentY += 15;
+            Label lblAddL = new Label { Text = "Delivery Address:", Location = new Point(35, currentY), Font = new Font("Segoe UI", 9.5F, FontStyle.Regular), ForeColor = Color.FromArgb(100, 116, 139), AutoSize = true };
+            Label lblAddR = new Label { Text = address, Location = new Point(220, currentY), Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = false, Size = new Size(300, 45) };
+            this.Controls.AddRange(new Control[] { lblAddL, lblAddR });
+            currentY += 55;
 
-            // 🚨 最終金額 (Grand Total) - 搭配 高亮薄荷綠背景 (Mint Green) 及 翡翠綠文字 (Emerald)
-            Panel pnlTotal = new Panel { Location = new Point(25, currentY), Size = new Size(485, 65), BackColor = Color.FromArgb(236, 253, 245) };
-            pnlTotal.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlTotal.ClientRectangle, Color.FromArgb(16, 185, 129), ButtonBorderStyle.Solid);
-            Label lblNetTitle = new Label { Text = "NET QUOTATION VALUE:", Location = new Point(15, 22), Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(6, 78, 59), AutoSize = true };
-            Label lblNetVal = new Label { Text = $"${net:N2}", Location = new Point(290, 14), Font = new Font("Segoe UI", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(4, 120, 87), AutoSize = false, Size = new Size(180, 40), TextAlign = ContentAlignment.MiddleRight };
-            pnlTotal.Controls.AddRange(new Control[] { lblNetTitle, lblNetVal });
-            this.Controls.Add(pnlTotal);
-            currentY += 85;
+            // 🚚 運送細節 (Transport Details) - 搭配 溫暖橙 標籤
+            AddGroupHeader("TRANSPORT INSTRUCTIONS", ref currentY, Color.FromArgb(245, 158, 11));
+            AddDataRow("Est. Arrival Date:", dDate, ref currentY, true, Color.FromArgb(220, 38, 38));
+            AddDataRow("Shipping Method:", method, ref currentY, false);
+            currentY += 25;
 
-            // 📋 Footer Terms
-            Label lblTerms = new Label { Text = "⚠️ Standard Terms: This quotation value is valid for exactly 30 calendar days from issue date. Prices subject to delivery logistics verification.", Font = new Font("Segoe UI", 8.5F, FontStyle.Italic), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(25, currentY), Size = new Size(480, 40) };
-            this.Controls.Add(lblTerms);
+            // ✍️ 客戶簽收區塊 (Customer Acknowledgment)
+            Panel pnlSign = new Panel { Location = new Point(25, currentY), Size = new Size(515, 120), BackColor = Color.FromArgb(248, 250, 252) };
+            pnlSign.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlSign.ClientRectangle, Color.FromArgb(203, 213, 225), ButtonBorderStyle.Solid);
+            Label lblSignTitle = new Label { Text = "Goods Received In Good Condition:", Location = new Point(15, 15), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), AutoSize = true };
+            Label lblLine1 = new Label { Text = "Signature: _________________________________", Location = new Point(15, 55), Font = new Font("Segoe UI", 10F), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            Label lblLine2 = new Label { Text = "Date: _________________________________", Location = new Point(280, 55), Font = new Font("Segoe UI", 10F), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            pnlSign.Controls.AddRange(new Control[] { lblSignTitle, lblLine1, lblLine2 });
+            this.Controls.Add(pnlSign);
 
-            // 🎨 底部操作按鈕區 (Action Buttons)
-            Panel pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 75, BackColor = Color.FromArgb(248, 250, 252) };
+            // 底部操作按鈕區
+            Panel pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 75, BackColor = Color.White };
             pnlBottom.Paint += (s, e) => e.Graphics.DrawLine(new Pen(Color.FromArgb(226, 232, 240)), 0, 0, pnlBottom.Width, 0);
 
-            // 🖨️ 孔雀綠色 (Teal) 打印按鈕
-            Button btnPrint = new Button { Text = "🖨️ Print Quote", Size = new Size(135, 42), Location = new Point(100, 16), BackColor = Color.FromArgb(13, 148, 136), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnPrint = new Button { Text = "🖨️ Print DN", Size = new Size(140, 42), Location = new Point(100, 16), BackColor = Color.FromArgb(14, 165, 233), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnPrint.FlatAppearance.BorderSize = 0;
-            btnPrint.Click += (s, e) => MessageBox.Show("Connecting to local hardware printer subsystem...", "Print Job Triggered", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btnPrint.Click += (s, e) => MessageBox.Show("Connecting to warehouse printer...", "Print Job", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            // 💾 靛藍色 (Indigo) 匯出按鈕
-            Button btnPDF = new Button { Text = "💾 Export PDF", Size = new Size(135, 42), Location = new Point(245, 16), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnPDF = new Button { Text = "💾 Save PDF", Size = new Size(140, 42), Location = new Point(255, 16), BackColor = Color.FromArgb(71, 85, 105), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnPDF.FlatAppearance.BorderSize = 0;
-            btnPDF.Click += (s, e) => MessageBox.Show("PDF Document generated successfully inside deployment output matrix folder.", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btnPDF.Click += (s, e) => MessageBox.Show("Delivery Note PDF saved successfully.", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            // ❌ 淺灰色 (Light Gray) 關閉按鈕
-            Button btnClose = new Button { Text = "Close", Size = new Size(100, 42), Location = new Point(390, 16), BackColor = Color.FromArgb(226, 232, 240), ForeColor = Color.FromArgb(51, 65, 85), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnClose = new Button { Text = "Close", Size = new Size(100, 42), Location = new Point(410, 16), BackColor = Color.FromArgb(226, 232, 240), ForeColor = Color.FromArgb(51, 65, 85), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnClose.FlatAppearance.BorderSize = 0;
             btnClose.Click += (s, e) => this.Close();
 
@@ -513,25 +491,21 @@ namespace ITP4915M_Group11
             this.Controls.Add(pnlBottom);
         }
 
-        // 🎨 自訂帶有「鮮艷左側標記條」的 Group Header
         private void AddGroupHeader(string title, ref int y, Color accentColor)
         {
-            // 左側細小顏色標記條 (Color Accent Bar)
             Panel colorBar = new Panel { Location = new Point(25, y + 2), Size = new Size(5, 18), BackColor = accentColor };
             this.Controls.Add(colorBar);
-
-            // 標題文字
             Label lbl = new Label { Text = title, Location = new Point(38, y), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = accentColor, AutoSize = true };
             this.Controls.Add(lbl);
-            y += 26;
+            y += 28;
         }
 
         private void AddDataRow(string label, string val, ref int y, bool isBold, Color? customColor = null)
         {
             Label lblL = new Label { Text = label, Location = new Point(35, y), Font = new Font("Segoe UI", 9.5F, FontStyle.Regular), ForeColor = Color.FromArgb(100, 116, 139), AutoSize = true };
-            Label lblR = new Label { Text = val, Location = new Point(220, y), Font = new Font("Segoe UI", 10F, isBold ? FontStyle.Bold : FontStyle.Regular), ForeColor = customColor ?? Color.FromArgb(51, 65, 85), AutoSize = true, Width = 280 };
+            Label lblR = new Label { Text = val, Location = new Point(220, y), Font = new Font("Segoe UI", 10F, isBold ? FontStyle.Bold : FontStyle.Regular), ForeColor = customColor ?? Color.FromArgb(51, 65, 85), AutoSize = true, Width = 300 };
             this.Controls.AddRange(new Control[] { lblL, lblR });
-            y += 26; // 增加少少行距令畫面透氣啲
+            y += 28;
         }
     }
 }
