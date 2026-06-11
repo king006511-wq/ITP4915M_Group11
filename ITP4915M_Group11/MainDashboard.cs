@@ -9,7 +9,12 @@ namespace ITP4915M_Group11
         public MainDashboard()
         {
             InitializeComponent();
-            InitializePremiumModernUI(); // 啟動全英文現代化主頁
+            // Apply consistent theme then initialize UI (avoid in design mode)
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                ThemeManager.ApplyTheme(this);
+                InitializePremiumModernUI(); // 啟動全英文現代化主頁
+            }
         }
 
         private void InitializePremiumModernUI()
@@ -54,6 +59,23 @@ namespace ITP4915M_Group11
             };
             btnLogout.FlatAppearance.BorderSize = 0;
             btnLogout.Click += (s, e) => { Application.Exit(); };
+
+            // 主頁按鈕 (點擊回到主頁)
+            Button btnHome = new Button
+            {
+                Text = "🏠 Home",
+                Location = new Point(900, 20),
+                Size = new Size(110, 40),
+                BackColor = Color.FromArgb(37, 99, 235),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnHome.FlatAppearance.BorderSize = 0;
+            btnHome.Click += (s, e) => { /* 重新載入主畫面內容 */ InitializePremiumModernUI(); };
+
+            pnlHeader.Controls.Add(btnHome);
             pnlHeader.Controls.Add(btnLogout);
             this.Controls.Add(pnlHeader);
 

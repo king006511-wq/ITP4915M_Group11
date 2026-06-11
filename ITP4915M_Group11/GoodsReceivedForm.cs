@@ -23,12 +23,16 @@ namespace ITP4915M_Group11
         public GoodsReceivedForm()
         {
             InitializeComponent();
-            InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
-            GenerateGRNID();             // Generate unique runtime sequence ID
-            LoadActivePurchaseOrders();  // Ingest pending PO records
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                ThemeManager.ApplyTheme(this);
+                InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
+                GenerateGRNID();             // Generate unique runtime sequence ID
+                LoadActivePurchaseOrders();  // Ingest pending PO records
 
-            // 確保 Form_Load 事件有綁定
-            this.Load += GoodsReceivedForm_Load;
+                // 確保 Form_Load 事件有綁定
+                this.Load += GoodsReceivedForm_Load;
+            }
         }
 
         #region 🎨 Dynamic Premium English UI Construction
@@ -162,6 +166,12 @@ namespace ITP4915M_Group11
                 AutoSize = true
             };
             pnlMain.Controls.Add(lblHeader);
+
+            // Back Home button
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnBackHome.FlatAppearance.BorderSize = 0;
+            btnBackHome.Click += (s, e) => { NavigationHelper.GoToMainDashboard(this); };
+            pnlMain.Controls.Add(btnBackHome);
 
             // 5. GRN Ingestion Processing Panel (Left Input Box Card)
             Panel pnlCard = new Panel

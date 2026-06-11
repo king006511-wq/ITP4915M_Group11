@@ -125,6 +125,7 @@
     <Compile Include="MainDashboard.Designer.cs">
       <DependentUpon>MainDashboard.cs</DependentUpon>
     </Compile>
+    <Compile Include="NavigationHelper.cs" />
     <Compile Include="OrderManagementForm.cs" />
     <Compile Include="OrderManagementForm.Designer.cs">
       <DependentUpon>OrderManagementForm.cs</DependentUpon>
@@ -155,6 +156,7 @@
     <Compile Include="RawMaterialRequestForm.Designer.cs">
       <DependentUpon>RawMaterialRequestForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ThemeManager.cs" />
     <Compile Include="UserSession.cs" />
     <Compile Include="ViewOrders.cs">
       <SubType>Form</SubType>

@@ -23,7 +23,11 @@ namespace ITP4915M_Group11
         public ProcurementForm()
         {
             InitializeComponent();
-            InitializePremiumModernUI(); // 載入全英文高級採購 UI
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                ThemeManager.ApplyTheme(this);
+                InitializePremiumModernUI(); // 載入全英文高級採購 UI
+            }
         }
 
         private void ProcurementForm_Load(object sender, EventArgs e)
@@ -162,6 +166,12 @@ namespace ITP4915M_Group11
                 AutoSize = true
             };
             pnlMain.Controls.Add(lblHeader);
+
+            // Back Home button
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnBackHome.FlatAppearance.BorderSize = 0;
+            btnBackHome.Click += (s, e) => { NavigationHelper.GoToMainDashboard(this); };
+            pnlMain.Controls.Add(btnBackHome);
 
             // 4. Input Card Panel (左側建立採購單卡片)
             Panel pnlCard = new Panel

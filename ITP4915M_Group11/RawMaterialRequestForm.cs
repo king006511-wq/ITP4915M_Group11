@@ -23,9 +23,13 @@ namespace ITP4915M_Group11
         public RawMaterialRequestForm()
         {
             InitializeComponent();
-            InitializePremiumModernUI();
-            GenerateNewCardID(); // 自動生成 RC011 呢類 ID
-            LoadRequests();
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                ThemeManager.ApplyTheme(this);
+                InitializePremiumModernUI();
+                GenerateNewCardID(); // 自動生成 RC011 呢類 ID
+                LoadRequests();
+            }
         }
 
         #region 🎨 Dynamic Premium English UI Construction
@@ -107,6 +111,12 @@ namespace ITP4915M_Group11
 
             Label lblHeader = new Label { Text = "Factory Material Reorder Center", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
+
+            // Back Home button
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnBackHome.FlatAppearance.BorderSize = 0;
+            btnBackHome.Click += (s, e) => { NavigationHelper.GoToMainDashboard(this); };
+            pnlMain.Controls.Add(btnBackHome);
 
             // 3. Input Form Card
             Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 600), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };

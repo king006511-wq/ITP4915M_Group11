@@ -24,9 +24,13 @@ namespace ITP4915M_Group11
         public EmployeeManagement()
         {
             InitializeComponent();
-            InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
-            SetupRoleControls();         // Ingest Role options into ComboBox
-            LoadStaffData();             // Fetch staff list from Database
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                ThemeManager.ApplyTheme(this);
+                InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
+                SetupRoleControls();         // Ingest Role options into ComboBox
+                LoadStaffData();             // Fetch staff list from Database
+            }
         }
 
         #region 🎨 Dynamic Premium English UI Construction
@@ -160,6 +164,32 @@ namespace ITP4915M_Group11
                 AutoSize = true
             };
             pnlMain.Controls.Add(lblHeader);
+
+            // Back Home button
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnBackHome.FlatAppearance.BorderSize = 0;
+            btnBackHome.Click += (s, e) => {
+                try
+                {
+                    // Attempt to locate and show an existing main dashboard form if available
+                    foreach (Form f in Application.OpenForms)
+                    {
+                        if (f.GetType().Name == "MainDashboard")
+                        {
+                            this.Hide();
+                            f.Show();
+                            return;
+                        }
+                    }
+                    // Fallback: restart the application to simulate returning to home
+                    Application.Restart();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Navigation error: " + ex.Message, "Navigation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            pnlMain.Controls.Add(btnBackHome);
 
             // 5. Input Parameter Card Panel (Left Side Container)
             Panel pnlCard = new Panel
