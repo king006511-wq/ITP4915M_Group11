@@ -20,6 +20,7 @@ namespace ITP4915M_Group11
 
         public ProductManagement()
         {
+            InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 ThemeManager.ApplyTheme(this);
@@ -27,6 +28,35 @@ namespace ITP4915M_Group11
                 LoadDatabaseData();
             }
         }
+
+        #region 🔒 System Security Gatekeeper Enforcement
+        private void ProductManagement_Load(object sender, EventArgs e)
+        {
+            // 🎯 Check if the user has Manager or Administrator permissions
+            string currentRole = UserSession.LoggedInStaffRole;
+            string currentStaffID = UserSession.LoggedInStaffID;
+
+            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
+                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+
+            if (!isAuthorized)
+            {
+                MessageBox.Show(
+                    $"[SECURITY ALERT] Access Denied!\n\n" +
+                    $"Logged In Staff ID: {(string.IsNullOrEmpty(currentStaffID) ? "Unknown" : currentStaffID)}\n" +
+                    $"Your Account Role is: \"{(string.IsNullOrEmpty(currentRole) ? "None" : currentRole)}\"\n\n" +
+                    $"Only a Manager or Administrator is authorized to access Product Maintenance settings.",
+                    "System Security Guard",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Stop
+                );
+
+                // Gracefully abort and force close the form context before it finishes rendering
+                this.BeginInvoke(new MethodInvoker(this.Close));
+            }
+        }
+        #endregion
 
         #region 🎨 Premium Unified Modern UI Construction Engine
         private void InitializePremiumModernUI()
@@ -39,6 +69,9 @@ namespace ITP4915M_Group11
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
+
+            // Wire up the load event handler to trigger security checking routines
+            this.Load += ProductManagement_Load;
 
             // 1. Left Sidebar Navigation Container
             Panel pnlSidebar = new Panel { Width = 260, Dock = DockStyle.Left, BackColor = Color.FromArgb(15, 23, 42) };
@@ -233,6 +266,10 @@ namespace ITP4915M_Group11
                 txtPartID.ReadOnly = true;
                 txtPartID.BackColor = Color.FromArgb(241, 245, 249);
             }
+            else
+            {
+                ClearFields();
+            }
         }
 
         private void btnAdd_Click(object sender, EventArgs e)
@@ -341,10 +378,5 @@ namespace ITP4915M_Group11
             dgvProductCatalog.ClearSelection();
         }
         #endregion
-
-        private void ProductManagement_Load(object sender, EventArgs e)
-        {
-
-        }
     }
 }

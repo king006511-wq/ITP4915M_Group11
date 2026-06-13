@@ -50,6 +50,8 @@ namespace ITP4915M_Group11
             get { return !string.IsNullOrEmpty(LoggedInStaffID); }
         }
 
+        public static string CurrentUserRole { get; internal set; }
+
         /// <summary>
         /// 登出時呼叫此方法，清空所有 Session 資料，防止下一個使用者睇到舊資料
         /// </summary>

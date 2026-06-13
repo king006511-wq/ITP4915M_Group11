@@ -30,7 +30,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🎨 UI 元素與購物車變數
         // ==========================================
-        private TextBox txtOrderID, txtCustomerID, txtStaffUIID, txtQty, txtUnitPrice; // 💡 修正：將 txtStaffID 改名為 txtStaffUIID 避免與字串變數衝突
+        private TextBox txtOrderID, txtCustomerID, txtStaffUIID, txtQty, txtUnitPrice;
         private ComboBox cboProducts;
         private CheckBox chkRequireDelivery;
         private DataGridView dgvOrders;
@@ -55,59 +55,38 @@ namespace ITP4915M_Group11
             }
         }
 
-        /// <summary>
-        /// 🛑 終極防線：不論從哪裡開啟，只要 Form 敢 Load 載入，就必須強制通過權限比對！
-        /// </summary>
         private void OrderManagementForm_Load(object sender, EventArgs e)
         {
-            // 1. 同步全域的登入者資訊
             this.currentStaffID = UserSession.LoggedInStaffID;
 
-            // 2. 核心權限檢查：如果比對失敗，立刻銷毀視窗
             if (!CanAccess())
             {
                 MessageBox.Show(
                     $"[SECURITY ALERT] Access Denied!\n\n" +
                     $"Logged In StaffID: {currentStaffID}\n" +
                     $"Your Account Role is: \"{(string.IsNullOrEmpty(UserSession.LoggedInStaffRole) ? "None / Empty" : UserSession.LoggedInStaffRole)}\"\n\n" +
-                    $"Only Manager, Administrator, and Sales Representative are authorized to access this module.",
+                    $"Only Manager, Administrator and Sales Representative are authorized to access this module.",
                     "System Security Enforcer",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Stop
                 );
 
-                // 🌟 強制關閉表單，不讓非授權用戶看到任何東西
                 this.BeginInvoke(new MethodInvoker(this.Close));
                 return;
             }
 
-            // 3. 權限通過，才允許加載資料庫機密數據
             GenerateOrderID();
             LoadProductsToCombo();
             RefreshOrdersGrid();
         }
 
-        /// <summary>
-        /// 🔍 檢查全局 Session 角色是否符合存取白名單
-        /// </summary>
         private bool CanAccess()
         {
             string currentRole = UserSession.LoggedInStaffRole;
+            if (string.IsNullOrWhiteSpace(currentRole)) return false;
 
-            if (string.IsNullOrWhiteSpace(currentRole))
-                return false;
-
-            // 🎯 系統白名單開放角色名單
-            List<string> allowedRoles = new List<string>
-            {
-                "Manager",
-                "Administrator",
-                "Sales Representative"
-            };
-
-            // 忽略資料庫字串前後空白與大小寫進行安全比對
-            return allowedRoles.Any(role =>
-                role.Equals(currentRole.Trim(), StringComparison.OrdinalIgnoreCase));
+            List<string> allowedRoles = new List<string> { "Manager", "Administrator", "Sales Representative" };
+            return allowedRoles.Any(role => role.Equals(currentRole.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
         #region 🎨 Dynamic Premium English UI Construction
@@ -121,7 +100,7 @@ namespace ITP4915M_Group11
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
-            this.Load += OrderManagementForm_Load; // 💡 修正：必須綁定 Load 事件才能觸發權限檢查
+            this.Load += OrderManagementForm_Load;
 
             // 左側導航面板 (Sidebar)
             Panel pnlSidebar = new Panel { Width = 260, Dock = DockStyle.Left, BackColor = Color.FromArgb(15, 23, 42) };
@@ -144,18 +123,71 @@ namespace ITP4915M_Group11
                 else if (item.Contains("Logout")) { btnMenu.BackColor = Color.FromArgb(239, 68, 68); btnMenu.ForeColor = Color.White; }
                 else { btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184); }
 
+                // 🎯 修正後的 Click 事件路由邏輯
                 btnMenu.Click += (s, e) => {
                     Form targetForm = null;
                     try
                     {
-                        if (item.Contains("Sales Order")) { return; }
-                        // 💡 提示：如果其他 Form 尚未建立，請確保對應的類別有名稱匹配
-                        else if (item.Contains("Logout")) { Application.Restart(); return; }
+                        // 如果點擊的是當前的 Sales Order，則不需要做任何事
+                        if (item.Contains("Sales Order Mgmt"))
+                        {
+                            return;
+                        }
+                        else if (item.Contains("Delivery Logistics"))
+                        {
+                            targetForm = new LogisticsForm();
+                        }
+                        else if (item.Contains("Product Maintenance"))
+                        {
+                            targetForm = new ProductManagement();
+                        }
+                        else if (item.Contains("HR / Staff Mgmt"))
+                        {
+                            targetForm = new EmployeeManagement();
+                        }
+                        else if (item.Contains("Goods Received"))
+                        {
+                            targetForm = new GoodsReceivedForm();
+                        }
+                        else if (item.Contains("Material Requests"))
+                        {
+                            targetForm = new RawMaterialRequestForm();
+                        }
+                        else if (item.Contains("Procurement Control"))
+                        {
+                            targetForm = new ProcurementForm();
+                        }
+                        else if (item.Contains("Customer Support"))
+                        {
+                            targetForm = new AfterServiceForm();
+                        }
+                        else if (item.Contains("Logout System"))
+                        {
+                            DialogResult result = MessageBox.Show("Are you sure you want to log out?", "Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                            if (result == DialogResult.Yes)
+                            {
+                                // 清除 Session 確保安全
+                                UserSession.LoggedInStaffID = "";
+                                UserSession.LoggedInStaffName = "";
+                                UserSession.LoggedInStaffRole = "";
 
+                                Login login = new Login();
+                                login.Show();
+                                this.Hide();
+                                login.FormClosed += (senderLogin, args) => this.Close();
+                            }
+                            return;
+                        }
+
+                        // 執行表單切換跳轉
                         if (targetForm != null)
                         {
                             this.Hide();
-                            targetForm.FormClosed += (senderObj, args) => this.Close();
+                            // 當目標子表單被關閉時，不要直接關閉整個程式，而是把主 Dashboard 重新秀出來，或是回到 MainDashboard
+                            targetForm.FormClosed += (senderObj, args) => {
+                                // 這裡可以改為顯示主選單，或者重新顯示目前的訂單管理視窗
+                                this.Show();
+                            };
                             targetForm.Show();
                         }
                     }
@@ -176,8 +208,7 @@ namespace ITP4915M_Group11
             Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(830, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => {
-                // NavigationHelper.GoToMainDashboard(this); // 💡 如果有 NavigationHelper 請取消註解
-                this.Close();
+                this.Close(); // 關閉目前視窗，會觸發 MainDashboard 的 target.FormClosed += ... => this.Show(); 重新顯示主頁面
             };
             pnlMain.Controls.Add(btnBackHome);
 
@@ -249,13 +280,13 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(chkRequireDelivery);
             startY += 40;
 
-            // 🌟 底部功能按鈕區
+            // 底部功能按鈕區
             btnSubmitOrder = new Button { Text = "➕ Create Order", Location = new Point(20, startY), Size = new Size(140, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnSubmitOrder.Click += btnCreateOrder_Click;
             pnlCard.Controls.Add(btnSubmitOrder);
 
             btnUpdateOrder = new Button { Text = "✏️ Update", Location = new Point(170, startY), Size = new Size(140, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnUpdateOrder.Click += btnUpdateOrder_Click;
+            btnUpdateOrder.Click += (s, e) => { /* 實作程式碼 */ };
             pnlCard.Controls.Add(btnUpdateOrder);
 
             btnClear = new Button { Text = "🧹 Clear", Location = new Point(320, startY), Size = new Size(150, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
@@ -263,7 +294,7 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(btnClear);
 
             btnCreateQuotation = new Button { Text = "📄 Generate Order Quotation", Location = new Point(20, startY + 50), Size = new Size(450, 42), BackColor = Color.FromArgb(124, 58, 237), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnCreateQuotation.Click += btnCreateQuotation_Click;
+            btnCreateQuotation.Click += (s, e) => { /* 實作程式碼 */ };
             pnlCard.Controls.Add(btnCreateQuotation);
 
             // 右側歷史訂單紀錄面板
@@ -365,7 +396,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 1. 獲取主訂單資訊
                     string queryOrder = "SELECT CustomerID, StaffID FROM orders WHERE OrderID = @OrderID";
                     using (MySqlCommand cmd = new MySqlCommand(queryOrder, conn))
                     {
@@ -381,7 +411,6 @@ namespace ITP4915M_Group11
                         }
                     }
 
-                    // 2. 獲取所有子項目並塞入購物車
                     string queryLines = @"SELECT l.PartID, p.PartName, l.Quantity, l.UnitPrice 
                                           FROM order_lineitem l 
                                           JOIN product_part p ON l.PartID = p.PartID 
@@ -459,17 +488,13 @@ namespace ITP4915M_Group11
             }
         }
 
-        // ======================================================================
-        // 🚀 建立新訂單邏輯 (INSERT)
-        // ======================================================================
         private void btnCreateOrder_Click(object sender, EventArgs e)
         {
             if (cartTable.Rows.Count == 0) { MessageBox.Show("Cart is empty!", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             string customerID = txtCustomerID.Text.Trim();
-            string orderID = txtOrderID.Text.Trim(); // 💡 修正：宣告 orderID
+            string orderID = txtOrderID.Text.Trim();
             if (string.IsNullOrWhiteSpace(customerID)) { MessageBox.Show("Customer ID required!", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
 
-            // 💡 修正：移除重複的 orderStatus 宣告
             string orderStatus = chkRequireDelivery.Checked ? "Pending Delivery" : "Self Pickup";
 
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -477,7 +502,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 1. 檢查 Customer 是否存在
                     string checkCustSql = "SELECT COUNT(*) FROM customer WHERE CustomerID = @CustomerID";
                     using (MySqlCommand checkCustCmd = new MySqlCommand(checkCustSql, conn))
                     {
@@ -485,7 +509,6 @@ namespace ITP4915M_Group11
                         if (Convert.ToInt32(checkCustCmd.ExecuteScalar()) == 0) { MessageBox.Show($"Customer ID '{customerID}' not found!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
                     }
 
-                    // 2. 檢查所有庫存是否足夠
                     foreach (DataRow row in cartTable.Rows)
                     {
                         string pID = row["PartID"].ToString();
@@ -499,12 +522,10 @@ namespace ITP4915M_Group11
                         }
                     }
 
-                    // 3. 開始 Transaction 寫入資料
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
                         {
-                            // 寫入 Orders 主表
                             string insertOrderSql = "INSERT INTO orders (OrderID, CustomerID, StaffID, TotalAmount, Status, OrderDate) VALUES (@OID, @CID, @SID, @Total, @Status, NOW())";
                             using (MySqlCommand cmdOrder = new MySqlCommand(insertOrderSql, conn, trans))
                             {
@@ -512,11 +533,10 @@ namespace ITP4915M_Group11
                                 cmdOrder.Parameters.AddWithValue("@CID", customerID);
                                 cmdOrder.Parameters.AddWithValue("@SID", currentStaffID);
                                 cmdOrder.Parameters.AddWithValue("@Total", globalOrderTotal);
-                                cmdOrder.Parameters.AddWithValue("@Status", orderStatus); // 💡 修正：修正為對應的變數名稱 orderStatus
+                                cmdOrder.Parameters.AddWithValue("@Status", orderStatus);
                                 cmdOrder.ExecuteNonQuery();
                             }
 
-                            // 迴圈寫入 LineItem 子表並扣庫存
                             string insertLineSql = "INSERT INTO order_lineitem (OrderID, PartID, Quantity, UnitPrice) VALUES (@OID, @PartID, @Qty, @Price)";
                             string updateStockSql = "UPDATE product_part SET StockLevel = StockLevel - @Qty WHERE PartID = @PartID";
 
@@ -540,7 +560,7 @@ namespace ITP4915M_Group11
                             trans.Commit();
                             MessageBox.Show($"Order [{orderID}] created successfully with {cartTable.Rows.Count} items!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             ClearFields();
-                            RefreshOrdersGrid(); // 💡 新增：自動重新整理歷史紀錄
+                            RefreshOrdersGrid();
                         }
                         catch (Exception ex)
                         {
@@ -553,9 +573,6 @@ namespace ITP4915M_Group11
             }
         }
 
-        // ======================================================================
-        // 🔄 重新整理歷史訂單（大網格）
-        // ======================================================================
         private void RefreshOrdersGrid()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -575,31 +592,14 @@ namespace ITP4915M_Group11
             }
         }
 
-        // ======================================================================
-        // 🧹 清空表單欄位
-        // ======================================================================
         private void ClearFields()
         {
             txtCustomerID.Clear();
             txtQty.Clear();
-            txtUnitPrice.Clear();
-            cboProducts.SelectedIndex = -1;
             cartTable.Clear();
             UpdateGlobalOrderTotal();
             GenerateOrderID();
-        }
-
-        // ======================================================================
-        // ✏️ 欄位預留方法（防止按鈕點擊報錯）
-        // ======================================================================
-        private void btnUpdateOrder_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Update functionality can be extended using similar SQL transactions.", "System Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void btnCreateQuotation_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Quotation receipt system generated.", "System Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (cboProducts.Items.Count > 0) cboProducts.SelectedIndex = -1;
         }
         #endregion
     }

@@ -19,7 +19,7 @@ namespace ITP4915M_Group11
         private TextBox txtStaffID, txtName, txtPassword;
         private ComboBox cboRole;
         private DataGridView dgvStaff;
-        private Button btnAddStaff, btnUpdate, btnDelete, btnReset; // 加入了 btnReset
+        private Button btnAddStaff, btnUpdate, btnDelete, btnReset;
 
         public EmployeeManagement()
         {
@@ -32,6 +32,35 @@ namespace ITP4915M_Group11
                 LoadStaffData();             // Fetch staff list from Database
             }
         }
+
+        #region 🔒 System Security Gatekeeper Enforcement
+        private void EmployeeManagement_Load(object sender, EventArgs e)
+        {
+            // 🎯 Check if the user has Manager or Administrator permissions
+            string currentRole = UserSession.LoggedInStaffRole;
+            string currentStaffID = UserSession.LoggedInStaffID;
+
+            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
+                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+
+            if (!isAuthorized)
+            {
+                MessageBox.Show(
+                    $"[SECURITY ALERT] Access Denied!\n\n" +
+                    $"Logged In Staff ID: {(string.IsNullOrEmpty(currentStaffID) ? "Unknown" : currentStaffID)}\n" +
+                    $"Your Account Role is: \"{(string.IsNullOrEmpty(currentRole) ? "None" : currentRole)}\"\n\n" +
+                    $"Only a Manager or Administrator is authorized to access Employee Management profiles.",
+                    "System Security Guard",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Stop
+                );
+
+                // Gracefully abort and force close the form context before it finishes rendering
+                this.BeginInvoke(new MethodInvoker(this.Close));
+            }
+        }
+        #endregion
 
         #region 🎨 Dynamic Premium English UI Construction
         private void InitializePremiumModernUI()
@@ -47,6 +76,9 @@ namespace ITP4915M_Group11
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
+
+            // Wire up the load event handler to trigger security checking routines
+            this.Load += EmployeeManagement_Load;
 
             // 3. Left Sidebar Navigation Panel
             Panel pnlSidebar = new Panel
@@ -101,7 +133,8 @@ namespace ITP4915M_Group11
                     btnMenu.BackColor = Color.FromArgb(37, 99, 235);
                     btnMenu.ForeColor = Color.White;
                 }
-                else if (item.Contains("Logout"))
+                // Check specifically for Logout System
+                else if (item.Contains("Logout System"))
                 {
                     btnMenu.BackColor = Color.FromArgb(239, 68, 68);
                     btnMenu.ForeColor = Color.White;
@@ -128,7 +161,7 @@ namespace ITP4915M_Group11
                         else if (item.Contains("Material Requests")) targetForm = new RawMaterialRequestForm();
                         else if (item.Contains("Procurement")) targetForm = new ProcurementForm();
                         else if (item.Contains("Support")) targetForm = new AfterServiceForm();
-                        else if (item.Contains("Logout")) { Application.Restart(); return; }
+                        else if (item.Contains("Logout System")) { Application.Restart(); return; }
 
                         if (targetForm != null && !(targetForm is EmployeeManagement))
                         {
@@ -195,7 +228,7 @@ namespace ITP4915M_Group11
             Panel pnlCard = new Panel
             {
                 Location = new Point(30, 85),
-                Size = new Size(420, 620), // 稍微加長以容納新按鈕
+                Size = new Size(420, 620),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -275,7 +308,7 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(btnDelete);
             startY += 52;
 
-            // ✨ 新增的重置/清空按鈕
+            // ✨ Reset / Clear Button Layout
             btnReset = new Button
             {
                 Text = "🧹 Clear / Reset Fields",
@@ -289,8 +322,8 @@ namespace ITP4915M_Group11
             };
             btnReset.FlatAppearance.BorderSize = 0;
             btnReset.Click += (s, e) => {
-                dgvStaff.ClearSelection(); // 取消選擇 DataGridView 的選項
-                ClearFields();             // 清空並解鎖 TextBoxes
+                dgvStaff.ClearSelection();
+                ClearFields();
             };
             pnlCard.Controls.Add(btnReset);
 
@@ -330,7 +363,7 @@ namespace ITP4915M_Group11
             dgvStaff.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
             dgvStaff.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
 
-            // Re-bind old content click event to accurate automated Row Selection Tracker
+            // Row Selection Tracker Linkage
             dgvStaff.SelectionChanged += dgvStaff_SelectionChanged;
 
             pnlMain.Controls.Add(dgvStaff);
@@ -356,6 +389,8 @@ namespace ITP4915M_Group11
         private void SetupRoleControls()
         {
             cboRole.Items.Clear();
+            cboRole.Items.Add("Manager");
+            cboRole.Items.Add("System Manager");
             cboRole.Items.Add("Administrator");
             cboRole.Items.Add("Sales Representative");
             cboRole.Items.Add("Logistics Driver");
@@ -404,7 +439,7 @@ namespace ITP4915M_Group11
                 DataGridViewRow row = dgvStaff.SelectedRows[0];
                 txtStaffID.Text = row.Cells["StaffID"].Value?.ToString() ?? "";
                 txtName.Text = row.Cells["Name"].Value?.ToString() ?? "";
-                txtPassword.Clear(); // do not show stored password
+                txtPassword.Clear(); // Clear field to indicate password typing for edits
                 cboRole.Text = row.Cells["Role"].Value?.ToString() ?? "";
 
                 txtStaffID.ReadOnly = true;
@@ -414,11 +449,6 @@ namespace ITP4915M_Group11
             {
                 ClearFields();
             }
-        }
-
-        private void EmployeeManagement_Load(object sender, EventArgs e)
-        {
-
         }
 
         private void btnAddStaff_Click(object sender, EventArgs e)
@@ -547,9 +577,11 @@ namespace ITP4915M_Group11
             txtStaffID.Clear();
             txtName.Clear();
             txtPassword.Clear();
-            if (cboRole.Items.Count > 0) cboRole.SelectedIndex = 0;
 
-            // ✨ 解除唯讀並將背景顏色變回白色
+            if (cboRole.Items.Count > 0)
+                cboRole.SelectedIndex = 0;
+
+            // Unlock Staff ID input box field and revert color schema back to baseline
             txtStaffID.ReadOnly = false;
             txtStaffID.BackColor = Color.White;
         }
