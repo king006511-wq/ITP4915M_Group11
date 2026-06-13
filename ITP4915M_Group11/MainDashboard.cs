@@ -12,7 +12,7 @@ namespace ITP4915M_Group11
             // Apply consistent theme then initialize UI (avoid in design mode)
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                ThemeManager.ApplyTheme(this);
+                // ThemeManager.ApplyTheme(this); // 如果有 ThemeManager 請取消註解
                 InitializePremiumModernUI(); // 啟動全英文現代化主頁
             }
         }
@@ -45,7 +45,7 @@ namespace ITP4915M_Group11
             };
             pnlHeader.Controls.Add(lblLogo);
 
-            // 登出按鈕
+            // 🚪 登出按鈕 (已修正跳轉邏輯)
             Button btnLogout = new Button
             {
                 Text = "🚪 Logout",
@@ -58,7 +58,26 @@ namespace ITP4915M_Group11
                 Cursor = Cursors.Hand
             };
             btnLogout.FlatAppearance.BorderSize = 0;
-            btnLogout.Click += (s, e) => { Application.Exit(); };
+
+            // 🎯 核心修改處：點擊按鈕時安全登出並回到 Login 畫面
+            btnLogout.Click += (s, e) => {
+                DialogResult result = MessageBox.Show("Are you sure you want to log out?", "Logout Notice", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes)
+                {
+                    // 1. 安全考量：清空 Session 登入資料
+                    if (UserSession.LoggedInStaffID != null) UserSession.LoggedInStaffID = "";
+                    if (UserSession.LoggedInStaffName != null) UserSession.LoggedInStaffName = "";
+                    if (UserSession.LoggedInStaffRole != null) UserSession.LoggedInStaffRole = "";
+
+                    // 2. 開啟登入視窗
+                    Login loginForm = new Login();
+                    loginForm.Show();
+
+                    // 3. 關閉目前的控制面板 (不使用 Hide 避免記憶體殘留)
+                    this.Hide();
+                    loginForm.FormClosed += (senderLogin, args) => this.Close();
+                }
+            };
 
             // 主頁按鈕 (點擊回到主頁)
             Button btnHome = new Button
@@ -79,7 +98,7 @@ namespace ITP4915M_Group11
             pnlHeader.Controls.Add(btnLogout);
             this.Controls.Add(pnlHeader);
 
-            // 2. 8 大模組名稱 (完美對應我哋之前整嘅 Sidebar)
+            // 2. 8 大模組名稱
             string[] modules = {
                 "🛒 Sales Order Mgmt", "🚚 Delivery Logistics",
                 "🛋️ Product Maintenance", "👔 HR / Staff Mgmt",
@@ -115,12 +134,13 @@ namespace ITP4915M_Group11
                 btnModule.MouseEnter += (s, e) => { btnModule.BackColor = Color.FromArgb(241, 245, 249); btnModule.FlatAppearance.BorderColor = Color.FromArgb(37, 99, 235); };
                 btnModule.MouseLeave += (s, e) => { btnModule.BackColor = Color.White; btnModule.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240); };
 
-                // 🔗 點擊跳轉邏輯 (已經包埋 Goods Received 啦！)
+                // 🔗 點擊跳轉邏輯
                 btnModule.Click += (s, e) => {
                     Form target = null;
                     try
                     {
                         if (mod.Contains("Sales Order")) target = new OrderManagementForm();
+                        // 提示：其他 Form 類別需要確保專案中確實存在，否則編譯時會報錯
                         else if (mod.Contains("Logistics")) target = new LogisticsForm();
                         else if (mod.Contains("Product")) target = new ProductManagement();
                         else if (mod.Contains("HR")) target = new EmployeeManagement();
