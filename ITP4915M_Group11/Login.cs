@@ -60,7 +60,7 @@ namespace ITP4915M_Group11
             int currentY = 145;
 
             // Staff ID Input Block
-            Label lblUser = new Label { Text = "Staff ID / Username *", Location = new Point(50, currentY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            Label lblUser = new Label { Text = "Staff ID *", Location = new Point(50, currentY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             txtUser = new TextBox { Location = new Point(50, currentY + 22), Width = 350, Font = new Font("Segoe UI", 13F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Staff ID..." };
             SetupPlaceholder(txtUser, "Enter Staff ID...", false);
             pnlMain.Controls.Add(lblUser);
@@ -125,7 +125,6 @@ namespace ITP4915M_Group11
             string inputUser = txtUser.Text.Trim();
             string inputPass = txtPass.Text.Trim();
 
-            // Intercept placeholders or empty clicks
             if (string.IsNullOrEmpty(inputUser) || inputUser == "Enter Staff ID..." ||
                 string.IsNullOrEmpty(inputPass) || inputPass == "Enter Password...")
             {
@@ -139,9 +138,9 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
 
-                    // ⭐⭐⭐ 更新 SQL：提取所需的使用者詳細資料 ⭐⭐⭐
-                    // 假設你的 `staff` Table 有 Name 同 Department 欄位
-                    string loginQuery = "SELECT StaffID, Name, Password FROM staff WHERE StaffID = @user AND Password = @pass";
+                    // 🎯 修正處：將原本出錯的 Department 移除，只撈取 StaffID, Name, Role
+                    // （請確保你的 staff 資料表裡確實有 'Role' 這個欄位，如果叫別的名字如 'Position'，請自行更改）
+                    string loginQuery = "SELECT StaffID, Name, Role FROM staff WHERE StaffID = @user AND Password = @pass";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
                     {
@@ -150,25 +149,26 @@ namespace ITP4915M_Group11
 
                         using (MySqlDataReader reader = cmd.ExecuteReader())
                         {
-                            if (reader.Read()) // 如果有資料返回，表示登入成功
+                            if (reader.Read())
                             {
-                                // ⭐⭐⭐ 寫入全局 Session ⭐⭐⭐
+                                // 💾 將真實數據寫入全域變數 Session 中
                                 UserSession.LoggedInStaffID = reader["StaffID"].ToString();
-
-                                // 預防資料庫有啲欄位未設定或叫法唔同，如果冇呢啲欄位，請將呢兩行註解，或對應返 Database 欄位名稱
                                 UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
-                                UserSession.LoggedInDepartment = reader["Password"] != DBNull.Value ? reader["Password"].ToString() : "Unknown";
+                                UserSession.LoggedInStaffRole = reader["Role"] != DBNull.Value ? reader["Role"].ToString().Trim() : "";
                                 UserSession.LoginTime = DateTime.Now;
 
-                                MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName}.", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                // 部門暫時給予預設值，避免其他地方報錯
+                                UserSession.LoggedInDepartment = "General";
 
-                                // Seamlessly swap forms
+                                MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName} ({UserSession.LoggedInStaffRole}).", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                // 跳轉至主控制面板
                                 MainDashboard dashboard = new MainDashboard();
-                                dashboard.FormClosed += (s, args) => this.Close(); // 確保閂 Dashboard 嗰陣成個程式會結束
+                                dashboard.FormClosed += (s, args) => this.Close();
                                 dashboard.Show();
                                 this.Hide();
                             }
-                            else // 冇資料返回，表示帳號或密碼錯誤
+                            else
                             {
                                 MessageBox.Show("Access Denied:\nInvalid Staff ID or Password. Please try again.", "Authentication Failed", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                                 txtPass.Clear();

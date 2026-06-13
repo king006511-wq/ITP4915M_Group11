@@ -23,9 +23,14 @@ namespace ITP4915M_Group11
 
         /// <summary>
         /// 當前登入員工的部門 (例如: "IT", "Sales", "Warehouse")
-        /// 方便日後做權限控制 (Role-based Access Control)
         /// </summary>
         public static string LoggedInDepartment { get; set; }
+
+        /// <summary>
+        /// 🎯 當前登入員工的職位角色 (例如: "Manager", "Administrator", "Sales Representative")
+        /// 用於極度精準的頁面權限鎖定 (RBAC 角色存取控制)
+        /// </summary>
+        public static string LoggedInStaffRole { get; set; }
 
         /// <summary>
         /// 紀錄員工登入系統的準確時間
@@ -53,6 +58,7 @@ namespace ITP4915M_Group11
             LoggedInStaffID = null;
             LoggedInStaffName = null;
             LoggedInDepartment = null;
+            LoggedInStaffRole = null; // ⬅️ 登出時同步清空角色資訊
             LoginTime = DateTime.MinValue;
         }
     }
