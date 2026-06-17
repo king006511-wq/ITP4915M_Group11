@@ -80,6 +80,18 @@ namespace ITP4915M_Group11
             RefreshOrdersGrid();
         }
 
+        // 方法級別的授權檢查示例：在建立訂單前確認權限（若需要更嚴格控制）
+        private bool EnsureCanCreateOrder()
+        {
+            // 假設建立訂單僅限於 Sales, Manager, Administrator
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Sales, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+            {
+                MessageBox.Show("Access Denied: insufficient privileges to create orders.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return false;
+            }
+            return true;
+        }
+
         private bool CanAccess()
         {
             string currentRole = UserSession.LoggedInStaffRole;
@@ -490,6 +502,8 @@ namespace ITP4915M_Group11
 
         private void btnCreateOrder_Click(object sender, EventArgs e)
         {
+            if (!EnsureCanCreateOrder()) return;
+
             if (cartTable.Rows.Count == 0) { MessageBox.Show("Cart is empty!", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             string customerID = txtCustomerID.Text.Trim();
             string orderID = txtOrderID.Text.Trim();

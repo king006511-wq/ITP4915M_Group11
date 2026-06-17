@@ -128,6 +128,23 @@ namespace ITP4915M_Group11
                 btnModule.MouseEnter += (s, e) => { btnModule.BackColor = Color.FromArgb(241, 245, 249); btnModule.FlatAppearance.BorderColor = Color.FromArgb(37, 99, 235); };
                 btnModule.MouseLeave += (s, e) => { btnModule.BackColor = Color.White; btnModule.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240); };
 
+                // 根據角色隱藏或停用按鈕（UI 層）
+                var role = AuthorizationHelper.ParseRole(UserSession.LoggedInStaffRole);
+                bool canOpen = true;
+                if (mod.Contains("HR")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
+                if (mod.Contains("Sales Order")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.SalesRepresentative);
+                if (mod.Contains("Goods Received")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.WarehouseSpecialist);
+                if (mod.Contains("Procurement")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer);
+                if (mod.Contains("Logistics")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.LogisticsDriver);
+
+                if (!canOpen)
+                {
+                    btnModule.Enabled = false;
+                    btnModule.BackColor = Color.FromArgb(243, 244, 246);
+                    btnModule.ForeColor = Color.FromArgb(148, 163, 184);
+                    btnModule.Cursor = Cursors.Default;
+                }
+
                 // Module Router Mapping Linkage
                 btnModule.Click += (s, e) => {
                     Form target = null;
@@ -144,6 +161,21 @@ namespace ITP4915M_Group11
 
                         if (target != null)
                         {
+                            // 再次在跳轉前做快速授權檢查，避免程式碼直接呼叫而繞過 UI 控制
+                            bool allowed = true;
+                            string name = target.GetType().Name;
+                            if (name == nameof(EmployeeManagement)) allowed = AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator);
+                            if (name == nameof(OrderManagementForm)) allowed = AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Sales);
+                            if (name == nameof(GoodsReceivedForm)) allowed = AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Warehouse);
+                            if (name == nameof(ProcurementForm)) allowed = AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Procurement);
+                            if (name == nameof(AfterServiceForm)) allowed = AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Sales);
+
+                            if (!allowed)
+                            {
+                                MessageBox.Show("Access Denied: your role cannot open this module.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                                return;
+                            }
+
                             this.Hide();
                             target.FormClosed += (senderForm, args) => this.Show();
                             target.Show();

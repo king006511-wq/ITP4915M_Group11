@@ -58,6 +58,15 @@ namespace ITP4915M_Group11
                 return;
             }
 
+            // 額外: 禁用特定按鈕如果使用者不是擁有執行權限
+            if (!AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.LogisticsDriver))
+            {
+                btnAssignDelivery.Enabled = false;
+                btnUpdateStatus.Enabled = false;
+                btnAssignDelivery.BackColor = Color.LightGray;
+                btnUpdateStatus.BackColor = Color.LightGray;
+            }
+
             LoadDeliveryStaffToCombo();
             RefreshPendingOrdersGrid();
         }

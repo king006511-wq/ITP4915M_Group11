@@ -453,6 +453,13 @@ namespace ITP4915M_Group11
 
         private void btnAddStaff_Click(object sender, EventArgs e)
         {
+            // 權限檢查：僅 Manager 或 Administrator 可以新增員工
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+            {
+                MessageBox.Show("Access Denied: insufficient privileges to add staff.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
             {
                 MessageBox.Show("Please fill out all mandatory profile parameters input blocks fields first!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -491,6 +498,13 @@ namespace ITP4915M_Group11
 
         private void btnUpdate_Click(object sender, EventArgs e)
         {
+            // 權限檢查：僅 Manager 或 Administrator 可以更新員工資料
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+            {
+                MessageBox.Show("Access Denied: insufficient privileges to update staff records.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
             {
                 MessageBox.Show("Please select a registered employee line record ledger entry to manipulate payload updates parameters!", "Validation Missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -529,6 +543,13 @@ namespace ITP4915M_Group11
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
+            // 權限檢查：僅 Manager 或 Administrator 可以刪除員工
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+            {
+                MessageBox.Show("Access Denied: insufficient privileges to delete staff records.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtStaffID.Text))
             {
                 MessageBox.Show("Please isolate a target staff row inside the directory registry ledger list map before staging deletion commands!", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);

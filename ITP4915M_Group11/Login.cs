@@ -138,9 +138,8 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
 
-                    // 🎯 修正處：將原本出錯的 Department 移除，只撈取 StaffID, Name, Role
-                    // （請確保你的 staff 資料表裡確實有 'Role' 這個欄位，如果叫別的名字如 'Position'，請自行更改）
-                    string loginQuery = "SELECT StaffID, Name, Role FROM staff WHERE StaffID = @user AND Password = @pass";
+                    // 使用 SHA2(256) 比對已雜湊的密碼（與 premium_living_db.sql 的 INSERT 配合）
+                    string loginQuery = "SELECT StaffID, Name, Role FROM staff WHERE StaffID = @user AND Password = SHA2(@pass,256)";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
                     {
@@ -154,6 +153,7 @@ namespace ITP4915M_Group11
                                 // 💾 將真實數據寫入全域變數 Session 中
                                 UserSession.LoggedInStaffID = reader["StaffID"].ToString();
                                 UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
+                                // Trim role to normalize spacing (ensure consistent comparisons)
                                 UserSession.LoggedInStaffRole = reader["Role"] != DBNull.Value ? reader["Role"].ToString().Trim() : "";
                                 UserSession.LoginTime = DateTime.Now;
 

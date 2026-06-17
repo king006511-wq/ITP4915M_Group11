@@ -32,7 +32,14 @@ namespace ITP4915M_Group11
 
                 // 確保 Form_Load 事件有綁定
                 this.Load += GoodsReceivedForm_Load;
+                this.Shown += GoodsReceivedForm_Shown;
             }
+        }
+
+        private void GoodsReceivedForm_Shown(object sender, EventArgs e)
+        {
+            // 顯示時強制授權檢查（保險）
+            AuthorizationHelper.EnforceRole(this, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Warehouse);
         }
 
         #region 🎨 Dynamic Premium English UI Construction
@@ -364,6 +371,13 @@ namespace ITP4915M_Group11
 
         private void btnConfirmReceive_Click(object sender, EventArgs e)
         {
+            // 再次在執行關鍵動作前檢查角色
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Warehouse))
+            {
+                MessageBox.Show("Access Denied: insufficient privileges to confirm goods received.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtPOID.Text) || string.IsNullOrWhiteSpace(txtPartID.Text) || string.IsNullOrWhiteSpace(txtStaffResource.Text))
             {
                 MessageBox.Show("Please fill in the Warehouse Staff ID and select an active Purchase Order item from the list!",

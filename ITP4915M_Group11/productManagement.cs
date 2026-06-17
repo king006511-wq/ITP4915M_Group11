@@ -55,6 +55,18 @@ namespace ITP4915M_Group11
                 // Gracefully abort and force close the form context before it finishes rendering
                 this.BeginInvoke(new MethodInvoker(this.Close));
             }
+
+            // 若非 Manager/Admin，則停用新增/刪除/修改按鈕等敏感操作（若存在）
+            bool canEdit = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
+            foreach (Control c in this.Controls)
+            {
+                // 嘗試在 Runtime 找到常用按鈕名稱並停用
+                if (c is Button b && (b.Text.Contains("Add") || b.Text.Contains("Update") || b.Text.Contains("Delete")))
+                {
+                    b.Enabled = canEdit;
+                    b.BackColor = canEdit ? b.BackColor : Color.LightGray;
+                }
+            }
         }
         #endregion
 

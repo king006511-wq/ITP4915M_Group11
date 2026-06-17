@@ -32,6 +32,16 @@ namespace ITP4915M_Group11
             }
         }
 
+        private void RawMaterialRequestForm_Shown(object sender, EventArgs e)
+        {
+            // 請求物料一般不應由所有角色提交，限制給 Manager / ProcurementOfficer
+            if (!AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer))
+            {
+                MessageBox.Show("您沒有權限提交物料補貨申請。若需要操作，請洽管理員。", "存取被拒", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                this.BeginInvoke(new MethodInvoker(this.Close));
+            }
+        }
+
         #region 🎨 Dynamic Premium English UI Construction
         private void InitializePremiumModernUI()
         {

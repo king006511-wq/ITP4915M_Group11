@@ -319,6 +319,13 @@ namespace ITP4915M_Group11
 
         private void btnCreatePO_Click(object sender, EventArgs e)
         {
+            // 權限檢查：僅 Procurement Officer, Manager, 或 Administrator 可建立採購單
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Procurement, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+            {
+                MessageBox.Show("Access Denied: insufficient privileges to create purchase orders.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
             // 🌟 驗證警告全英文化
             if (string.IsNullOrWhiteSpace(txtSupplierID.Text) || string.IsNullOrWhiteSpace(txtStaffID.Text) || !decimal.TryParse(txtPrice.Text, out decimal price))
             {

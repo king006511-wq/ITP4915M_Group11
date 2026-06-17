@@ -27,10 +27,19 @@ namespace ITP4915M_Group11
         public static string LoggedInDepartment { get; set; }
 
         /// <summary>
-        /// 🎯 當前登入員工的職位角色 (例如: "Manager", "Administrator", "Sales Representative")
-        /// 用於極度精準的頁面權限鎖定 (RBAC 角色存取控制)
+        /// 🎯 當前登入員工的職位角色 (enum 表示)
+        /// 同時保留字串欄位以利與資料庫互轉
         /// </summary>
-        public static string LoggedInStaffRole { get; set; }
+        public static AuthorizationHelper.UserRoleEnum LoggedInStaffRoleEnum { get; set; } = AuthorizationHelper.UserRoleEnum.Unknown;
+
+        /// <summary>
+        /// 兼容性字串表示，僅供外部舊代碼使用。設定時會嘗試同步 LoggedInStaffRoleEnum
+        /// </summary>
+        public static string LoggedInStaffRole
+        {
+            get => AuthorizationHelper.RoleToDbString(LoggedInStaffRoleEnum);
+            set => LoggedInStaffRoleEnum = AuthorizationHelper.ParseRole(value);
+        }
 
         /// <summary>
         /// 紀錄員工登入系統的準確時間

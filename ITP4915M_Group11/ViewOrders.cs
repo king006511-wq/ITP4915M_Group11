@@ -32,6 +32,16 @@ namespace ITP4915M_Group11
                 btnBackHome.Click += (s, ev) => { NavigationHelper.GoToMainDashboard(this); };
                 pnl.Controls.Add(btnBackHome);
             }
+
+            // 限制檢視訂單的權限（示範）: 預設允許所有人查看，但若需限制可在此調整
+            // 例: 只有 Manager / Administrator / SalesRepresentative 可查看完整訂單
+            bool canView = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.SalesRepresentative);
+            if (!canView)
+            {
+                // 若不允許檢視，顯示警告並關閉
+                MessageBox.Show("您沒有權限檢視完整訂單資料。如需協助請聯絡管理員。", "存取被拒", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                this.BeginInvoke(new MethodInvoker(this.Close));
+            }
         }
 
         private void label11_Click(object sender, EventArgs e)

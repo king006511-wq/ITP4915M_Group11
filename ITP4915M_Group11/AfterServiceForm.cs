@@ -298,6 +298,17 @@ namespace ITP4915M_Group11
 
         private void btnSubmitComplaint_Click(object sender, EventArgs e)
         {
+            // 若狀態為 Refunded 或 Closed，僅 Manager 或 Administrator 可執行
+            string newStatus = cboStatus.Text?.Trim();
+            if (!string.IsNullOrEmpty(newStatus) && (newStatus.Equals("Refunded", StringComparison.OrdinalIgnoreCase) || newStatus.Equals("Closed", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+                {
+                    MessageBox.Show("Access Denied: insufficient privileges to set status to Refund/Close.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    return;
+                }
+            }
+
             string customerID = txtCustomerID.Text.Trim();
             string orderID = txtOrderID.Text.Trim();
 

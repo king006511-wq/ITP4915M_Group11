@@ -101,6 +101,7 @@
     <Compile Include="AfterServiceForm.Designer.cs">
       <DependentUpon>AfterServiceForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="AuthorizationHelper.cs" />
     <Compile Include="employeeManagement.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -220,6 +221,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="premium_living_db.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
