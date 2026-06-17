@@ -160,43 +160,15 @@ namespace ITP4915M_Group11
                     Form targetForm = null;
                     try
                     {
-                        // 如果點擊的是當前的 Sales Order，則不需要做任何事
-                        if (item.Contains("Back Home"))
-                        {
-                            targetForm = new MainDashboard();
-                        }
-                        else if (item.Contains("Sales Order Mgmt"))
-                        {
-                            return;
-                        }
-                        else if (item.Contains("Delivery Logistics"))
-                        {
-                            targetForm = new LogisticsForm();
-                        }
-                        else if (item.Contains("Product Maintenance"))
-                        {
-                            targetForm = new ProductManagement();
-                        }
-                        else if (item.Contains("HR / Staff Mgmt"))
-                        {
-                            targetForm = new EmployeeManagement();
-                        }
-                        else if (item.Contains("Goods Received"))
-                        {
-                            targetForm = new GoodsReceivedForm();
-                        }
-                        else if (item.Contains("Material Requests"))
-                        {
-                            targetForm = new RawMaterialRequestForm();
-                        }
-                        else if (item.Contains("Procurement Control"))
-                        {
-                            targetForm = new ProcurementForm();
-                        }
-                        else if (item.Contains("Customer Support"))
-                        {
-                            targetForm = new AfterServiceForm();
-                        }
+                        if (item.Contains("Back Home")) targetForm = new MainDashboard();
+                        else if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
+                        else if (item.Contains("Delivery Logistics")) { targetForm = new LogisticsForm(); }
+                        else if (item.Contains("Product Maintenance")) { targetForm = new ProductManagement(); }
+                        else if (item.Contains("HR / Staff Mgmt")) { targetForm = new EmployeeManagement(); }
+                        else if (item.Contains("Goods Received")) { targetForm = new GoodsReceivedForm(); }
+                        else if (item.Contains("Material Requests")) { targetForm = new RawMaterialRequestForm(); }
+                        else if (item.Contains("Procurement Control")) { targetForm = new ProcurementForm(); }
+                        else if (item.Contains("Customer Support")) { targetForm = new AfterServiceForm(); }
                         else if (item.Contains("Logout System"))
                         {
                             DialogResult result = MessageBox.Show("Are you sure you want to log out?", "Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -219,11 +191,7 @@ namespace ITP4915M_Group11
                         if (targetForm != null)
                         {
                             this.Hide();
-                            // 當目標子表單被關閉時，不要直接關閉整個程式，而是把主 Dashboard 重新秀出來，或是回到 MainDashboard
-                            targetForm.FormClosed += (senderObj, args) => {
-                                // 這裡可以改為顯示主選單，或者重新顯示目前的訂單管理視窗
-                                this.Show();
-                            };
+                            targetForm.FormClosed += (senderObj, args) => { this.Show(); };
                             targetForm.Show();
                         }
                     }
@@ -241,7 +209,7 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "Order Processing Dashboard", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(830, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnBackHome = new Button { Text = "\uD83D\uDD19 Go Back", Size = new Size(120, 34), Location = new Point(830, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => {
                 this.Close(); // 關閉目前視窗，會觸發 MainDashboard 的 target.FormClosed += ... => this.Show(); 重新顯示主頁面

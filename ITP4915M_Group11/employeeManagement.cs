@@ -200,9 +200,8 @@ namespace ITP4915M_Group11
             };
             pnlMain.Controls.Add(lblHeader);
 
-            // Back Home button (已移至側邊欄)
-            // 右上角保留顯示按鈕以便返回上一頁
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
+            // Go Back button (top-right) - returns to previous page by closing this form
+            Button btnBackHome = new Button { Text = "\u0001 Go Back", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => {
                 try

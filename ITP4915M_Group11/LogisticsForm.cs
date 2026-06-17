@@ -150,8 +150,8 @@ namespace ITP4915M_Group11
                         Form targetForm = null;
 
                         if (item.Contains("Delivery Logistics")) return; // Active form shortcut bypass
-
-                        if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
+                        if (item.Contains("Back Home")) targetForm = new MainDashboard();
+                        else if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
                         else if (item.Contains("Product Maintenance")) targetForm = new ProductManagement();
                         else if (item.Contains("HR / Staff Mgmt")) targetForm = new EmployeeManagement();
                         else if (item.Contains("Goods Received")) targetForm = new GoodsReceivedForm();
@@ -198,8 +198,8 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "Logistics & Dispatch Control Center", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            // Back Home top-right (visible, return to previous page)
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(830, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
+            // Go Back top-right (visible, return to previous page)
+            Button btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(830, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { try { this.Close(); } catch { this.Hide(); } };
             pnlMain.Controls.Add(btnBackHome);

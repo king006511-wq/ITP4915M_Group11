@@ -93,7 +93,8 @@ namespace ITP4915M_Group11
                     Form targetForm = null;
                     try
                     {
-                        if (item.Contains("Sales Order")) targetForm = new OrderManagementForm();
+                        if (item.Contains("Back Home")) targetForm = new MainDashboard();
+                        else if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
                         else if (item.Contains("Logistics")) targetForm = new LogisticsForm();
                         else if (item.Contains("Product")) targetForm = new ProductManagement();
                         else if (item.Contains("HR")) targetForm = new EmployeeManagement();
@@ -123,8 +124,8 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "Customer Support & Ticketing System", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            // Back Home top-right (visible, returns to previous page by closing this form)
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
+            // Go Back top-right (visible, returns to previous page by closing this form)
+            Button btnBackHome = new Button { Text = " Go Back", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { this.Close(); };
             pnlMain.Controls.Add(btnBackHome);
