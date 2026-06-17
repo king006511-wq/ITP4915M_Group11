@@ -128,8 +128,7 @@ namespace ITP4915M_Group11
                 btnModule.MouseEnter += (s, e) => { btnModule.BackColor = Color.FromArgb(241, 245, 249); btnModule.FlatAppearance.BorderColor = Color.FromArgb(37, 99, 235); };
                 btnModule.MouseLeave += (s, e) => { btnModule.BackColor = Color.White; btnModule.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240); };
 
-                // 根據角色隱藏或停用按鈕（UI 層）
-                var role = AuthorizationHelper.ParseRole(UserSession.LoggedInStaffRole);
+                // 根據角色決定是否顯示模組按鈕（完全隱藏不可見）
                 bool canOpen = true;
                 if (mod.Contains("HR")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
                 if (mod.Contains("Sales Order")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.SalesRepresentative);
@@ -137,12 +136,12 @@ namespace ITP4915M_Group11
                 if (mod.Contains("Procurement")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer);
                 if (mod.Contains("Logistics")) canOpen = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.LogisticsDriver);
 
+                // 若無權限則不加入 UI（完全隱藏並不佔位）
                 if (!canOpen)
                 {
-                    btnModule.Enabled = false;
-                    btnModule.BackColor = Color.FromArgb(243, 244, 246);
-                    btnModule.ForeColor = Color.FromArgb(148, 163, 184);
-                    btnModule.Cursor = Cursors.Default;
+                    // 不把按鈕加入到 Controls，等於隱藏且不留空白
+                    // 為了維持欄位排版，僅在可見的按鈕加入時才遞增 col
+                    continue;
                 }
 
                 // Module Router Mapping Linkage

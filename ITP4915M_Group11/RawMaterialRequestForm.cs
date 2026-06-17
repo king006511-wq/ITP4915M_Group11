@@ -110,6 +110,18 @@ namespace ITP4915M_Group11
                     }
                     catch (Exception ex) { MessageBox.Show("Navigation error: " + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 };
+                // 根據角色決定側邊選單項目是否顯示
+                bool menuVisible = true;
+                if (item.Contains("Sales Order Mgmt")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.SalesRepresentative);
+                else if (item.Contains("Delivery Logistics")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.LogisticsDriver);
+                else if (item.Contains("Product Maintenance")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
+                else if (item.Contains("HR / Staff Mgmt")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
+                else if (item.Contains("Goods Received")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.WarehouseSpecialist);
+                else if (item.Contains("Material Requests")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer);
+                else if (item.Contains("Procurement Control")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer);
+                else if (item.Contains("Customer Support")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.SalesRepresentative);
+
+                btnMenu.Visible = menuVisible;
                 pnlSidebar.Controls.Add(btnMenu);
                 btnTop += 55;
             }
