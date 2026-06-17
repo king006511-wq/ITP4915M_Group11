@@ -60,9 +60,16 @@ namespace ITP4915M_Group11
             pnlSidebar.Controls.Add(lblLogo);
 
             string[] menuItems = {
-                "🛒 Sales Order Mgmt", "🚚 Delivery Logistics", "🛋️ Product Maintenance",
-                "👔 HR / Staff Mgmt", "📦 Goods Received (GRN)", "🏭 Material Requests",
-                "📊 Procurement Control", "🔧 Customer Support", "🚪 Logout System"
+                "🏠 Back Home",
+                "🛒 Sales Order Mgmt",
+                "🚚 Delivery Logistics",
+                "🛋️ Product Maintenance",
+                "👔 HR / Staff Mgmt",
+                "📦 Goods Received (GRN)",
+                "🏭 Material Requests",
+                "📊 Procurement Control",
+                "🔧 Customer Support",
+                "🚪 Logout System"
             };
 
             int btnTop = 110;

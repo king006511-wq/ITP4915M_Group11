@@ -102,9 +102,16 @@ namespace ITP4915M_Group11
             pnlSidebar.Controls.Add(lblLogo);
 
             string[] menuItems = {
-                "🛒 Sales Order Mgmt", "🚚 Delivery Logistics", "🛋️ Product Maintenance",
-                "👔 HR / Staff Mgmt", "📦 Goods Received (GRN)", "🏭 Material Requests",
-                "📊 Procurement Control", "🔧 Customer Support", "🚪 Logout System"
+                "🏠 Back Home",
+                "🛒 Sales Order Mgmt",
+                "🚚 Delivery Logistics",
+                "🛋️ Product Maintenance",
+                "👔 HR / Staff Mgmt",
+                "📦 Goods Received (GRN)",
+                "🏭 Material Requests",
+                "📊 Procurement Control",
+                "🔧 Customer Support",
+                "🚪 Logout System"
             };
 
             int btnTop = 110;
@@ -135,7 +142,7 @@ namespace ITP4915M_Group11
                     try
                     {
                         if (item.Contains("Delivery Logistics")) return; // Active form shortcut bypass
-
+                        
                         if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
                         else if (item.Contains("Product Maintenance")) targetForm = new ProductManagement();
                         else if (item.Contains("HR / Staff Mgmt")) targetForm = new EmployeeManagement();
@@ -183,9 +190,10 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "Logistics & Dispatch Control Center", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(830, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // Back Home button (已移至側邊欄)
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(830, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = false };
             btnBackHome.FlatAppearance.BorderSize = 0;
-            btnBackHome.Click += (s, e) => this.Close();
+            btnBackHome.Click += (s, e) => NavigationHelper.GoToMainDashboard(this);
             pnlMain.Controls.Add(btnBackHome);
 
             Label lblStaff = new Label { Text = $"👤 Controller: {currentStaffID}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(13, 148, 136), Location = new Point(520, 26), AutoSize = true };

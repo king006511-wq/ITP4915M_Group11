@@ -99,6 +99,23 @@ namespace ITP4915M_Group11
             };
             pnlSidebar.Controls.Add(lblLogo);
 
+            // 將 Back Home 按鈕放到側邊欄，點擊回到 MainDashboard
+            Button btnBackHomeSidebar = new Button
+            {
+                Text = "🏠 Back Home",
+                Top = 95,
+                Left = 12,
+                Size = new Size(236, 40),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(37, 99, 235),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnBackHomeSidebar.FlatAppearance.BorderSize = 0;
+            btnBackHomeSidebar.Click += (s, e) => { NavigationHelper.GoToMainDashboard(this); };
+            pnlSidebar.Controls.Add(btnBackHomeSidebar);
+
             string[] menuItems = {
                 "🛒 Sales Order Mgmt",
                 "🚚 Delivery Logistics",
@@ -198,28 +215,18 @@ namespace ITP4915M_Group11
             };
             pnlMain.Controls.Add(lblHeader);
 
-            // Back Home button
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // Back Home button (已移至側邊欄)
+            // 右上角保留占位但隱藏以維持 UI 一致性
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = false };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => {
                 try
                 {
-                    // Attempt to locate and show an existing main dashboard form if available
-                    foreach (Form f in Application.OpenForms)
-                    {
-                        if (f.GetType().Name == "MainDashboard")
-                        {
-                            this.Hide();
-                            f.Show();
-                            return;
-                        }
-                    }
-                    // Fallback: restart the application to simulate returning to home
-                    Application.Restart();
+                    NavigationHelper.GoToMainDashboard(this);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Navigation error: " + ex.Message, "Navigation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Navigation routing error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
             pnlMain.Controls.Add(btnBackHome);

@@ -77,6 +77,7 @@ namespace ITP4915M_Group11
             pnlSidebar.Controls.Add(lblLogo);
 
             string[] menuItems = {
+                "🏠 Back Home",
                 "🛒 Sales Order Mgmt",
                 "🚚 Delivery Logistics",
                 "🛋️ Product Maintenance",
@@ -174,8 +175,8 @@ namespace ITP4915M_Group11
             };
             pnlMain.Controls.Add(lblHeader);
 
-            // Back Home button
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // Back Home button (已移至側邊欄)
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = false };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { NavigationHelper.GoToMainDashboard(this); };
             pnlMain.Controls.Add(btnBackHome);

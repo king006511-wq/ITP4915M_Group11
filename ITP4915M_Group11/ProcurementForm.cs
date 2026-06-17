@@ -68,6 +68,7 @@ namespace ITP4915M_Group11
             pnlSidebar.Controls.Add(lblLogo);
 
             string[] menuItems = {
+                "🏠 Back Home",
                 "🛒 Sales Order Mgmt",
                 "🚚 Delivery Logistics",
                 "🛋️ Product Maintenance",
@@ -123,7 +124,8 @@ namespace ITP4915M_Group11
                     Form targetForm = null;
                     try
                     {
-                        if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
+                        if (item.Contains ("Back Home")) targetForm = new MainDashboard() ;
+                        else if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
                         else if (item.Contains("Logistics")) targetForm = new LogisticsForm();
                         else if (item.Contains("Product Maintenance")) targetForm = new ProductManagement();
                         else if (item.Contains("Staff Mgmt")) targetForm = new EmployeeManagement();

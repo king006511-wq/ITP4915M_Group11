@@ -120,9 +120,16 @@ namespace ITP4915M_Group11
             pnlSidebar.Controls.Add(lblLogo);
 
             string[] menuItems = {
-                "🛒 Sales Order Mgmt", "🚚 Delivery Logistics", "🛋️ Product Maintenance",
-                "👔 HR / Staff Mgmt", "📦 Goods Received (GRN)", "🏭 Material Requests",
-                "📊 Procurement Control", "🔧 Customer Support", "🚪 Logout System"
+                "🏠 Back Home",
+                "🛒 Sales Order Mgmt",
+                "🚚 Delivery Logistics",
+                "🛋️ Product Maintenance",
+                "👔 HR / Staff Mgmt",
+                "📦 Goods Received (GRN)",
+                "🏭 Material Requests",
+                "📊 Procurement Control",
+                "🔧 Customer Support",
+                "🚪 Logout System"
             };
 
             int btnTop = 110;
@@ -154,7 +161,11 @@ namespace ITP4915M_Group11
                     try
                     {
                         // 如果點擊的是當前的 Sales Order，則不需要做任何事
-                        if (item.Contains("Sales Order Mgmt"))
+                        if (item.Contains("Back Home"))
+                        {
+                            targetForm = new MainDashboard();
+                        }
+                        else if (item.Contains("Sales Order Mgmt"))
                         {
                             return;
                         }
