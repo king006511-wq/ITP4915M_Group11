@@ -99,24 +99,8 @@ namespace ITP4915M_Group11
             };
             pnlSidebar.Controls.Add(lblLogo);
 
-            // 將 Back Home 按鈕放到側邊欄，點擊回到 MainDashboard
-            Button btnBackHomeSidebar = new Button
-            {
-                Text = "🏠 Back Home",
-                Top = 95,
-                Left = 12,
-                Size = new Size(236, 40),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(37, 99, 235),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnBackHomeSidebar.FlatAppearance.BorderSize = 0;
-            btnBackHomeSidebar.Click += (s, e) => { NavigationHelper.GoToMainDashboard(this); };
-            pnlSidebar.Controls.Add(btnBackHomeSidebar);
-
             string[] menuItems = {
+                "🏠 Back Home",
                 "🛒 Sales Order Mgmt",
                 "🚚 Delivery Logistics",
                 "🛋️ Product Maintenance",
@@ -171,7 +155,8 @@ namespace ITP4915M_Group11
                     Form targetForm = null;
                     try
                     {
-                        if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
+                        if (item.Contains("Back Home")) targetForm = new MainDashboard();
+                        else if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
                         else if (item.Contains("Delivery Logistics")) targetForm = new LogisticsForm();
                         else if (item.Contains("Product Maintenance")) targetForm = new ProductManagement();
                         else if (item.Contains("Goods Received (GRN)")) targetForm = new GoodsReceivedForm();
@@ -216,17 +201,17 @@ namespace ITP4915M_Group11
             pnlMain.Controls.Add(lblHeader);
 
             // Back Home button (已移至側邊欄)
-            // 右上角保留占位但隱藏以維持 UI 一致性
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = false };
+            // 右上角保留顯示按鈕以便返回上一頁
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => {
                 try
                 {
-                    NavigationHelper.GoToMainDashboard(this);
+                    this.Close();
                 }
-                catch (Exception ex)
+                catch
                 {
-                    MessageBox.Show("Navigation routing error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    this.Hide();
                 }
             };
             pnlMain.Controls.Add(btnBackHome);

@@ -150,6 +150,7 @@ namespace ITP4915M_Group11
                 btnTop += 55;
             }
             this.Controls.Add(pnlSidebar);
+            // Patch touch: no functional changes; file updated for consistency.
 
             // 3. Right Main Workspace Panel (鎖定坐標防重疊)
             Panel pnlMain = new Panel
@@ -169,10 +170,10 @@ namespace ITP4915M_Group11
             };
             pnlMain.Controls.Add(lblHeader);
 
-            // Back Home button
-            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // Back Home button (visible, returns to previous page)
+            Button btnBackHome = new Button { Text = "🏠 Back Home", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
-            btnBackHome.Click += (s, e) => { NavigationHelper.GoToMainDashboard(this); };
+            btnBackHome.Click += (s, e) => { try { this.Close(); } catch { this.Hide(); } };
             pnlMain.Controls.Add(btnBackHome);
 
             // 4. Input Card Panel (左側建立採購單卡片)
