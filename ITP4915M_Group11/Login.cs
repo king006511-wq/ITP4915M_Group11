@@ -10,7 +10,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString;
 
         // ==========================================
         // 🎨 Modern UI Element Variables
@@ -109,11 +109,6 @@ namespace ITP4915M_Group11
                     txt.ForeColor = Color.Gray;
                 }
             };
-        }
-
-        private void Login_Load(object sender, EventArgs e)
-        {
-
         }
         #endregion
 
