@@ -271,7 +271,25 @@ namespace ITP4915M_Group11
 
         private void AfterServiceForm_Load(object sender, EventArgs e)
         {
+            // 1) 安全權限攔截：若無權限則延遲關閉表單
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Sales))
+            {
+                MessageBox.Show("您沒有權限存取售後服務模組。", "存取被拒", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                this.BeginInvoke(new MethodInvoker(this.Close));
+                return;
+            }
 
+            // 2) 確保動態 UI 已建立 (txtDescription 作為搜尋框)
+            try
+            {
+                EnsureComplaintTableExists();
+                GenerateNewTicketID();
+                LoadComplaints();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Initialization error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void txtDescription_TextChanged(object sender, EventArgs e)

@@ -318,6 +318,51 @@ namespace ITP4915M_Group11
             }
         }
 
+        // 安全的地址取得方法：先查 delivery_note (ExecuteScalar 安全可直接 return)，再查 customer 表（使用 DataReader 並在 using 結束後回傳）
+        private string GetCustomerAddress(MySqlConnection conn, string customerId)
+        {
+            if (conn == null || string.IsNullOrWhiteSpace(customerId)) return string.Empty;
+
+            try
+            {
+                // 1) 嘗試先由 delivery_note 尋找最近有效的 DeliveryAddress
+                string queryDeliveryNote = "SELECT DeliveryAddress FROM delivery_note WHERE OrderID = (SELECT OrderID FROM orders WHERE CustomerID = @CustID LIMIT 1) LIMIT 1";
+                using (MySqlCommand cmd = new MySqlCommand(queryDeliveryNote, conn))
+                {
+                    cmd.Parameters.AddWithValue("@CustID", customerId);
+                    object val = cmd.ExecuteScalar();
+                    if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(val.ToString()))
+                    {
+                        return val.ToString(); // ExecuteScalar 在此為安全回傳
+                    }
+                }
+
+                // 2) 若無 delivery_note，從 customer 表抓 Address
+                string resultAddress = string.Empty;
+                string queryCustomer = "SELECT Address FROM customer WHERE CustomerID = @CustID LIMIT 1";
+                using (MySqlCommand cmd = new MySqlCommand(queryCustomer, conn))
+                {
+                    cmd.Parameters.AddWithValue("@CustID", customerId);
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            if (reader["Address"] != DBNull.Value)
+                            {
+                                resultAddress = reader["Address"].ToString();
+                            }
+                        }
+                    }
+                }
+
+                return resultAddress;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
         private void dgvPendingOrders_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvPendingOrders.CurrentRow == null || dgvPendingOrders.CurrentRow.Index < 0) return;
@@ -343,7 +388,10 @@ namespace ITP4915M_Group11
                                 txtOrderID.Text = reader["OrderID"].ToString();
                                 txtCustomerID.Text = reader["CustomerID"].ToString();
                                 txtCurrentStatus.Text = reader["Status"].ToString();
-                                txtDeliveryAddress.Text = "Premium Living Default Route Center, Hong Kong"; // Placeholder text
+                                // 透過輔助方法安全撈取地址，避免在 DataReader using 內直接 return 導致連線通道未完全關閉
+                                string custId = reader["CustomerID"].ToString();
+                                string addr = GetCustomerAddress(conn, custId);
+                                txtDeliveryAddress.Text = string.IsNullOrWhiteSpace(addr) ? "Premium Living Default Route Center, Hong Kong" : addr;
                             }
                         }
                     }

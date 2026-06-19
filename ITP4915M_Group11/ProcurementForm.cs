@@ -336,11 +336,26 @@ namespace ITP4915M_Group11
                 return;
             }
 
+            // 合併 Staff 檢查與 Transaction 寫入於單一連線，避免過多連線開啟導致的資源競爭或死結
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
+
+                    // 先執行 Staff 存在性檢查
+                    string staffCheckSql = "SELECT COUNT(1) FROM staff WHERE StaffID = @StaffID";
+                    using (MySqlCommand checkCmd = new MySqlCommand(staffCheckSql, conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@StaffID", txtStaffID.Text.Trim());
+                        int cnt = Convert.ToInt32(checkCmd.ExecuteScalar());
+                        if (cnt == 0)
+                        {
+                            MessageBox.Show($"Specified Staff ID does not exist in staff records.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
@@ -379,7 +394,6 @@ namespace ITP4915M_Group11
                             }
 
                             trans.Commit();
-                            // 🌟 成功提示全英文化
                             MessageBox.Show($"Purchase Order [{txtPOID.Text}] successfully issued to Supplier!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                             // 清除欄位並刷新
@@ -390,7 +404,7 @@ namespace ITP4915M_Group11
                         }
                         catch (Exception ex)
                         {
-                            trans.Rollback();
+                            try { trans.Rollback(); } catch { }
                             throw new Exception("Transaction failed, database rolled back. Reason: " + ex.Message);
                         }
                     }
