@@ -15,8 +15,8 @@ namespace ITP4915M_Group11
         private TextBox txtDefaultPrice;
         private DataGridView dgvProductCatalog;
 
-        // 🔒 XAMPP Database Connection String Configuration
-        private readonly string connectionString = "Server=localhost;Database=premium_living_db;Uid=root;Pwd=;port=3306;SslMode=Disabled;";
+        // 🔒 Centralized Database Connection String
+        private readonly string connectionString = UserSession.ConnString;
 
         public ProductManagement()
         {

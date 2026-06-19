@@ -23,7 +23,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = "Server=localhost;Database=premium_living_db;Uid=root;Pwd=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString;
         private decimal currentUnitPrice = 0;
         private string currentStaffID;
 

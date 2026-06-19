@@ -11,7 +11,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString;
 
         // ==========================================
         // 🎨 Modern UI Element Variables
@@ -32,6 +32,14 @@ namespace ITP4915M_Group11
 
         private void ProcurementForm_Load(object sender, EventArgs e)
         {
+            // 權限檢查：僅 Procurement Officer, Manager, 或 Administrator 可進入此表單
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Procurement, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+            {
+                MessageBox.Show("您沒有權限存取採購控制台。", "存取被拒", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                this.BeginInvoke(new MethodInvoker(this.Close));
+                return;
+            }
+
             ResetPurchaseOrderID();
             LoadPendingRequests();
         }
@@ -334,6 +342,32 @@ namespace ITP4915M_Group11
             {
                 MessageBox.Show("Please fill in Supplier ID, Staff ID, and a valid Unit Price!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+            }
+
+            // 確認 StaffID 在 staff 表中存在，防止後續關聯錯誤
+            using (MySqlConnection checkConn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    checkConn.Open();
+                    string staffCheckSql = "SELECT COUNT(1) FROM staff WHERE StaffID = @StaffID";
+                    using (MySqlCommand cmd = new MySqlCommand(staffCheckSql, checkConn))
+                    {
+                        cmd.Parameters.AddWithValue("@StaffID", txtStaffID.Text.Trim());
+                        object result = cmd.ExecuteScalar();
+                        int count = Convert.ToInt32(result);
+                        if (count == 0)
+                        {
+                            MessageBox.Show("Specified Staff ID does not exist in staff records. Please verify the Staff ID.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to validate Staff ID: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
             }
 
             using (MySqlConnection conn = new MySqlConnection(connString))

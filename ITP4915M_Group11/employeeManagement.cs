@@ -11,7 +11,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString;
 
         // ==========================================
         // 🎨 Modern UI Element Variables
@@ -457,7 +457,8 @@ namespace ITP4915M_Group11
                 return;
             }
 
-            string query = "INSERT INTO staff (StaffID, Name, Password, Role) VALUES (@id, @name, @pass, @role)";
+            // 密碼使用 SHA2(256) 雜湊存入，與登入時比對方式一致
+            string query = "INSERT INTO staff (StaffID, Name, Password, Role) VALUES (@id, @name, SHA2(@pass,256), @role)";
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
@@ -502,7 +503,8 @@ namespace ITP4915M_Group11
                 return;
             }
 
-            string query = "UPDATE staff SET Name = @name, Password = @pass, Role = @role WHERE StaffID = @id";
+            // 密碼使用 SHA2(256) 雜湊存入，與登入時比對方式一致
+            string query = "UPDATE staff SET Name = @name, Password = SHA2(@pass,256), Role = @role WHERE StaffID = @id";
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {

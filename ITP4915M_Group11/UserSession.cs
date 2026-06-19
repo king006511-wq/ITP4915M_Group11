@@ -46,6 +46,11 @@ namespace ITP4915M_Group11
         /// </summary>
         public static DateTime LoginTime { get; set; }
 
+        /// <summary>
+        /// 中央化資料庫連線字串，供所有表單統一使用。可在發佈或測試時只修改此處即可。
+        /// </summary>
+        public static string ConnString { get; set; } = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+
         // ==========================================
         // 🛠️ 系統操作方法 (Methods)
         // ==========================================

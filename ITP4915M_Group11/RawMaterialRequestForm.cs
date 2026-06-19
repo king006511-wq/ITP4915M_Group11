@@ -11,7 +11,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString;
 
         // ==========================================
         // 🎨 Modern UI Element Variables
@@ -30,6 +30,22 @@ namespace ITP4915M_Group11
                 GenerateNewCardID(); // 自動生成 RC011 呢類 ID
                 LoadRequests();
             }
+        }
+
+        // Designer 會註冊到 Load 事件，提供一個實作以避免 Designer 引用錯誤
+        private void RawMaterialRequestForm_Load(object sender, EventArgs e)
+        {
+            // 權限保護：僅 Manager / Administrator / ProcurementOfficer 可使用物料請求功能
+            if (!AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer))
+            {
+                MessageBox.Show("您沒有權限提交物料補貨申請。若需要操作，請洽管理員。", "存取被拒", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                this.BeginInvoke(new MethodInvoker(this.Close));
+                return;
+            }
+
+            // 確保在 Load 階段已產生 ID 與載入資料（若尚未執行）
+            try { GenerateNewCardID(); } catch { }
+            try { LoadRequests(); } catch { }
         }
 
         private void RawMaterialRequestForm_Shown(object sender, EventArgs e)
@@ -257,11 +273,6 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Load Error: " + ex.Message); }
             }
-        }
-
-        private void RawMaterialRequestForm_Load(object sender, EventArgs e)
-        {
-
         }
 
         private void btnSubmitRequest_Click(object sender, EventArgs e)

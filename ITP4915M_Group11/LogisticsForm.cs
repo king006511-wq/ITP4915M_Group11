@@ -13,7 +13,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = "Server=localhost;Database=premium_living_db;Uid=root;Pwd=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString;
         private string currentStaffID;
 
         // ==========================================
@@ -343,12 +343,53 @@ namespace ITP4915M_Group11
                                 txtOrderID.Text = reader["OrderID"].ToString();
                                 txtCustomerID.Text = reader["CustomerID"].ToString();
                                 txtCurrentStatus.Text = reader["Status"].ToString();
-                                txtDeliveryAddress.Text = "Premium Living Default Route Center, Hong Kong"; // Placeholder text
+                                // 取出客戶真實地址，若 orders 表中有 delivery_note 或 address 欄位，優先使用；否則查 customer 表
+                                string customerId = reader["CustomerID"].ToString();
+                                txtDeliveryAddress.Text = GetCustomerAddress(conn, customerId);
                             }
                         }
                     }
                 }
                 catch (Exception ex) { MessageBox.Show("Selection routing error:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            }
+        }
+
+        private string GetCustomerAddress(MySqlConnection conn, string customerId)
+        {
+            try
+            {
+                // 1) 嘗試從 delivery_note 取得地址
+                string queryDeliveryNote = "SELECT DeliveryAddress FROM delivery_note WHERE CustomerID = @CustID LIMIT 1";
+                using (MySqlCommand cmd = new MySqlCommand(queryDeliveryNote, conn))
+                {
+                    cmd.Parameters.AddWithValue("@CustID", customerId);
+                    object val = cmd.ExecuteScalar();
+                    if (val != null && val != DBNull.Value)
+                        return val.ToString();
+                }
+
+                // 2) 嘗試從 customer 表取得地址欄位
+                string queryCustomer = "SELECT Address, ShippingAddress FROM customer WHERE CustomerID = @CustID LIMIT 1";
+                using (MySqlCommand cmd = new MySqlCommand(queryCustomer, conn))
+                {
+                    cmd.Parameters.AddWithValue("@CustID", customerId);
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            if (reader["ShippingAddress"] != DBNull.Value && !string.IsNullOrWhiteSpace(reader["ShippingAddress"].ToString()))
+                                return reader["ShippingAddress"].ToString();
+                            if (reader["Address"] != DBNull.Value && !string.IsNullOrWhiteSpace(reader["Address"].ToString()))
+                                return reader["Address"].ToString();
+                        }
+                    }
+                }
+
+                return string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
 

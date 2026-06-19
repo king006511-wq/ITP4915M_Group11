@@ -11,8 +11,9 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString;
         private DataTable originalComplaintsTable = new DataTable();
+        private TextBox txtSearch; // 用於歷史紀錄即時過濾
 
         // ==========================================
         // 🎨 Modern UI Element Variables
@@ -34,6 +35,21 @@ namespace ITP4915M_Group11
                 GenerateNewTicketID();
                 LoadComplaints();
             }
+
+        // Designer 會註冊到 Load 事件，提供一個實作以避免 Designer 引用錯誤
+        private void AfterServiceForm_Load(object sender, EventArgs e)
+        {
+            // 權限檢查：僅 Manager / Administrator / Sales 可以進入售後表單
+            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Sales))
+            {
+                MessageBox.Show("您沒有權限存取售後服務模組。", "存取被拒", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                this.BeginInvoke(new MethodInvoker(this.Close));
+                return;
+            }
+            // 預設: 生成新的投訴 ID
+            GenerateNewTicketID();
+            LoadComplaints();
+        }
         }
 
         #region 🎨 Dynamic Premium English UI Construction
@@ -150,9 +166,9 @@ namespace ITP4915M_Group11
             startY += 75;
 
             // Description Box transformed into an active Real-time History Filter
-            Label lblDesc = new Label { Text = "🔍 Live Filter History (Type ID to search):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235) };
+            Label lblDesc = new Label { Text = "Complaint Description:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235) };
             txtDescription = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 90, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
-            txtDescription.TextChanged += txtDescription_TextChanged; // Real-time search connection
+            // 移除將描述欄位用作搜尋的行為，描述僅作為儲存客戶投訴內容
             pnlCard.Controls.Add(lblDesc);
             pnlCard.Controls.Add(txtDescription);
             startY += 125;
@@ -172,7 +188,14 @@ namespace ITP4915M_Group11
             Label lblGridTitle = new Label { Text = "📂 Support Tickets History", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(440, 85), AutoSize = true };
             pnlMain.Controls.Add(lblGridTitle);
 
-            dgvComplaints = new DataGridView { Location = new Point(440, 125), Size = new Size(430, 560), BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            // 加入搜尋框，避免使用描述欄作為即時過濾，改善 UX
+            Label lblSearch = new Label { Text = "🔍 Live Filter (Type ID / Customer / Order):", Location = new Point(440, 115), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtSearch = new TextBox { Location = new Point(440, 135), Width = 430, Font = new Font("Segoe UI", 10F) };
+            txtSearch.TextChanged += txtDescription_TextChanged; // 重用過濾方法但綁定到搜尋欄
+            pnlMain.Controls.Add(lblSearch);
+            pnlMain.Controls.Add(txtSearch);
+
+            dgvComplaints = new DataGridView { Location = new Point(440, 175), Size = new Size(430, 510), BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvComplaints.EnableHeadersVisualStyles = false;
             dgvComplaints.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvComplaints.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
@@ -269,24 +292,27 @@ namespace ITP4915M_Group11
             }
         }
 
-        private void AfterServiceForm_Load(object sender, EventArgs e)
-        {
-
-        }
-
         private void txtDescription_TextChanged(object sender, EventArgs e)
         {
-            if (dgvComplaints.DataSource is DataTable dt)
+            // 支援由 txtSearch 或 txtDescription 觸發的行為：如果是 txtSearch 則作為過濾；如果是 txtDescription 則不過濾
+            string keyword = string.Empty;
+            if (sender is TextBox tb)
             {
-                string keyword = txtDescription.Text.Trim().Replace("'", "''");
-                if (string.IsNullOrWhiteSpace(keyword))
+                if (tb == txtSearch)
                 {
-                    dt.DefaultView.RowFilter = "";
+                    keyword = txtSearch.Text.Trim().Replace("'", "''");
                 }
                 else
                 {
-                    dt.DefaultView.RowFilter = string.Format("ComplaintID LIKE '%{0}%' OR CustomerID LIKE '%{0}%' OR OrderID LIKE '%{0}%'", keyword);
+                    // 描述欄變動不會影響 DataGridView 的過濾
+                    return;
                 }
+            }
+
+            if (dgvComplaints.DataSource is DataTable dt)
+            {
+                if (string.IsNullOrWhiteSpace(keyword)) dt.DefaultView.RowFilter = "";
+                else dt.DefaultView.RowFilter = string.Format("ComplaintID LIKE '%{0}%' OR CustomerID LIKE '%{0}%' OR OrderID LIKE '%{0}%'", keyword);
             }
         }
 
