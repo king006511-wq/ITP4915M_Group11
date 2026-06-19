@@ -322,45 +322,43 @@ namespace ITP4915M_Group11
 
         private void btnCreatePO_Click(object sender, EventArgs e)
         {
-            // 權限檢查：僅 Procurement Officer, Manager, 或 Administrator 可建立採購單
+            // 權限檢查
             if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Procurement, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
             {
                 MessageBox.Show("Access Denied: insufficient privileges to create purchase orders.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 return;
             }
 
-            // 🌟 驗證警告全英文化
             if (string.IsNullOrWhiteSpace(txtSupplierID.Text) || string.IsNullOrWhiteSpace(txtStaffID.Text) || !decimal.TryParse(txtPrice.Text, out decimal price))
             {
                 MessageBox.Show("Please fill in Supplier ID, Staff ID, and a valid Unit Price!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 合併 Staff 檢查與 Transaction 寫入於單一連線，避免過多連線開啟導致的資源競爭或死結
+            // 🌟 將檢查與寫入合併在同一個 using 連線區塊中
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
 
-                    // 先執行 Staff 存在性檢查
+                    // 1. 先用同一條連線檢查 Staff ID
                     string staffCheckSql = "SELECT COUNT(1) FROM staff WHERE StaffID = @StaffID";
-                    using (MySqlCommand checkCmd = new MySqlCommand(staffCheckSql, conn))
+                    using (MySqlCommand cmdCheck = new MySqlCommand(staffCheckSql, conn))
                     {
-                        checkCmd.Parameters.AddWithValue("@StaffID", txtStaffID.Text.Trim());
-                        int cnt = Convert.ToInt32(checkCmd.ExecuteScalar());
-                        if (cnt == 0)
+                        cmdCheck.Parameters.AddWithValue("@StaffID", txtStaffID.Text.Trim());
+                        if (Convert.ToInt32(cmdCheck.ExecuteScalar()) == 0)
                         {
-                            MessageBox.Show($"Specified Staff ID does not exist in staff records.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            MessageBox.Show("Specified Staff ID does not exist in staff records. Please verify the Staff ID.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
                     }
 
+                    // 2. 檢查通過，直接開啟 Transaction 寫入
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
                         {
-                            // 1. 插入採購單主檔
                             string poSql = "INSERT INTO purchase_order (PO_ID, SupplierID, StaffID, ReOrderCardID, PODate, Status) VALUES (@PO, @Sup, @Staff, @RC, NOW(), 'Ordered')";
                             using (MySqlCommand cmd = new MySqlCommand(poSql, conn, trans))
                             {
@@ -371,7 +369,6 @@ namespace ITP4915M_Group11
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 2. 插入採購明細表
                             string lineSql = "INSERT INTO po_lineitem (PO_ID, PartID, Quantity, UnitPrice) VALUES (@PO, @Part, @Qty, @Price)";
                             using (MySqlCommand cmd = new MySqlCommand(lineSql, conn, trans))
                             {
@@ -382,7 +379,6 @@ namespace ITP4915M_Group11
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 3. 更新補貨卡狀態為「Approved」
                             if (!string.IsNullOrWhiteSpace(txtRCID.Text))
                             {
                                 string rcSql = "UPDATE reorder_card SET Status = 'Approved' WHERE ReOrderCardID = @RC";
@@ -396,15 +392,13 @@ namespace ITP4915M_Group11
                             trans.Commit();
                             MessageBox.Show($"Purchase Order [{txtPOID.Text}] successfully issued to Supplier!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            // 清除欄位並刷新
-                            txtRCID.Clear(); txtPartID.Clear(); txtQty.Clear(); txtPrice.Clear();
-                            txtSupplierID.Clear();
+                            txtRCID.Clear(); txtPartID.Clear(); txtQty.Clear(); txtPrice.Clear(); txtSupplierID.Clear();
                             ResetPurchaseOrderID();
                             LoadPendingRequests();
                         }
                         catch (Exception ex)
                         {
-                            try { trans.Rollback(); } catch { }
+                            trans.Rollback();
                             throw new Exception("Transaction failed, database rolled back. Reason: " + ex.Message);
                         }
                     }

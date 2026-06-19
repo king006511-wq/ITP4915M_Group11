@@ -333,13 +333,14 @@ namespace ITP4915M_Group11
                     object val = cmd.ExecuteScalar();
                     if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(val.ToString()))
                     {
-                        return val.ToString(); // ExecuteScalar 在此為安全回傳
+                        // ExecuteScalar 在此為安全回傳
+                        return val.ToString();
                     }
                 }
 
                 // 2) 若無 delivery_note，從 customer 表抓 Address
                 string resultAddress = string.Empty;
-                string queryCustomer = "SELECT Address FROM customer WHERE CustomerID = @CustID LIMIT 1";
+                string queryCustomer = "SELECT Address, ShippingAddress FROM customer WHERE CustomerID = @CustID LIMIT 1";
                 using (MySqlCommand cmd = new MySqlCommand(queryCustomer, conn))
                 {
                     cmd.Parameters.AddWithValue("@CustID", customerId);
@@ -347,7 +348,11 @@ namespace ITP4915M_Group11
                     {
                         if (reader.Read())
                         {
-                            if (reader["Address"] != DBNull.Value)
+                            if (reader["ShippingAddress"] != DBNull.Value && !string.IsNullOrWhiteSpace(reader["ShippingAddress"].ToString()))
+                            {
+                                resultAddress = reader["ShippingAddress"].ToString();
+                            }
+                            else if (reader["Address"] != DBNull.Value && !string.IsNullOrWhiteSpace(reader["Address"].ToString()))
                             {
                                 resultAddress = reader["Address"].ToString();
                             }

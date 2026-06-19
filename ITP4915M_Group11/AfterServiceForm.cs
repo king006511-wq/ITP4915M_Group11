@@ -269,9 +269,10 @@ namespace ITP4915M_Group11
             }
         }
 
+        // Designer 會註冊到 Load 事件，提供一個實作以避免 Designer 引用錯誤
         private void AfterServiceForm_Load(object sender, EventArgs e)
         {
-            // 1) 安全權限攔截：若無權限則延遲關閉表單
+            // 1. 優先執行權限檢查：僅 Manager / Administrator / Sales 可以進入售後表單
             if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Sales))
             {
                 MessageBox.Show("您沒有權限存取售後服務模組。", "存取被拒", MessageBoxButtons.OK, MessageBoxIcon.Stop);
@@ -279,17 +280,10 @@ namespace ITP4915M_Group11
                 return;
             }
 
-            // 2) 確保動態 UI 已建立 (txtDescription 作為搜尋框)
-            try
-            {
-                EnsureComplaintTableExists();
-                GenerateNewTicketID();
-                LoadComplaints();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Initialization error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            // 2. 權限通過後，才執行資料表確認與資料載入
+            EnsureComplaintTableExists();
+            GenerateNewTicketID();
+            LoadComplaints();
         }
 
         private void txtDescription_TextChanged(object sender, EventArgs e)
