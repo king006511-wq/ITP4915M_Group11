@@ -102,6 +102,12 @@
       <DependentUpon>AfterServiceForm.cs</DependentUpon>
     </Compile>
     <Compile Include="AuthorizationHelper.cs" />
+    <Compile Include="CustomerManagement.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CustomerManagement.Designer.cs">
+      <DependentUpon>CustomerManagement.cs</DependentUpon>
+    </Compile>
     <Compile Include="employeeManagement.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -167,6 +173,9 @@
     </Compile>
     <EmbeddedResource Include="AfterServiceForm.resx">
       <DependentUpon>AfterServiceForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CustomerManagement.resx">
+      <DependentUpon>CustomerManagement.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="employeeManagement.resx">
       <DependentUpon>employeeManagement.cs</DependentUpon>

@@ -110,6 +110,11 @@ namespace ITP4915M_Group11
                 }
             };
         }
+
+        private void Login_Load(object sender, EventArgs e)
+        {
+
+        }
         #endregion
 
         // ==========================================

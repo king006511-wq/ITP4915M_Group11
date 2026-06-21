@@ -63,96 +63,17 @@ namespace ITP4915M_Group11
         {
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Factory Material Replenishment";
-            this.Size = new Size(1180, 750);
+            this.Size = new Size(940, 750); // Adjusted from 1180 to 940 to remove the sidebar space
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
 
-            // 1. Left Sidebar Navigation
-            Panel pnlSidebar = new Panel { Width = 260, Dock = DockStyle.Left, BackColor = Color.FromArgb(15, 23, 42) };
-            Label lblLogo = new Label { Text = "Premium Living\nFurniture", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(20, 25), Size = new Size(220, 60), TextAlign = ContentAlignment.MiddleLeft };
-            pnlSidebar.Controls.Add(lblLogo);
+            // 1. Left Sidebar Navigation - REMOVED
 
-            string[] menuItems = {
-                "🏠 Back Home",
-                "🛒 Sales Order Mgmt",
-                "🚚 Delivery Logistics",
-                "🛋️ Product Maintenance",
-                "👔 HR / Staff Mgmt",
-                "📦 Goods Received (GRN)",
-                "🏭 Material Requests",
-                "📊 Procurement Control",
-                "🔧 Customer Support",
-                "🚪 Logout System"
-            };
-
-            int btnTop = 110;
-            foreach (string item in menuItems)
-            {
-                Button btnMenu = new Button { Text = "  " + item, Top = btnTop, Left = 12, Size = new Size(236, 48), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.Hand };
-                btnMenu.FlatAppearance.BorderSize = 0;
-
-                if (item.Contains("Material Requests"))
-                {
-                    btnMenu.BackColor = Color.FromArgb(37, 99, 235); btnMenu.ForeColor = Color.White;
-                }
-                else if (item.Contains("Logout"))
-                {
-                    btnMenu.BackColor = Color.FromArgb(239, 68, 68); btnMenu.ForeColor = Color.White;
-                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(220, 38, 38); };
-                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.FromArgb(239, 68, 68); };
-                }
-                else
-                {
-                    btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184);
-                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(51, 65, 85); btnMenu.ForeColor = Color.White; };
-                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184); };
-                }
-
-                btnMenu.Click += (s, e) => {
-                    Form targetForm = null;
-                    try
-                    {
-                        if (item.Contains("Back Home")) targetForm = new MainDashboard();
-                        else if (item.Contains("Sales Order")) targetForm = new OrderManagementForm();
-                        else if (item.Contains("Logistics")) targetForm = new LogisticsForm();
-                        else if (item.Contains("Product")) targetForm = new ProductManagement();
-                        else if (item.Contains("HR")) targetForm = new EmployeeManagement();
-                        else if (item.Contains("GRN")) targetForm = new GoodsReceivedForm();
-                        else if (item.Contains("Procurement")) targetForm = new ProcurementForm();
-                        else if (item.Contains("Support")) targetForm = new AfterServiceForm();
-                        else if (item.Contains("Logout")) { Application.Restart(); return; }
-
-                        if (targetForm != null && !(targetForm is RawMaterialRequestForm))
-                        {
-                            this.Hide();
-                            targetForm.FormClosed += (senderForm, args) => this.Show();
-                            targetForm.Show();
-                        }
-                    }
-                    catch (Exception ex) { MessageBox.Show("Navigation error: " + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-                };
-                // 根據角色決定側邊選單項目是否顯示
-                bool menuVisible = true;
-                if (item.Contains("Sales Order Mgmt")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.SalesRepresentative);
-                else if (item.Contains("Delivery Logistics")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.LogisticsDriver);
-                else if (item.Contains("Product Maintenance")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
-                else if (item.Contains("HR / Staff Mgmt")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
-                else if (item.Contains("Goods Received")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.WarehouseSpecialist);
-                else if (item.Contains("Material Requests")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer);
-                else if (item.Contains("Procurement Control")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.ProcurementOfficer);
-                else if (item.Contains("Customer Support")) menuVisible = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.SalesRepresentative);
-
-                btnMenu.Visible = menuVisible;
-                pnlSidebar.Controls.Add(btnMenu);
-                btnTop += 55;
-            }
-            this.Controls.Add(pnlSidebar);
-
-            // 2. Right Main Workspace
-            Panel pnlMain = new Panel { Location = new Point(260, 0), Size = new Size(900, 750) };
+            // 2. Main Workspace Workspace (Shifted to Point(0, 0) since sidebar is gone)
+            Panel pnlMain = new Panel { Location = new Point(0, 0), Size = new Size(900, 750) };
             this.Controls.Add(pnlMain);
 
             Label lblHeader = new Label { Text = "Factory Material Reorder Center", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };

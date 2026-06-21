@@ -48,76 +48,7 @@ namespace ITP4915M_Group11
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
 
-            // 1. Left Sidebar Navigation
-            Panel pnlSidebar = new Panel { Width = 260, Dock = DockStyle.Left, BackColor = Color.FromArgb(15, 23, 42) };
-            Label lblLogo = new Label { Text = "Premium Living\nFurniture", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(20, 25), Size = new Size(220, 60), TextAlign = ContentAlignment.MiddleLeft };
-            pnlSidebar.Controls.Add(lblLogo);
-
-            string[] menuItems = {
-                "🏠 Back Home",
-                "🛒 Sales Order Mgmt",
-                "🚚 Delivery Logistics",
-                "🛋️ Product Maintenance",
-                "👔 HR / Staff Mgmt",
-                "📦 Goods Received (GRN)",
-                "🏭 Material Requests",
-                "📊 Procurement Control",
-                "🔧 Customer Support",
-                "🚪 Logout System"
-            };
-
-            int btnTop = 110;
-            foreach (string item in menuItems)
-            {
-                Button btnMenu = new Button { Text = "  " + item, Top = btnTop, Left = 12, Size = new Size(236, 48), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.Hand };
-                btnMenu.FlatAppearance.BorderSize = 0;
-
-                if (item.Contains("Customer Support"))
-                {
-                    btnMenu.BackColor = Color.FromArgb(37, 99, 235); btnMenu.ForeColor = Color.White;
-                }
-                else if (item.Contains("Logout"))
-                {
-                    btnMenu.BackColor = Color.FromArgb(239, 68, 68); btnMenu.ForeColor = Color.White;
-                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(220, 38, 38); };
-                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.FromArgb(239, 68, 68); };
-                }
-                else
-                {
-                    btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184);
-                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(51, 65, 85); btnMenu.ForeColor = Color.White; };
-                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184); };
-                }
-
-                btnMenu.Click += (s, e) => {
-                    Form targetForm = null;
-                    try
-                    {
-                        if (item.Contains("Back Home")) targetForm = new MainDashboard();
-                        else if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
-                        else if (item.Contains("Logistics")) targetForm = new LogisticsForm();
-                        else if (item.Contains("Product")) targetForm = new ProductManagement();
-                        else if (item.Contains("HR")) targetForm = new EmployeeManagement();
-                        else if (item.Contains("GRN")) targetForm = new GoodsReceivedForm();
-                        else if (item.Contains("Material")) targetForm = new RawMaterialRequestForm();
-                        else if (item.Contains("Procurement")) targetForm = new ProcurementForm();
-                        else if (item.Contains("Logout")) { Application.Restart(); return; }
-
-                        if (targetForm != null && !(targetForm is AfterServiceForm))
-                        {
-                            this.Hide();
-                            targetForm.FormClosed += (senderForm, args) => this.Show();
-                            targetForm.Show();
-                        }
-                    }
-                    catch (Exception ex) { MessageBox.Show("Navigation error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-                };
-                pnlSidebar.Controls.Add(btnMenu);
-                btnTop += 55;
-            }
-            this.Controls.Add(pnlSidebar);
-
-            // 2. Right Main Workspace
+            // 2. Right Main Workspace (Left Navigation Panel Removed)
             Panel pnlMain = new Panel { Location = new Point(260, 0), Size = new Size(900, 750) };
             this.Controls.Add(pnlMain);
 
@@ -125,7 +56,7 @@ namespace ITP4915M_Group11
             pnlMain.Controls.Add(lblHeader);
 
             // Go Back top-right (visible, returns to previous page by closing this form)
-            Button btnBackHome = new Button { Text = " Go Back", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
+            Button btnBackHome = new Button { Text = "⬅ Go Back", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { this.Close(); };
             pnlMain.Controls.Add(btnBackHome);

@@ -50,118 +50,21 @@ namespace ITP4915M_Group11
 
             // 2. Main Window Settings
             this.Text = "Premium Living Furniture - Goods Received Note (GRN) Control";
-            this.Size = new Size(1180, 750);
+            this.Size = new Size(920, 750); // Adjusted size to remove sidebar footprint
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
 
-            // 3. Left Sidebar Navigation Panel
-            Panel pnlSidebar = new Panel
-            {
-                Width = 260,
-                Dock = DockStyle.Left,
-                BackColor = Color.FromArgb(15, 23, 42)
-            };
+            // ==============================================================
+            // 🛑 Left Sidebar Navigation Panel code has been completely REMOVED here.
+            // ==============================================================
 
-            Label lblLogo = new Label
-            {
-                Text = "Premium Living\nFurniture",
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(20, 25),
-                Size = new Size(220, 60),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-            pnlSidebar.Controls.Add(lblLogo);
-
-            string[] menuItems = {
-                "🏠 Back Home",
-                "🛒 Sales Order Mgmt",
-                "🚚 Delivery Logistics",
-                "🛋️ Product Maintenance",
-                "👔 HR / Staff Mgmt",
-                "📦 Goods Received (GRN)",
-                "🏭 Material Requests",
-                "📊 Procurement Control",
-                "🔧 Customer Support",
-                "🚪 Logout System"
-            };
-
-            int btnTop = 110;
-            foreach (string item in menuItems)
-            {
-                Button btnMenu = new Button
-                {
-                    Text = "  " + item,
-                    Top = btnTop,
-                    Left = 12,
-                    Size = new Size(236, 48),
-                    FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Cursor = Cursors.Hand
-                };
-                btnMenu.FlatAppearance.BorderSize = 0;
-
-                // Highlight current Goods Received (GRN) workspace; Logout shown as danger red
-                if (item.Contains("Goods Received (GRN)"))
-                {
-                    btnMenu.BackColor = Color.FromArgb(37, 99, 235);
-                    btnMenu.ForeColor = Color.White;
-                }
-                else if (item.Contains("Logout"))
-                {
-                    btnMenu.BackColor = Color.FromArgb(239, 68, 68);
-                    btnMenu.ForeColor = Color.White;
-                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(220, 38, 38); };
-                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.FromArgb(239, 68, 68); };
-                }
-                else
-                {
-                    btnMenu.BackColor = Color.Transparent;
-                    btnMenu.ForeColor = Color.FromArgb(148, 163, 184);
-                    btnMenu.MouseEnter += (s, e) => { btnMenu.BackColor = Color.FromArgb(51, 65, 85); btnMenu.ForeColor = Color.White; };
-                    btnMenu.MouseLeave += (s, e) => { btnMenu.BackColor = Color.Transparent; btnMenu.ForeColor = Color.FromArgb(148, 163, 184); };
-                }
-
-                // Cross-Module Sidebar Routing Execution
-                btnMenu.Click += (s, e) => {
-                    Form targetForm = null;
-                    try
-                    {
-                        if (item.Contains("Back Home")) targetForm = new MainDashboard();
-                        else if (item.Contains("Sales Order Mgmt")) targetForm = new OrderManagementForm();
-                        else if (item.Contains("Delivery Logistics")) targetForm = new LogisticsForm();
-                        else if (item.Contains("Product Maintenance")) targetForm = new ProductManagement();
-                        else if (item.Contains("Staff Mgmt")) targetForm = new EmployeeManagement();
-                        else if (item.Contains("Material Requests")) targetForm = new RawMaterialRequestForm();
-                        else if (item.Contains("Procurement")) targetForm = new ProcurementForm();
-                        else if (item.Contains("Support")) targetForm = new AfterServiceForm();
-                        else if (item.Contains("Logout")) { Application.Restart(); return; }
-
-                        if (targetForm != null && !(targetForm is GoodsReceivedForm))
-                        {
-                            this.Hide();
-                            targetForm.FormClosed += (senderForm, args) => this.Show();
-                            targetForm.Show();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Navigation routing failed: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                };
-                pnlSidebar.Controls.Add(btnMenu);
-                btnTop += 55;
-            }
-            this.Controls.Add(pnlSidebar);
-
-            // 4. Right Workspace Body
+            // 4. Right Workspace Body (Shifted to Point(0, 0))
             Panel pnlMain = new Panel
             {
-                Location = new Point(260, 0),
+                Location = new Point(0, 0),
                 Size = new Size(900, 750)
             };
             this.Controls.Add(pnlMain);
