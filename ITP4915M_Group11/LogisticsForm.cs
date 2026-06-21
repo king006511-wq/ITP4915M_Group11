@@ -10,15 +10,9 @@ namespace ITP4915M_Group11
 {
     public partial class LogisticsForm : Form
     {
-        // ==========================================
-        // 🔒 Database Configuration
-        // ==========================================
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private string currentStaffID;
 
-        // ==========================================
-        // 🎨 UI Elements & Logistics Controls
-        // ==========================================
         private DataGridView dgvPendingOrders;
         private TextBox txtOrderID, txtCustomerID, txtDeliveryAddress, txtCurrentStatus;
         private ComboBox cboDeliveryStaff;
@@ -46,80 +40,38 @@ namespace ITP4915M_Group11
             this.BackColor = Color.FromArgb(243, 244, 246);
             this.FormBorderStyle = FormBorderStyle.None;
 
-            TableLayoutPanel mainTable = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-                BackColor = Color.Transparent
-            };
+            TableLayoutPanel mainTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Color.Transparent };
             mainTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
             mainTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             this.Controls.Add(mainTable);
 
-            // 🌟 炫彩漸層 Header
             Panel pnlHeader = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
-            pnlHeader.Paint += (s, e) =>
-            {
+            pnlHeader.Paint += (s, e) => {
                 using (LinearGradientBrush brush = new LinearGradientBrush(pnlHeader.ClientRectangle, Color.FromArgb(79, 70, 229), Color.FromArgb(217, 70, 239), 45F))
                 {
                     e.Graphics.FillRectangle(brush, pnlHeader.ClientRectangle);
                 }
             };
 
-            Label lblModuleTitle = new Label
-            {
-                Text = "⚡ Logistics Dispatch & Delivery Management",
-                Font = new Font("Segoe UI Black", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                Location = new Point(20, 18),
-                AutoSize = true
-            };
+            Label lblModuleTitle = new Label { Text = "⚡ Logistics Dispatch & Delivery Management", Font = new Font("Segoe UI Black", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, Location = new Point(20, 18), AutoSize = true };
             pnlHeader.Controls.Add(lblModuleTitle);
             mainTable.Controls.Add(pnlHeader, 0, 0);
 
-            TableLayoutPanel contentTable = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 1,
-                Margin = new Padding(20, 20, 20, 20)
-            };
+            TableLayoutPanel contentTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Margin = new Padding(20) };
             contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 360F));
             contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
             contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             mainTable.Controls.Add(contentTable, 0, 1);
 
-            Panel pnlInputs = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                AutoScroll = true,
-                Padding = new Padding(20)
-            };
+            Panel pnlInputs = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, AutoScroll = true, Padding = new Padding(20) };
             pnlInputs.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlInputs.ClientRectangle, Color.FromArgb(229, 231, 235), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(pnlInputs, 0, 0);
 
-            dgvPendingOrders = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AllowUserToAddRows = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                Font = new Font("Segoe UI", 10F),
-                ReadOnly = true,
-                EnableHeadersVisualStyles = false
-            };
+            dgvPendingOrders = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, AllowUserToAddRows = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, Font = new Font("Segoe UI", 10F), ReadOnly = true, EnableHeadersVisualStyles = false };
             dgvPendingOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(14, 165, 233);
             dgvPendingOrders.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvPendingOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             dgvPendingOrders.ColumnHeadersHeight = 40;
-
-            // 🛠️ 修正了這裡的顏色筆誤 (改為 248)
             dgvPendingOrders.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
             dgvPendingOrders.SelectionChanged += dgvPendingOrders_SelectionChanged;
 
@@ -127,9 +79,6 @@ namespace ITP4915M_Group11
             gridContainer.Controls.Add(dgvPendingOrders);
             contentTable.Controls.Add(gridContainer, 2, 0);
 
-            // ====================================================
-            // 📝 左側欄位與彩色按鈕
-            // ====================================================
             int currentY = 15;
             int inputWidth = 300;
 
@@ -188,7 +137,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region ⚙️ Operational Logic & Core Engines
+        #region ⚙️ Operational Logic
         private void LoadDeliveryStaff()
         {
             cboDeliveryStaff.Items.Clear();
@@ -215,7 +164,7 @@ namespace ITP4915M_Group11
                         dgvPendingOrders.DataSource = dt;
                     }
                 }
-                catch (Exception) { /* Silent fail */ }
+                catch (Exception) { }
             }
         }
 
@@ -297,20 +246,10 @@ namespace ITP4915M_Group11
             string customerID = txtCustomerID.Text.Trim();
             string address = txtDeliveryAddress.Text.Trim();
 
-            Form previewForm = new Form
-            {
-                Text = "Interactive Document Hub",
-                Size = new Size(650, 850),
-                StartPosition = FormStartPosition.CenterParent,
-                BackColor = Color.FromArgb(243, 244, 246),
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false,
-                MinimizeBox = false
-            };
+            Form previewForm = new Form { Text = "Interactive Document Hub", Size = new Size(650, 850), StartPosition = FormStartPosition.CenterParent, BackColor = Color.FromArgb(243, 244, 246), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false };
 
             Panel pnlPreviewHeader = new Panel { Dock = DockStyle.Top, Height = 60 };
-            pnlPreviewHeader.Paint += (s, ev) =>
-            {
+            pnlPreviewHeader.Paint += (s, ev) => {
                 using (LinearGradientBrush brush = new LinearGradientBrush(pnlPreviewHeader.ClientRectangle, Color.FromArgb(236, 72, 153), Color.FromArgb(245, 158, 11), 0F))
                 {
                     ev.Graphics.FillRectangle(brush, pnlPreviewHeader.ClientRectangle);
@@ -350,10 +289,7 @@ namespace ITP4915M_Group11
             docSheet.Controls.Add(pnlDivider);
 
             Panel pnlReplySlipCard = new Panel { Location = new Point(30, 320), Size = new Size(490, 300), BackColor = Color.FromArgb(254, 252, 232), Padding = new Padding(20) };
-
-            // 🛠️ 修正了變數名稱衝突，原本是 e 改成 paintArgs 避免和上面 btnGenerateNote_Click 的 e 衝突
             pnlReplySlipCard.Paint += (s, paintArgs) => ControlPaint.DrawBorder(paintArgs.Graphics, pnlReplySlipCard.ClientRectangle, Color.FromArgb(253, 224, 71), ButtonBorderStyle.Solid);
-
             docSheet.Controls.Add(pnlReplySlipCard);
 
             Label lblSlipTitle = new Label { Text = "📌 CUSTOMER REPLY SLIP", Font = new Font("Segoe UI", 11F, FontStyle.Bold), ForeColor = Color.FromArgb(161, 98, 7), Location = new Point(20, 20), AutoSize = true };
@@ -377,79 +313,94 @@ namespace ITP4915M_Group11
             Panel pnlTopLine = new Panel { Size = new Size(650, 1), Location = new Point(0, 0), BackColor = Color.FromArgb(226, 232, 240) };
             pnlActionDock.Controls.Add(pnlTopLine);
 
-            Button btnExport = new Button
-            {
-                Text = "💾 Save Document to PDF / TXT",
-                Location = new Point(30, 18),
-                Size = new Size(390, 45),
-                BackColor = Color.FromArgb(14, 165, 233),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
+            Button btnExport = new Button { Text = "💾 Export & Preview Document", Location = new Point(30, 18), Size = new Size(390, 45), BackColor = Color.FromArgb(14, 165, 233), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnExport.FlatAppearance.BorderSize = 0;
 
-            Button btnCancel = new Button
-            {
-                Text = "Close",
-                Location = new Point(440, 18),
-                Size = new Size(160, 45),
-                BackColor = Color.FromArgb(243, 244, 246),
-                ForeColor = Color.FromArgb(75, 85, 99),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
+            Button btnCancel = new Button { Text = "Close", Location = new Point(440, 18), Size = new Size(160, 45), BackColor = Color.FromArgb(243, 244, 246), ForeColor = Color.FromArgb(75, 85, 99), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnCancel.FlatAppearance.BorderSize = 0;
 
+            // 🛠️ 核心修正：升級為高品質 HTML 導出引擎
             btnExport.Click += (src, args) =>
             {
                 using (SaveFileDialog sfd = new SaveFileDialog())
                 {
-                    sfd.Filter = "Portable Document Format (*.pdf)|*.pdf|Standard Text File (*.txt)|*.txt";
+                    sfd.Filter = "Modern Web Document (*.html)|*.html|Plain Text File (*.txt)|*.txt";
                     sfd.FileName = $"DeliveryManifest_{orderID}";
-                    sfd.Title = "Choose System Directory Location to Save File";
+                    sfd.Title = "Save Document Structure";
 
                     if (sfd.ShowDialog() == DialogResult.OK)
                     {
                         try
                         {
-                            string rawExportString = $@"PREMIUM LIVING FURNITURE
-----------------------------------------------------
-DELIVERY NOTE DATA SUMMARY
-----------------------------------------------------
-Order Ref:      {orderID}
-Customer Ref:   {customerID}
-Target Date:    {scheduleDate}
-Logistics:      {deliveryStaff}
-Destination:    {address}
+                            string fileContent = "";
+                            if (sfd.FileName.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+                            {
+                                fileContent = $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>Delivery Note - {orderID}</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; color: #1e293b; background-color: #f8fafc; }}
+        .container {{ max-width: 650px; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 8px solid #0ea5e9; margin: 0 auto; }}
+        h1 {{ color: #1e3a8a; margin: 0 0 5px 0; font-size: 24px; font-weight: 800; }}
+        .subtitle {{ color: #0ea5e9; font-weight: bold; margin-bottom: 30px; letter-spacing: 1px; }}
+        .meta-table {{ width: 100%; border-collapse: collapse; margin-bottom: 40px; }}
+        .meta-table td {{ padding: 12px 0; border-bottom: 1px solid #e2e8f0; font-size: 15px; }}
+        .meta-label {{ font-weight: bold; color: #64748b; width: 35%; }}
+        .meta-value {{ color: #0f172a; }}
+        .reply-slip {{ background-color: #fef08a; border: 2px dashed #ca8a04; padding: 25px; border-radius: 6px; margin-top: 30px; }}
+        .slip-title {{ color: #a16207; font-weight: bold; font-size: 16px; margin-bottom: 10px; }}
+        .sig-container {{ margin-top: 50px; display: flex; justify-content: space-between; }}
+        .sig-box {{ width: 45%; border-top: 1px solid #ca8a04; text-align: center; padding-top: 8px; font-size: 13px; color: #a16207; font-weight: bold; margin-top: 40px; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h1>PREMIUM LIVING FURNITURE</h1>
+        <div class='subtitle'>OFFICIAL DELIVERY NOTE</div>
+        
+        <table class='meta-table'>
+            <tr><td class='meta-label'>Order Reference:</td><td class='meta-value'><b>{orderID}</b></td></tr>
+            <tr><td class='meta-label'>Customer ID:</td><td class='meta-value'>{customerID}</td></tr>
+            <tr><td class='meta-label'>Destination Address:</td><td class='meta-value'>{address}</td></tr>
+            <tr><td class='meta-label'>Scheduled Date:</td><td class='meta-value'>{scheduleDate}</td></tr>
+            <tr><td class='meta-label'>Assigned Logistics Team:</td><td class='meta-value'>{deliveryStaff}</td></tr>
+        </table>
 
-----------------------------------------------------
-CUSTOMER REPLY MANIFEST
-----------------------------------------------------
-Status: Received in good condition.
+        <div class='reply-slip'>
+            <div class='slip-title'>📌 CUSTOMER REPLY SLIP & RECEIPT</div>
+            <p style='color: #713f12; font-size: 14px;'>I hereby confirm receipt of items for Order [{orderID}] in pristine condition without any structural damages.</p>
+            
+            <div class='sig-container'>
+                <div class='sig-box'>Customer Signature / Date</div>
+                <div class='sig-box'>Delivery Operator Signature</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+                            }
+                            else
+                            {
+                                fileContent = $@"PREMIUM LIVING FURNITURE\r\nOFFICIAL DELIVERY NOTE\r\n--------------------------------------\r\nOrder Ref: {orderID}\r\nCustomer: {customerID}\r\nAddress: {address}\r\nDate: {scheduleDate}\r\nTeam: {deliveryStaff}\r\n--------------------------------------\r\nStatus: Received in good condition.";
+                            }
 
-Customer Sign: ___________________________
-Date Signed:   ___________________________";
+                            File.WriteAllText(sfd.FileName, fileContent, System.Text.Encoding.UTF8);
+                            MessageBox.Show($"File successfully generated and saved at:\n{sfd.FileName}", "Export Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            File.WriteAllText(sfd.FileName, rawExportString);
-                            MessageBox.Show($"File successfully pipeline-routed and stored at:\n{sfd.FileName}", "Export Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            // 🛠️ 核心修正：自動呼叫預設瀏覽器秒開網頁，讓用戶隨時 Ctrl+P 轉印成真 PDF
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
                             previewForm.Close();
                         }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"File pipeline exception:\n{ex.Message}", "IO Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+                        catch (Exception ex) { MessageBox.Show($"File export error:\n{ex.Message}", "IO Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                     }
                 }
             };
 
             btnCancel.Click += (src, args) => previewForm.Close();
-
             pnlActionDock.Controls.Add(btnExport);
             pnlActionDock.Controls.Add(btnCancel);
-
             previewForm.ShowDialog();
         }
 
