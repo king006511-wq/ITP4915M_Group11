@@ -30,7 +30,6 @@
             this.Name = "LogisticsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "物流管理 - 生成發貨單 (Logistics Processing System)";
-            this.Load += new System.EventHandler(this.LogisticsForm_Load);
             this.ResumeLayout(false);
 
         }

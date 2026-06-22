@@ -11,10 +11,10 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 資料庫配置
         // ==========================================
-        private readonly string connString = "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         // ==========================================
-        // 🎨 現代化 UI 元件變數
+        // 🎨 現代化多彩 UI 元件變數
         // ==========================================
         private TextBox txtCustomerID, txtName, txtPhone, txtAddress, txtSearch;
         private ComboBox cboType;
@@ -24,176 +24,146 @@ namespace ITP4915M_Group11
         public CustomerManagement()
         {
             InitializeComponent();
-            InitializePremiumCustomerUI(); // 動態渲染國際企業級 UI
-            SetupTypeComboBox();          // 設定 B2B/B2C 下拉選單
-            LoadCustomerData();           // 載入客戶清單
-            GenerateNextCustomerID();     // 自動生成下一個客戶 ID
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                ThemeManager.ApplyTheme(this);
+                InitializePerfectMatchUI();
+                SetupTypeComboBox();
+                LoadCustomerData();
+                GenerateNextCustomerID();
+            }
         }
 
-        #region 🎨 動態企業級 UI 渲染 (Fixed Layout & Overlaps)
-        #region 🎨 動態企業級 UI 渲染 (Bulletproof Docking Layout)
-        private void InitializePremiumCustomerUI()
+        #region 🎨 絕對座標佈局 (修正空白與資料顯示)
+        private void InitializePerfectMatchUI()
         {
-            this.Text = "Premium Living Furniture - Client Relationship Management (CRM)";
+            this.Controls.Clear();
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-            this.FormBorderStyle = FormBorderStyle.None; // Seamless embedding
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.Size = new Size(1180, 800);
 
-            // 1. 頂部深色導覽列 (Dock = Top, Fixed Height)
-            Panel headerPanel = new Panel
+            // =========================================================
+            // 🛡️ 核心修復 1：消除中間多餘空白 (將 X 座標由 260 改為 20)
+            // =========================================================
+            Panel pnlMain = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = Color.FromArgb(15, 23, 42)
+                Location = new Point(20, 0),  // ⬅️ 移去左邊
+                Size = new Size(1120, 750)    // ⬅️ 擴大整個面板寬度
             };
-            Label lblTitle = new Label
-            {
-                Text = "GLOBAL CLIENT REGISTRY METRICS",
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(20, 16),
-                AutoSize = true
-            };
-            headerPanel.Controls.Add(lblTitle);
-            this.Controls.Add(headerPanel);
+            this.Controls.Add(pnlMain);
 
-            // 2. 主容器 (Fills the rest of the window, acts as a safe zone)
-            Panel contentPanel = new Panel
+            // =========================================================
+            // 【中間】資料輸入面板 (Inputting Data)
+            // =========================================================
+            Panel pnlCard = new Panel
             {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(20) // Adds a 20px gap around all edges
-            };
-            this.Controls.Add(contentPanel);
-            contentPanel.BringToFront(); // Ensures it sits below the header
-
-            // ==========================================
-            // 3. 左側：資料輸入面板 (Dock = Left, Fixed Width)
-            // ==========================================
-            Panel inputPanel = new Panel
-            {
-                Dock = DockStyle.Left,
-                Width = 340,
+                Location = new Point(20, 50),
+                Size = new Size(380, 650),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
+            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+            pnlMain.Controls.Add(pnlCard);
 
-            Label lblSection = new Label { Text = "Client Profile Master", Font = new Font("Segoe UI", 11F, FontStyle.Bold), ForeColor = Color.FromArgb(30, 41, 59), Location = new Point(15, 15), AutoSize = true };
-            inputPanel.Controls.Add(lblSection);
+            Label lblCardTitle = new Label { Text = "📝 Client Profile Entry", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 15), AutoSize = true };
+            pnlCard.Controls.Add(lblCardTitle);
 
-            string[] labels = { "Customer ID *", "Client Name *", "Account Type *", "Contact Phone *", "Billing Address" };
-            int startY = 55;
+            int startY = 60;
+            txtCustomerID = CreateStyledTextBox(pnlCard, ref startY, "Customer ID (Auto):", true);
+            txtName = CreateStyledTextBox(pnlCard, ref startY, "Client Full Name *:", false);
 
-            txtCustomerID = new TextBox { Location = new Point(15, startY + 20), Size = new Size(300, 25), ReadOnly = true, BackColor = Color.FromArgb(241, 245, 249) };
-            txtName = new TextBox { Location = new Point(15, startY + 80), Size = new Size(300, 25) };
-            cboType = new ComboBox { Location = new Point(15, startY + 140), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            txtPhone = new TextBox { Location = new Point(15, startY + 200), Size = new Size(300, 25) };
-            txtAddress = new TextBox { Location = new Point(15, startY + 260), Size = new Size(300, 60), Multiline = true };
+            Label lblType = new Label { Text = "Account Type *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboType = new ComboBox { Location = new Point(20, startY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), DropDownStyle = ComboBoxStyle.DropDownList };
+            pnlCard.Controls.Add(lblType); pnlCard.Controls.Add(cboType);
+            startY += 65;
 
-            for (int i = 0; i < labels.Length; i++)
-            {
-                inputPanel.Controls.Add(new Label { Text = labels[i], Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, startY + (i * 60)), AutoSize = true });
-            }
+            txtPhone = CreateStyledTextBox(pnlCard, ref startY, "Contact Phone *:", false);
 
-            inputPanel.Controls.Add(txtCustomerID);
-            inputPanel.Controls.Add(txtName);
-            inputPanel.Controls.Add(cboType);
-            inputPanel.Controls.Add(txtPhone);
-            inputPanel.Controls.Add(txtAddress);
+            Label lblAddr = new Label { Text = "Billing / Delivery Address:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtAddress = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 75, Multiline = true, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            pnlCard.Controls.Add(lblAddr); pnlCard.Controls.Add(txtAddress);
+            startY += 110;
 
-            btnAdd = CreateStyledButton("Add Client", Color.FromArgb(14, 165, 233), Color.White, new Point(15, 395), new Size(145, 32));
-            btnUpdate = CreateStyledButton("Update Profile", Color.FromArgb(245, 158, 11), Color.White, new Point(170, 395), new Size(145, 32));
-            btnDelete = CreateStyledButton("Purge Record", Color.FromArgb(239, 68, 68), Color.White, new Point(15, 435), new Size(145, 32));
-            btnReset = CreateStyledButton("Reset Workspace", Color.FromArgb(100, 116, 139), Color.White, new Point(170, 435), new Size(145, 32));
+            btnAdd = new Button { Text = "➕ Add Client", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnUpdate = new Button { Text = "💾 Update", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(59, 130, 246), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
 
-            btnAdd.Click += btnAdd_Click;
-            btnUpdate.Click += btnUpdate_Click;
-            btnDelete.Click += btnDelete_Click;
-            btnReset.Click += (s, e) => ClearWorkspace();
+            startY += 50;
+            btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnReset = new Button { Text = "🔄 Reset", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
 
-            inputPanel.Controls.Add(btnAdd);
-            inputPanel.Controls.Add(btnUpdate);
-            inputPanel.Controls.Add(btnDelete);
-            inputPanel.Controls.Add(btnReset);
+            btnAdd.FlatAppearance.BorderSize = 0; btnUpdate.FlatAppearance.BorderSize = 0; btnDelete.FlatAppearance.BorderSize = 0; btnReset.FlatAppearance.BorderSize = 0;
+            btnAdd.Click += btnAdd_Click; btnUpdate.Click += btnUpdate_Click; btnDelete.Click += btnDelete_Click; btnReset.Click += (s, e) => ClearWorkspace();
 
-            // ==========================================
-            // 4. 右側：搜尋與資料表格面板 (Dock = Fill, Flexible)
-            // ==========================================
-            Panel rightPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(20, 0, 0, 0) // Creates a 20px gap from the Left Panel
-            };
+            pnlCard.Controls.Add(btnAdd); pnlCard.Controls.Add(btnUpdate); pnlCard.Controls.Add(btnDelete); pnlCard.Controls.Add(btnReset);
 
-            // 搜尋列區塊 (Dock = Top inside Right Panel)
-            Panel searchPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 40
-            };
-            Label lblSearch = new Label { Text = "🔍 Global Query Filter :", Font = new Font("Segoe UI", 9F, FontStyle.Bold), Location = new Point(0, 5), AutoSize = true };
-            txtSearch = new TextBox
-            {
-                Location = new Point(150, 2),
-                Size = new Size(300, 25),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
+            // =========================================================
+            // 【右側】數據表格與搜尋 (Displaying Data)
+            // =========================================================
+            Label lblGridTitle = new Label { Text = "📂 Customer Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(430, 50), AutoSize = true };
+            pnlMain.Controls.Add(lblGridTitle);
+
+            txtSearch = new TextBox { Location = new Point(850, 50), Size = new Size(240, 25), Font = new Font("Segoe UI", 10F) }; // 向右靠
+            txtSearch.Text = "Search Name / Phone...";
+            txtSearch.ForeColor = Color.Gray;
+            txtSearch.GotFocus += (s, e) => { if (txtSearch.Text == "Search Name / Phone...") { txtSearch.Text = ""; txtSearch.ForeColor = Color.Black; } };
+            txtSearch.LostFocus += (s, e) => { if (string.IsNullOrWhiteSpace(txtSearch.Text)) { txtSearch.Text = "Search Name / Phone..."; txtSearch.ForeColor = Color.Gray; } };
             txtSearch.TextChanged += txtSearch_TextChanged;
-            searchPanel.Controls.Add(lblSearch);
-            searchPanel.Controls.Add(txtSearch);
+            pnlMain.Controls.Add(txtSearch);
 
-            // 資料表格 (Dock = Fill inside Right Panel)
+            // 數據網格
             dgvCustomer = new DataGridView
             {
-                Dock = DockStyle.Fill,
+                Location = new Point(430, 90),
+                Size = new Size(660, 610), // ⬅️ 擴闊表格，用盡右側空間
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
+                BorderStyle = BorderStyle.None,
+                AllowUserToAddRows = false,
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AllowUserToAddRows = false,
                 RowHeadersVisible = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+                EnableHeadersVisualStyles = false,
+
+                // 🛡️ 核心修復 2：強制資料欄自動填滿表格寬度，解決資料截斷問題
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
             };
+
+            // 允許文字自動換行
+            dgvCustomer.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+
+            dgvCustomer.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(79, 70, 229);
+            dgvCustomer.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvCustomer.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvCustomer.ColumnHeadersHeight = 38;
+            dgvCustomer.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            dgvCustomer.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
+
             dgvCustomer.CellClick += dgvCustomer_CellClick;
-
-            // Build Right Panel (Order matters here for Docking to work properly)
-            rightPanel.Controls.Add(dgvCustomer);  // Add Grid First (Fill)
-            rightPanel.Controls.Add(searchPanel);  // Add Search Second (Top)
-
-            // Build Content Panel (Order matters: Fill goes first, then Left)
-            contentPanel.Controls.Add(rightPanel);
-            contentPanel.Controls.Add(inputPanel);
+            pnlMain.Controls.Add(dgvCustomer);
         }
-        #endregion
 
-        private Button CreateStyledButton(string text, Color backColor, Color foreColor, Point location, Size size)
+        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
         {
-            Button btn = new Button
-            {
-                Text = text,
-                BackColor = backColor,
-                ForeColor = foreColor,
-                Location = location,
-                Size = size,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btn.FlatAppearance.BorderSize = 0;
-            return btn;
+            Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
+            container.Controls.Add(lbl); container.Controls.Add(txt);
+            topY += 65;
+            return txt;
         }
 
         private void SetupTypeComboBox()
         {
             cboType.Items.Clear();
-            cboType.Items.Add("B2B");
-            cboType.Items.Add("B2C");
-            cboType.SelectedIndex = 0;
+            cboType.Items.Add("B2B (Corporate)");
+            cboType.Items.Add("B2C (Retail)");
+            if (cboType.Items.Count > 0) cboType.SelectedIndex = 0;
         }
         #endregion
 
-        #region 💾 資料庫商業邏輯 (CRUD Framework)
-
+        #region 💾 資料庫核心商業邏輯
         private void LoadCustomerData(string filter = "")
         {
             try
@@ -202,14 +172,14 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
                     string query = "SELECT CustomerID, Name, Type, Phone, Address FROM customer WHERE 1=1";
-                    if (!string.IsNullOrEmpty(filter))
+                    if (!string.IsNullOrEmpty(filter) && filter != "Search Name / Phone...")
                     {
                         query += " AND (CustomerID LIKE @filter OR Name LIKE @filter OR Phone LIKE @filter)";
                     }
 
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
-                        if (!string.IsNullOrEmpty(filter))
+                        if (!string.IsNullOrEmpty(filter) && filter != "Search Name / Phone...")
                             cmd.Parameters.AddWithValue("@filter", "%" + filter + "%");
 
                         using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
@@ -223,13 +193,8 @@ namespace ITP4915M_Group11
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to connect database system:\n" + ex.Message, "Infrastructure Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Failed to load customer list:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private void CustomerManagement_Load(object sender, EventArgs e)
-        {
-
         }
 
         private void GenerateNextCustomerID()
@@ -245,7 +210,7 @@ namespace ITP4915M_Group11
                         object result = cmd.ExecuteScalar();
                         if (result != null)
                         {
-                            string lastID = result.ToString(); // 例如 "C010"
+                            string lastID = result.ToString();
                             if (lastID.StartsWith("C") && int.TryParse(lastID.Substring(1), out int num))
                             {
                                 txtCustomerID.Text = "C" + (num + 1).ToString("D3");
@@ -256,7 +221,10 @@ namespace ITP4915M_Group11
                     }
                 }
             }
-            catch { txtCustomerID.Text = "C001"; }
+            catch (Exception)
+            {
+                txtCustomerID.Text = "C001";
+            }
         }
 
         private void btnAdd_Click(object sender, EventArgs e)
@@ -277,7 +245,7 @@ namespace ITP4915M_Group11
                     {
                         cmd.Parameters.AddWithValue("@id", txtCustomerID.Text.Trim());
                         cmd.Parameters.AddWithValue("@name", txtName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@type", cboType.SelectedItem.ToString());
+                        cmd.Parameters.AddWithValue("@type", cboType.Text);
                         cmd.Parameters.AddWithValue("@phone", txtPhone.Text.Trim());
                         cmd.Parameters.AddWithValue("@address", txtAddress.Text.Trim());
 
@@ -311,7 +279,7 @@ namespace ITP4915M_Group11
                     {
                         cmd.Parameters.AddWithValue("@id", txtCustomerID.Text.Trim());
                         cmd.Parameters.AddWithValue("@name", txtName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@type", cboType.SelectedItem.ToString());
+                        cmd.Parameters.AddWithValue("@type", cboType.Text);
                         cmd.Parameters.AddWithValue("@phone", txtPhone.Text.Trim());
                         cmd.Parameters.AddWithValue("@address", txtAddress.Text.Trim());
 
@@ -364,21 +332,27 @@ namespace ITP4915M_Group11
             if (e.RowIndex >= 0)
             {
                 DataGridViewRow row = dgvCustomer.Rows[e.RowIndex];
-                txtCustomerID.Text = row.Cells["CustomerID"].Value.ToString();
-                txtName.Text = row.Cells["Name"].Value.ToString();
-                cboType.SelectedItem = row.Cells["Type"].Value.ToString();
-                txtPhone.Text = row.Cells["Phone"].Value.ToString();
-                txtAddress.Text = row.Cells["Address"].Value.ToString();
+                txtCustomerID.Text = row.Cells["CustomerID"].Value?.ToString();
+                txtName.Text = row.Cells["Name"].Value?.ToString();
 
-                // 選取狀態下，新增按鈕反灰鎖定，避免編號覆寫
+                string typeVal = row.Cells["Type"].Value?.ToString();
+                if (cboType.Items.Contains(typeVal)) cboType.SelectedItem = typeVal;
+
+                txtPhone.Text = row.Cells["Phone"].Value?.ToString();
+                txtAddress.Text = row.Cells["Address"].Value?.ToString();
+
+                // 編輯模式下，鎖定 Add 按鈕並轉為灰色
                 btnAdd.Enabled = false;
-                btnAdd.BackColor = Color.LightGray;
+                btnAdd.BackColor = Color.FromArgb(203, 213, 225);
             }
         }
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
         {
-            LoadCustomerData(txtSearch.Text.Trim());
+            if (txtSearch.Text != "Search Name / Phone...")
+            {
+                LoadCustomerData(txtSearch.Text.Trim());
+            }
         }
 
         private void ClearWorkspace()
@@ -389,11 +363,12 @@ namespace ITP4915M_Group11
             txtSearch.Clear();
             if (cboType.Items.Count > 0) cboType.SelectedIndex = 0;
 
+            // 恢復 Add 按鈕為翠綠色
             btnAdd.Enabled = true;
-            btnAdd.BackColor = Color.FromArgb(14, 165, 233);
+            btnAdd.BackColor = Color.FromArgb(16, 185, 129);
 
             LoadCustomerData();
-            GenerateNextCustomerID(); // 重新整理並指派全新編號
+            GenerateNextCustomerID();
         }
         #endregion
     }
