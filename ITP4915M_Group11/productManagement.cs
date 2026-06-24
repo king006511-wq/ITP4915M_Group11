@@ -8,15 +8,16 @@ namespace ITP4915M_Group11
 {
     public partial class ProductManagement : Form
     {
-        private TextBox txtPartID;
+        // 變數名稱更新：對應全新 Product 表
+        private TextBox txtProductID;
         private TextBox txtProductName;
         private TextBox txtDescription;
         private TextBox txtStockLevel;
-        private TextBox txtDefaultPrice;
+        private TextBox txtRetailPrice;
         private DataGridView dgvProductCatalog;
 
         // 🔒 Centralized Database Connection String (UNTOUCHED)
-        private readonly string connectionString = UserSession.ConnString;
+        private readonly string connectionString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         public ProductManagement()
         {
@@ -52,17 +53,13 @@ namespace ITP4915M_Group11
                     MessageBoxIcon.Stop
                 );
 
-                // Gracefully abort and force close the form context once the form is shown
-                // 使用 Shown 事件以確保視窗 handle 已建立，避免在 Load 期間呼叫 BeginInvoke 導致例外
                 this.Shown += (s2, e2) => this.Close();
-                return; // 授權失敗時提前結束 Load，避免後續邏輯執行
+                return;
             }
 
-            // 若非 Manager/Admin，則停用新增/刪除/修改按鈕等敏感操作（若存在）
             bool canEdit = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
             foreach (Control c in this.Controls)
             {
-                // 嘗試在 Runtime 找到常用按鈕名稱並停用
                 if (c is Button b && (b.Text.Contains("Add") || b.Text.Contains("Update") || b.Text.Contains("Delete")))
                 {
                     b.Enabled = canEdit;
@@ -84,48 +81,42 @@ namespace ITP4915M_Group11
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
 
-            // Wire up the load event handler to trigger security checking routines
             this.Load += ProductManagement_Load;
 
-            // ==============================================================
-            // 🛑 Left Sidebar Navigation Panel code has been completely REMOVED here.
-            // ==============================================================
-
-            // 2. Right Workspace Controller Panel Area (Adjusted to fill the screen)
+            // Workspace Controller Panel Area
             Panel pnlMain = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
             this.Controls.Add(pnlMain);
 
-            Label lblHeader = new Label { Text = "Product Inventory Maintenance System", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
+            Label lblHeader = new Label { Text = "Finished Goods Inventory Maintenance", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            // Go Back button (top-right) - returns to previous page by closing this form
-            Button btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
+            Button btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(1015, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { try { this.Close(); } catch { this.Hide(); } };
             pnlMain.Controls.Add(btnBackHome);
 
-            // 3. Input Details Dashboard Card
+            // Input Details Dashboard Card
             Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 600), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlCard);
 
-            Label lblCardTitle = new Label { Text = "📦 Product Management Details", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };
+            Label lblCardTitle = new Label { Text = "📦 Finished Product Details", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };
             pnlCard.Controls.Add(lblCardTitle);
 
             int startY = 60;
-            txtPartID = CreateStyledTextBox(pnlCard, ref startY, "Part ID *:", false);
+            txtProductID = CreateStyledTextBox(pnlCard, ref startY, "Product ID *:", false);
             txtProductName = CreateStyledTextBox(pnlCard, ref startY, "Product Name *:", false);
             txtStockLevel = CreateStyledTextBox(pnlCard, ref startY, "Stock Level:", false);
-            txtDefaultPrice = CreateStyledTextBox(pnlCard, ref startY, "Default Price (HKD):", false);
+            txtRetailPrice = CreateStyledTextBox(pnlCard, ref startY, "Retail Price (HKD):", false);
 
             Label lblDesc = new Label { Text = "🔍 Live Form Search Filter keyword:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235) };
             txtDescription = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 70, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
-            txtDescription.TextChanged += txtDescription_TextChanged; // Wire real-time list filter handler
+            txtDescription.TextChanged += txtDescription_TextChanged;
             pnlCard.Controls.Add(lblDesc);
             pnlCard.Controls.Add(txtDescription);
             startY += 105;
 
-            // Action Buttons Construction
+            // Action Buttons
             Button btnAdd = new Button { Text = "➕ Add", Location = new Point(20, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             Button btnUpdate = new Button { Text = "💾 Update", Location = new Point(195, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             Button btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(20, startY + 50), Size = new Size(160, 42), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
@@ -134,17 +125,28 @@ namespace ITP4915M_Group11
             foreach (var b in new Button[] { btnAdd, btnUpdate, btnDelete, btnClear }) b.FlatAppearance.BorderSize = 0;
             pnlCard.Controls.AddRange(new Control[] { btnAdd, btnUpdate, btnDelete, btnClear });
 
-            // Wire action behaviors
             btnAdd.Click += btnAdd_Click;
             btnUpdate.Click += btnUpdate_Click;
             btnDelete.Click += btnDelete_Click;
             btnClear.Click += (s, e) => ClearFields();
 
-            // 4. Clean Unified Data Grid Component
+            // 4. Data Grid Component (拉闊填滿右側剩餘空白)
             Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(440, 85), AutoSize = true };
             pnlMain.Controls.Add(lblGridTitle);
 
-            dgvProductCatalog = new DataGridView { Location = new Point(440, 125), Size = new Size(430, 560), BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            dgvProductCatalog = new DataGridView
+            {
+                Location = new Point(440, 125),
+                Size = new Size(700, 560), // 🚀 將表格寬度從 430 加闊至 700 填滿畫面
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                AllowUserToAddRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
             dgvProductCatalog.EnableHeadersVisualStyles = false;
             dgvProductCatalog.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvProductCatalog.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
@@ -168,7 +170,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 📦 Business Management Logic Functions (UNTOUCHED)
+        #region 📦 Business Management Logic Functions (已更新至全新 product 表)
         private void LoadDatabaseData()
         {
             try
@@ -176,7 +178,8 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "SELECT PartID AS 'Part ID', PartName AS 'Name', StockLevel AS 'Stock', DefaultPrice AS 'Price HKD' FROM product_part";
+                    // 🚀 從全新的 product 表讀取資料
+                    string query = "SELECT ProductID AS 'Product ID', ProductName AS 'Name', StockLevel AS 'Stock', RetailPrice AS 'Price HKD' FROM product";
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
@@ -205,7 +208,7 @@ namespace ITP4915M_Group11
                 }
                 else
                 {
-                    dt.DefaultView.RowFilter = string.Format("[Part ID] LIKE '%{0}%' OR [Name] LIKE '%{0}%'", keyword);
+                    dt.DefaultView.RowFilter = string.Format("[Product ID] LIKE '%{0}%' OR [Name] LIKE '%{0}%'", keyword);
                 }
             }
         }
@@ -215,12 +218,12 @@ namespace ITP4915M_Group11
             if (dgvProductCatalog.SelectedRows.Count > 0)
             {
                 DataGridViewRow row = dgvProductCatalog.SelectedRows[0];
-                txtPartID.Text = row.Cells["Part ID"].Value?.ToString() ?? "";
+                txtProductID.Text = row.Cells["Product ID"].Value?.ToString() ?? "";
                 txtProductName.Text = row.Cells["Name"].Value?.ToString() ?? "";
                 txtStockLevel.Text = row.Cells["Stock"].Value?.ToString() ?? "";
-                txtDefaultPrice.Text = row.Cells["Price HKD"].Value?.ToString() ?? "";
-                txtPartID.ReadOnly = true;
-                txtPartID.BackColor = Color.FromArgb(241, 245, 249);
+                txtRetailPrice.Text = row.Cells["Price HKD"].Value?.ToString() ?? "";
+                txtProductID.ReadOnly = true;
+                txtProductID.BackColor = Color.FromArgb(241, 245, 249);
             }
             else
             {
@@ -230,9 +233,9 @@ namespace ITP4915M_Group11
 
         private void btnAdd_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtPartID.Text) || string.IsNullOrWhiteSpace(txtProductName.Text))
+            if (string.IsNullOrWhiteSpace(txtProductID.Text) || string.IsNullOrWhiteSpace(txtProductName.Text))
             {
-                MessageBox.Show("Please fill in Part ID and Product Name fields!", "Missing Required Fields", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please fill in Product ID and Product Name fields!", "Missing Required Fields", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             try
@@ -240,13 +243,14 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "INSERT INTO product_part (PartID, PartName, StockLevel, DefaultPrice) VALUES (@partID, @name, @stock, @price)";
+                    // 🚀 寫入全新的 product 表
+                    string query = "INSERT INTO product (ProductID, ProductName, StockLevel, RetailPrice) VALUES (@id, @name, @stock, @price)";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
-                        cmd.Parameters.AddWithValue("@partID", txtPartID.Text.Trim());
+                        cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
                         cmd.Parameters.AddWithValue("@name", txtProductName.Text.Trim());
                         cmd.Parameters.AddWithValue("@stock", string.IsNullOrEmpty(txtStockLevel.Text) ? 0 : Convert.ToInt32(txtStockLevel.Text.Trim()));
-                        cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtDefaultPrice.Text) ? 0 : Convert.ToDecimal(txtDefaultPrice.Text.Trim()));
+                        cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtRetailPrice.Text) ? 0 : Convert.ToDecimal(txtRetailPrice.Text.Trim()));
                         cmd.ExecuteNonQuery();
                     }
                     MessageBox.Show("Product was added successfully!", "Transaction Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -259,7 +263,7 @@ namespace ITP4915M_Group11
 
         private void btnUpdate_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtPartID.Text))
+            if (string.IsNullOrWhiteSpace(txtProductID.Text))
             {
                 MessageBox.Show("Please click on an active catalog item to initiate modification cycles.", "System Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -269,13 +273,14 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "UPDATE product_part SET PartName=@name, StockLevel=@stock, DefaultPrice=@price WHERE PartID=@partID";
+                    // 🚀 更新全新的 product 表
+                    string query = "UPDATE product SET ProductName=@name, StockLevel=@stock, RetailPrice=@price WHERE ProductID=@id";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
-                        cmd.Parameters.AddWithValue("@partID", txtPartID.Text.Trim());
+                        cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
                         cmd.Parameters.AddWithValue("@name", txtProductName.Text.Trim());
                         cmd.Parameters.AddWithValue("@stock", string.IsNullOrEmpty(txtStockLevel.Text) ? 0 : Convert.ToInt32(txtStockLevel.Text.Trim()));
-                        cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtDefaultPrice.Text) ? 0 : Convert.ToDecimal(txtDefaultPrice.Text.Trim()));
+                        cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtRetailPrice.Text) ? 0 : Convert.ToDecimal(txtRetailPrice.Text.Trim()));
 
                         int rowCount = cmd.ExecuteNonQuery();
                         if (rowCount > 0)
@@ -292,12 +297,12 @@ namespace ITP4915M_Group11
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtPartID.Text))
+            if (string.IsNullOrWhiteSpace(txtProductID.Text))
             {
                 MessageBox.Show("Select an active catalog item from the history panel to drop.", "Deletion Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            DialogResult confirm = MessageBox.Show($"Are you sure you want to permanently erase catalog item record ID [{txtPartID.Text}]?", "Confirm Erase Sequence", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            DialogResult confirm = MessageBox.Show($"Are you sure you want to permanently erase catalog item record ID [{txtProductID.Text}]?", "Confirm Erase Sequence", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (confirm == DialogResult.No) return;
 
             try
@@ -305,10 +310,11 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "DELETE FROM product_part WHERE PartID=@partID";
+                    // 🚀 從全新的 product 表刪除
+                    string query = "DELETE FROM product WHERE ProductID=@id";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
-                        cmd.Parameters.AddWithValue("@partID", txtPartID.Text.Trim());
+                        cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
                         int dynamicRows = cmd.ExecuteNonQuery();
                         if (dynamicRows > 0)
                         {
@@ -324,13 +330,13 @@ namespace ITP4915M_Group11
 
         private void ClearFields()
         {
-            txtPartID.Clear();
+            txtProductID.Clear();
             txtProductName.Clear();
             txtStockLevel.Clear();
-            txtDefaultPrice.Clear();
+            txtRetailPrice.Clear();
             txtDescription.Clear();
-            txtPartID.ReadOnly = false;
-            txtPartID.BackColor = Color.White;
+            txtProductID.ReadOnly = false;
+            txtProductID.BackColor = Color.White;
             dgvProductCatalog.ClearSelection();
         }
         #endregion

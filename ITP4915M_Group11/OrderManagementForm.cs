@@ -275,7 +275,8 @@ namespace ITP4915M_Group11
             startY += 25;
 
             cartTable = new DataTable();
-            cartTable.Columns.Add("PartID", typeof(string));
+            // 🚀 更新欄位名稱為 ProductID 配合新 SQL 結構
+            cartTable.Columns.Add("ProductID", typeof(string));
             cartTable.Columns.Add("Product Name", typeof(string));
             cartTable.Columns.Add("Qty", typeof(int));
             cartTable.Columns.Add("Unit Price", typeof(decimal));
@@ -434,14 +435,14 @@ namespace ITP4915M_Group11
                 return;
             }
             var selectedProduct = (ProductItem)cboProducts.SelectedItem;
-            string partID = selectedProduct.ID;
+            string productID = selectedProduct.ID; // 🚀 修正變數名稱
             string prodName = selectedProduct.Name;
             decimal price = selectedProduct.Price;
             decimal subtotal = price * qty;
             bool itemExists = false;
             foreach (DataRow row in cartTable.Rows)
             {
-                if (row["PartID"].ToString() == partID)
+                if (row["ProductID"].ToString() == productID) // 🚀 修正為 ProductID 欄位
                 {
                     row["Qty"] = Convert.ToInt32(row["Qty"]) + qty;
                     row["Subtotal"] = Convert.ToDecimal(row["Qty"]) * price;
@@ -451,7 +452,7 @@ namespace ITP4915M_Group11
             }
             if (!itemExists)
             {
-                cartTable.Rows.Add(partID, prodName, qty, price, subtotal);
+                cartTable.Rows.Add(productID, prodName, qty, price, subtotal); // 🚀 寫入 ProductID
             }
             UpdateGlobalOrderTotal();
         }
@@ -504,7 +505,8 @@ namespace ITP4915M_Group11
                             }
                         }
                     }
-                    string queryLines = @"SELECT l.PartID, p.PartName, l.Quantity, l.UnitPrice FROM order_lineitem l JOIN product_part p ON l.PartID = p.PartID WHERE l.OrderID = @OrderID";
+                    // 🚀 核心 SQL 修正：將 product_part 換成新嘅 product，欄位改做 ProductID 配合
+                    string queryLines = @"SELECT l.ProductID, p.ProductName, l.Quantity, l.UnitPrice FROM order_lineitem l JOIN product p ON l.ProductID = p.ProductID WHERE l.OrderID = @OrderID";
                     using (MySqlCommand cmdLines = new MySqlCommand(queryLines, conn))
                     {
                         cmdLines.Parameters.AddWithValue("@OrderID", selectedOrderID);
@@ -512,8 +514,8 @@ namespace ITP4915M_Group11
                         {
                             while (reader.Read())
                             {
-                                string pID = reader["PartID"].ToString();
-                                string pName = reader["PartName"].ToString();
+                                string pID = reader["ProductID"].ToString();
+                                string pName = reader["ProductName"].ToString();
                                 int qty = Convert.ToInt32(reader["Quantity"]);
                                 decimal price = Convert.ToDecimal(reader["UnitPrice"]);
                                 decimal subtotal = qty * price;
@@ -570,7 +572,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT PartID, PartName, DefaultPrice FROM product_part";
+                    // 🚀 核心 SQL 修正：讀取全新嘅 product 表以及對應嘅 RetailPrice 欄位
+                    string query = "SELECT ProductID, ProductName, RetailPrice FROM product";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
                         using (MySqlDataReader reader = cmd.ExecuteReader())
@@ -580,9 +583,9 @@ namespace ITP4915M_Group11
                             {
                                 productList.Add(new ProductItem
                                 {
-                                    ID = reader["PartID"].ToString(),
-                                    Name = reader["PartName"].ToString(),
-                                    Price = Convert.ToDecimal(reader["DefaultPrice"])
+                                    ID = reader["ProductID"].ToString(),
+                                    Name = reader["ProductName"].ToString(),
+                                    Price = Convert.ToDecimal(reader["RetailPrice"])
                                 });
                             }
                             cboProducts.DataSource = productList;
@@ -632,12 +635,13 @@ namespace ITP4915M_Group11
                     }
                     foreach (DataRow row in cartTable.Rows)
                     {
-                        string pID = row["PartID"].ToString();
+                        string pID = row["ProductID"].ToString(); // 🚀 修正為新架構欄位名
                         int reqQty = Convert.ToInt32(row["Qty"]);
-                        string checkStockSql = "SELECT StockLevel FROM product_part WHERE PartID = @PartID";
+                        // 🚀 核心 SQL 修正：向新 product 表檢查庫存
+                        string checkStockSql = "SELECT StockLevel FROM product WHERE ProductID = @ProductID";
                         using (MySqlCommand checkCmd = new MySqlCommand(checkStockSql, conn))
                         {
-                            checkCmd.Parameters.AddWithValue("@PartID", pID);
+                            checkCmd.Parameters.AddWithValue("@ProductID", pID);
                             int currentStock = Convert.ToInt32(checkCmd.ExecuteScalar());
                             if (currentStock < reqQty)
                             {
@@ -660,14 +664,15 @@ namespace ITP4915M_Group11
                                 cmdOrder.Parameters.AddWithValue("@Status", orderStatus);
                                 cmdOrder.ExecuteNonQuery();
                             }
-                            string insertLineSql = "INSERT INTO order_lineitem (OrderID, PartID, Quantity, UnitPrice) VALUES (@OID, @PartID, @Qty, @Price)";
-                            string updateStockSql = "UPDATE product_part SET StockLevel = StockLevel - @Qty WHERE PartID = @PartID";
+                            // 🚀 核心 SQL 修正：將訂單細項嘅 PartID 換成新嘅 ProductID；扣減庫存亦同步更新到 product 表
+                            string insertLineSql = "INSERT INTO order_lineitem (OrderID, ProductID, Quantity, UnitPrice) VALUES (@OID, @ProductID, @Qty, @Price)";
+                            string updateStockSql = "UPDATE product SET StockLevel = StockLevel - @Qty WHERE ProductID = @ProductID";
                             foreach (DataRow row in cartTable.Rows)
                             {
                                 using (MySqlCommand cmdLine = new MySqlCommand(insertLineSql, conn, trans))
                                 {
                                     cmdLine.Parameters.AddWithValue("@OID", orderID);
-                                    cmdLine.Parameters.AddWithValue("@PartID", row["PartID"].ToString());
+                                    cmdLine.Parameters.AddWithValue("@ProductID", row["ProductID"].ToString());
                                     cmdLine.Parameters.AddWithValue("@Qty", Convert.ToInt32(row["Qty"]));
                                     cmdLine.Parameters.AddWithValue("@Price", Convert.ToDecimal(row["Unit Price"]));
                                     cmdLine.ExecuteNonQuery();
@@ -675,7 +680,7 @@ namespace ITP4915M_Group11
                                 using (MySqlCommand cmdStock = new MySqlCommand(updateStockSql, conn, trans))
                                 {
                                     cmdStock.Parameters.AddWithValue("@Qty", Convert.ToInt32(row["Qty"]));
-                                    cmdStock.Parameters.AddWithValue("@PartID", row["PartID"].ToString());
+                                    cmdStock.Parameters.AddWithValue("@ProductID", row["ProductID"].ToString());
                                     cmdStock.ExecuteNonQuery();
                                 }
                             }

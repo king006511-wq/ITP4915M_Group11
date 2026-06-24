@@ -11,14 +11,18 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = UserSession.ConnString;
+        private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         // ==========================================
-        // 🎨 Modern UI Element Variables
+        // 🎨 UI Element Variables
         // ==========================================
-        private TextBox txtGRNID, txtPOID, txtPartID, txtQty, txtStaffResource;
+        private TextBox txtGRNID, txtPOID, txtMaterialID, txtQty, txtStaffResource;
         private DataGridView dgvPOItems;
-        private Button btnConfirmReceive;
+        private Button btnConfirmReceive, btnClear;
+
+        // 核心佈局控制元件
+        private Panel pnlLeftCard;
+        private Label lblGridTitle;
 
         public GoodsReceivedForm()
         {
@@ -26,196 +30,180 @@ namespace ITP4915M_Group11
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 ThemeManager.ApplyTheme(this);
-                InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
-                GenerateGRNID();             // Generate unique runtime sequence ID
-                LoadActivePurchaseOrders();  // Ingest pending PO records
+                InitializeSleekModernUI(); // 🚀 啟動精緻收身版排版
+                GenerateGRNID();
+                LoadActivePurchaseOrders();
 
-                // 確保 Form_Load 事件有綁定
                 this.Load += GoodsReceivedForm_Load;
-                this.Shown += GoodsReceivedForm_Shown;
+
+                // 🌟 核心防禦：綁定視窗縮放事件，強行用數學公式完美控制畫面
+                this.SizeChanged += GoodsReceivedForm_SizeChanged;
+                this.Layout += (s, e) => RecalculateCustomLayout();
             }
         }
 
-        private void GoodsReceivedForm_Shown(object sender, EventArgs e)
+        #region 🔒 權限驗證
+        private void GoodsReceivedForm_Load(object sender, EventArgs e)
         {
-            // 顯示時強制授權檢查（保險）
-            AuthorizationHelper.EnforceRole(this, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Warehouse);
+            txtStaffResource.Text = UserSession.LoggedInStaffID ?? "S001";
+
+            string currentRole = UserSession.LoggedInStaffRole;
+            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
+                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Warehouse Specialist", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Procurement Officer", StringComparison.OrdinalIgnoreCase));
+
+            if (!isAuthorized)
+            {
+                MessageBox.Show("[SECURITY ALERT] Access Denied!\n\nOnly Warehouse Specialists and Management can process Goods Received Notes.", "System Security Enforcer", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                this.BeginInvoke(new MethodInvoker(this.Close));
+            }
         }
+        #endregion
 
-        #region 🎨 Dynamic Premium English UI Construction
-        private void InitializePremiumModernUI()
+        #region 🎨 精緻手動算繪排版 (告別臃腫，變回精準現代商務風)
+        private void InitializeSleekModernUI()
         {
-            // 1. Clear old control leftovers to prevent overlapping or designer mismatches
             this.Controls.Clear();
-
-            // 2. Main Window Settings
-            this.Text = "Premium Living Furniture - Goods Received Note (GRN) Control";
-            this.Size = new Size(920, 750); // Adjusted size to remove sidebar footprint
-            this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
+            this.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular); // 全局字體調整為標準大細
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.TopLevel = false;
+            this.Dock = DockStyle.Fill;
 
-            // ==============================================================
-            // 🛑 Left Sidebar Navigation Panel code has been completely REMOVED here.
-            // ==============================================================
-
-            // 4. Right Workspace Body (Shifted to Point(0, 0))
-            Panel pnlMain = new Panel
+            // =========================================================
+            // 【左側】收貨單輸入卡片 (寬度由 420 縮窄至 400)
+            // =========================================================
+            pnlLeftCard = new Panel
             {
-                Location = new Point(0, 0),
-                Size = new Size(900, 750)
-            };
-            this.Controls.Add(pnlMain);
-
-            Label lblHeader = new Label
-            {
-                Text = "Warehouse Stock Ingestion & GRN Center",
-                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(30, 20),
-                AutoSize = true
-            };
-            pnlMain.Controls.Add(lblHeader);
-
-            // Go Back button (top-right) - returns to previous page by closing current form
-            Button btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
-            btnBackHome.FlatAppearance.BorderSize = 0;
-            btnBackHome.Click += (s, e) => { try { this.Close(); } catch { this.Hide(); } };
-            pnlMain.Controls.Add(btnBackHome);
-
-            // 5. GRN Ingestion Processing Panel (Left Input Box Card)
-            Panel pnlCard = new Panel
-            {
-                Location = new Point(30, 85),
-                Size = new Size(420, 600),
                 BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                AutoScroll = true
             };
-            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
-            pnlMain.Controls.Add(pnlCard);
+            pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlLeftCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+            this.Controls.Add(pnlLeftCard);
 
-            Label lblCardTitle = new Label
-            {
-                Text = "📋 Stock Ingestion Parameters",
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(37, 99, 235),
-                Location = new Point(20, 15),
-                AutoSize = true
-            };
-            pnlCard.Controls.Add(lblCardTitle);
+            Label lblCardTitle = new Label { Text = "📦 Goods Receiving (GRN)", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(22, 18), AutoSize = true };
+            pnlLeftCard.Controls.Add(lblCardTitle);
 
             int startY = 65;
+            int inputWidth = 350; // 輸入框微調
 
-            // Form Input Blocks
-            txtGRNID = CreateStyledTextBox(pnlCard, ref startY, "Goods Received ID (GRN ID):", true);
-            txtPOID = CreateStyledTextBox(pnlCard, ref startY, "Selected Purchase Order ID (PO ID):", true);
-            txtPartID = CreateStyledTextBox(pnlCard, ref startY, "Part ID / Code:", true);
-            txtQty = CreateStyledTextBox(pnlCard, ref startY, "Ingestion Quantity (Qty):", false);
-            txtStaffResource = CreateStyledTextBox(pnlCard, ref startY, "Warehouse Staff ID *:", false);
+            txtGRNID = CreateStyledTextBox(pnlLeftCard, ref startY, "GRN Document ID:", true, inputWidth);
+            txtPOID = CreateStyledTextBox(pnlLeftCard, ref startY, "Purchase Order ID:", true, inputWidth);
+            txtMaterialID = CreateStyledTextBox(pnlLeftCard, ref startY, "Raw Material ID:", true, inputWidth);
+            txtQty = CreateStyledTextBox(pnlLeftCard, ref startY, "Received Quantity:", true, inputWidth);
+            txtStaffResource = CreateStyledTextBox(pnlLeftCard, ref startY, "Processed By (Staff ID):", true, inputWidth);
 
-            startY += 10;
+            int btnWidth = 170;
+            btnConfirmReceive = new Button { Text = "✅ Confirm Receive", Location = new Point(22, startY + 10), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnClear = new Button { Text = "🔄 Clear Selection", Location = new Point(202, startY + 10), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnConfirmReceive.FlatAppearance.BorderSize = 0; btnClear.FlatAppearance.BorderSize = 0;
 
-            // Action Button
-            btnConfirmReceive = new Button
-            {
-                Text = "📥 Confirm Ingestion & Add Stock",
-                Location = new Point(20, startY),
-                Size = new Size(375, 48),
-                BackColor = Color.FromArgb(16, 185, 129), // Bright success emerald green
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnConfirmReceive.FlatAppearance.BorderSize = 0;
             btnConfirmReceive.Click += btnConfirmReceive_Click;
-            pnlCard.Controls.Add(btnConfirmReceive);
+            btnClear.Click += (s, e) => ClearFields();
 
-            // 6. Data Grid View Panel (Right-side pending selection list)
-            Label lblGridTitle = new Label
-            {
-                Text = "📦 Pending Active Purchase Orders",
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(480, 85),
-                AutoSize = true
-            };
-            pnlMain.Controls.Add(lblGridTitle);
+            pnlLeftCard.Controls.Add(btnConfirmReceive); pnlLeftCard.Controls.Add(btnClear);
+
+            // =========================================================
+            // 【右側】數據表格與標題 (精緻商務化)
+            // =========================================================
+            lblGridTitle = new Label { Text = "📥 Pending Purchase Orders (Incoming)", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            this.Controls.Add(lblGridTitle);
 
             dgvPOItems = new DataGridView
             {
-                Location = new Point(480, 125),
-                Size = new Size(390, 560),
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
+                BorderStyle = BorderStyle.FixedSingle,
                 AllowUserToAddRows = false,
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 RowHeadersVisible = false,
+                ScrollBars = ScrollBars.Both,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                GridColor = Color.FromArgb(241, 245, 249)
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
+                EnableHeadersVisualStyles = false
             };
 
-            // Modern Interactive DataGridView Layout Specifications
-            dgvPOItems.EnableHeadersVisualStyles = false;
+            // 📉 縮減大細：打造俐落舒適嘅閱讀感
+            dgvPOItems.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dgvPOItems.DefaultCellStyle.Padding = new Padding(8);
+            dgvPOItems.DefaultCellStyle.Font = new Font("Segoe UI", 11F, FontStyle.Regular); // 調整為 11pt
+            dgvPOItems.RowTemplate.Height = 36; // 行高由 55px 修正為標準黃金比例 36px
+
+            dgvPOItems.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             dgvPOItems.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvPOItems.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvPOItems.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvPOItems.ColumnHeadersHeight = 38;
+            dgvPOItems.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold); // 表頭微調
+            dgvPOItems.ColumnHeadersDefaultCellStyle.Padding = new Padding(8);
+            dgvPOItems.ColumnHeadersHeight = 42; // 表頭厚度調整至 42px
+
             dgvPOItems.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
             dgvPOItems.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
-            dgvPOItems.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
 
-            // Switch event mapping to modern row selection change for high accuracy mapping
             dgvPOItems.SelectionChanged += dgvPOItems_SelectionChanged;
-
-            pnlMain.Controls.Add(dgvPOItems);
+            this.Controls.Add(dgvPOItems);
         }
 
-        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
+        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly, int width)
         {
-            Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 375, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White };
-            if (readOnly)
-            {
-                txt.ReadOnly = true;
-                txt.BackColor = Color.FromArgb(241, 245, 249);
-            }
-            container.Controls.Add(lbl);
-            container.Controls.Add(txt);
-            topY += 65;
+            Label lbl = new Label { Text = labelText, Location = new Point(22, topY), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(22, topY + 24), Width = width, Font = new Font("Segoe UI", 11F), BorderStyle = BorderStyle.FixedSingle };
+            if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
+            container.Controls.Add(lbl); container.Controls.Add(txt);
+            topY += 75; // 元件間距由 85 縮窄到 75，介面更緊湊
             return txt;
         }
 
-        // ⭐⭐⭐ 自動填寫 User Session 嘅代碼 ⭐⭐⭐
-        private void GoodsReceivedForm_Load(object sender, EventArgs e)
+        private void GoodsReceivedForm_SizeChanged(object sender, EventArgs e)
         {
-            // 檢查系統係咪已經有登入紀錄
-            if (UserSession.IsLoggedIn)
-            {
-                // 將儲存咗嘅 ID 放入 txtStaffResource
-                txtStaffResource.Text = UserSession.LoggedInStaffID;
+            RecalculateCustomLayout();
+        }
 
-                // 鎖死個 TextBox，防止使用者亂改搞到 Database Error
-                txtStaffResource.ReadOnly = true;
-                txtStaffResource.BackColor = Color.FromArgb(241, 245, 249); // 轉灰底色
-            }
-            else
+        /// <summary>
+        /// 🛠️ 鋼鐵動態佈局：不依賴 Dock，完全用像素公式精確定位
+        /// </summary>
+        private void RecalculateCustomLayout()
+        {
+            if (this.Width < 200 || this.Height < 200) return;
+
+            this.SuspendLayout();
+
+            // 1. 指定左側卡片位置 (固定 400px 闊度)
+            pnlLeftCard.Location = new Point(20, 20);
+            pnlLeftCard.Size = new Size(400, this.Height - 40);
+
+            // 2. 計算右側對齊錨點
+            int rightStartX = pnlLeftCard.Right + 20;
+            int rightWidth = this.Width - rightStartX - 20;
+
+            if (rightWidth > 100)
             {
-                // 如果你測試緊未寫好 Login，可以畀個假 ID 頂住先，唔會阻住你試 Run
-                // txtStaffResource.Text = "S001";
+                // 3. 固定標題
+                lblGridTitle.Location = new Point(rightStartX, 20);
+
+                // 4. 右側表格動態拉大填滿，精準漂亮
+                dgvPOItems.Location = new Point(rightStartX, 55);
+                dgvPOItems.Size = new Size(rightWidth, this.Height - 75);
+
+                // 5. 自動平分欄位
+                if (dgvPOItems.Columns.Count > 0)
+                {
+                    dgvPOItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+                    dgvPOItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+                }
             }
+
+            this.ResumeLayout(false);
         }
         #endregion
 
-        #region 📦 Core Warehouse Stock Ingestion Logic
+        #region 💾 資料庫連線與核心邏輯
         private void GenerateGRNID()
         {
-            // Database constraint: GRN_ID is varchar(20). Keep string length under 20 characters.
-            txtGRNID.Text = "GRN" + DateTime.Now.ToString("ddHHmmss");
+            txtGRNID.Text = "GRN" + DateTime.Now.ToString("MMddHHmmss");
         }
 
         private void LoadActivePurchaseOrders()
@@ -225,82 +213,85 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // IMPROVED: Adjusted table name to 'purchase_order' and matched descriptive text mapping to 'PartName'
-                    string query = @"SELECT po.PO_ID AS 'PO_ID', po.SupplierID AS 'Supplier_ID', 
-                                            li.PartID AS 'Part_ID', p.PartName AS 'Part_Name', 
-                                            li.Quantity AS 'Quantity', po.Status AS 'Status'
-                                     FROM purchase_order po
-                                     JOIN po_lineitem li ON po.PO_ID = li.PO_ID
-                                     JOIN product_part p ON li.PartID = p.PartID
-                                     WHERE po.Status != 'Received';";
+                    string query = @"
+                        SELECT 
+                            po.PO_ID AS 'PO Number', 
+                            pol.MaterialID AS 'Material ID', 
+                            rm.MaterialName AS 'Material Name', 
+                            pol.Quantity AS 'Order Qty', 
+                            po.Status 
+                        FROM purchase_order po
+                        JOIN po_lineitem pol ON po.PO_ID = pol.PO_ID
+                        JOIN raw_material rm ON pol.MaterialID = rm.MaterialID
+                        WHERE po.Status != 'Received'
+                        ORDER BY po.PODate DESC";
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
-                        dgvPOItems.DataSource = dt;
-                    }
 
-                    // Explicitly define English headers inside visual UI grid
-                    if (dgvPOItems.Columns.Contains("PO_ID")) dgvPOItems.Columns["PO_ID"].HeaderText = "PO ID";
-                    if (dgvPOItems.Columns.Contains("Supplier_ID")) dgvPOItems.Columns["Supplier_ID"].HeaderText = "Supplier ID";
-                    if (dgvPOItems.Columns.Contains("Part_ID")) dgvPOItems.Columns["Part_ID"].HeaderText = "Part ID";
-                    if (dgvPOItems.Columns.Contains("Part_Name")) dgvPOItems.Columns["Part_Name"].HeaderText = "Part Name";
-                    if (dgvPOItems.Columns.Contains("Quantity")) dgvPOItems.Columns["Quantity"].HeaderText = "Order Qty";
-                    if (dgvPOItems.Columns.Contains("Status")) dgvPOItems.Columns["Status"].HeaderText = "Status";
+                        dgvPOItems.DataSource = null;
+                        dgvPOItems.DataSource = dt;
+
+                        // 設定最小防禦欄寬，防止內容擠壓
+                        foreach (DataGridViewColumn col in dgvPOItems.Columns)
+                        {
+                            col.MinimumWidth = 110;
+                        }
+
+                        if (dgvPOItems.Columns.Contains("Material Name"))
+                        {
+                            dgvPOItems.Columns["Material Name"].MinimumWidth = 180;
+                        }
+
+                        RecalculateCustomLayout();
+                        dgvPOItems.ClearSelection();
+                    }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Failed to load active purchase orders:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to load PO data:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
         private void dgvPOItems_SelectionChanged(object sender, EventArgs e)
         {
-            // Safeguard active selections and load parameters securely into the staging panel
             if (dgvPOItems.SelectedRows.Count > 0)
             {
                 DataGridViewRow row = dgvPOItems.SelectedRows[0];
-                txtPOID.Text = row.Cells["PO_ID"].Value?.ToString() ?? "";
-                txtPartID.Text = row.Cells["Part_ID"].Value?.ToString() ?? "";
-                txtQty.Text = row.Cells["Quantity"].Value?.ToString() ?? "";
-            }
-            else
-            {
-                txtPOID.Clear();
-                txtPartID.Clear();
-                txtQty.Clear();
+                txtPOID.Text = row.Cells["PO Number"].Value?.ToString() ?? "";
+                txtMaterialID.Text = row.Cells["Material ID"].Value?.ToString() ?? "";
+                txtQty.Text = row.Cells["Order Qty"].Value?.ToString() ?? "";
             }
         }
 
         private void btnConfirmReceive_Click(object sender, EventArgs e)
         {
-            // 再次在執行關鍵動作前檢查角色
-            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Warehouse))
-            {
-                MessageBox.Show("Access Denied: insufficient privileges to confirm goods received.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtPOID.Text) || string.IsNullOrWhiteSpace(txtPartID.Text) || string.IsNullOrWhiteSpace(txtStaffResource.Text))
-            {
-                MessageBox.Show("Please fill in the Warehouse Staff ID and select an active Purchase Order item from the list!",
-                                "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (!int.TryParse(txtQty.Text.Trim(), out int qty) || qty <= 0)
-            {
-                MessageBox.Show("Please specify a valid positive integer quantity for stock ingestion!",
-                                "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            string grnID = txtGRNID.Text.Trim();
             string poID = txtPOID.Text.Trim();
-            string partID = txtPartID.Text.Trim();
+            string materialID = txtMaterialID.Text.Trim();
+            string qtyStr = txtQty.Text.Trim();
+            string grnID = txtGRNID.Text.Trim();
             string staffID = txtStaffResource.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(poID) || string.IsNullOrWhiteSpace(materialID) || string.IsNullOrWhiteSpace(qtyStr))
+            {
+                MessageBox.Show("Please select a pending Purchase Order from the grid first.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!int.TryParse(qtyStr, out int qty) || qty <= 0)
+            {
+                MessageBox.Show("Invalid quantity format detected in PO details.", "Data Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            DialogResult confirm = MessageBox.Show(
+                $"Are you sure you want to receive this shipment?\n\nPO Number: {poID}\nMaterial ID: {materialID}\nQuantity: {qty}\n\nThis will permanently update warehouse stock levels.",
+                "Confirm Receiving", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (confirm == DialogResult.No) return;
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
@@ -311,52 +302,40 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            // Step 1: Commit record parameter into Goods Received Note ledger
-                            // IMPROVED: Target table correctly updated to 'goods_received_note'
-                            string insertGrnSql = "INSERT INTO goods_received_note (GRN_ID, PO_ID, StaffID, ReceivedDate) VALUES (@GRN_ID, @PO_ID, @StaffID, NOW())";
-                            using (MySqlCommand cmdGrn = new MySqlCommand(insertGrnSql, conn, trans))
+                            string queryGRN = "INSERT INTO goods_received_note (GRN_ID, PO_ID, StaffID, ReceivedDate) VALUES (@grnID, @poID, @staffID, NOW())";
+                            using (MySqlCommand cmdGRN = new MySqlCommand(queryGRN, conn, trans))
                             {
-                                cmdGrn.Parameters.AddWithValue("@GRN_ID", grnID);
-                                cmdGrn.Parameters.AddWithValue("@PO_ID", poID);
-                                cmdGrn.Parameters.AddWithValue("@StaffID", staffID);
-                                cmdGrn.ExecuteNonQuery();
+                                cmdGRN.Parameters.AddWithValue("@grnID", grnID);
+                                cmdGRN.Parameters.AddWithValue("@poID", poID);
+                                cmdGRN.Parameters.AddWithValue("@staffID", staffID);
+                                cmdGRN.ExecuteNonQuery();
                             }
 
-                            // Step 2: Increment inventory reserves inside core components tables
-                            string addStockSql = "UPDATE product_part SET StockLevel = StockLevel + @Qty WHERE PartID = @PartID";
-                            using (MySqlCommand cmdStock = new MySqlCommand(addStockSql, conn, trans))
+                            string queryStock = "UPDATE raw_material SET StockLevel = StockLevel + @qty WHERE MaterialID = @matID";
+                            using (MySqlCommand cmdStock = new MySqlCommand(queryStock, conn, trans))
                             {
-                                cmdStock.Parameters.AddWithValue("@Qty", qty);
-                                cmdStock.Parameters.AddWithValue("@PartID", partID);
+                                cmdStock.Parameters.AddWithValue("@qty", qty);
+                                cmdStock.Parameters.AddWithValue("@matID", materialID);
                                 cmdStock.ExecuteNonQuery();
                             }
 
-                            // Step 3: Flag Purchase Order reference log tracking as 'Received'
-                            // IMPROVED: Target table updated to 'purchase_order' to align with the active database system
-                            string updatePOSql = "UPDATE purchase_order SET Status = 'Received' WHERE PO_ID = @PO_ID";
-                            using (MySqlCommand cmdPO = new MySqlCommand(updatePOSql, conn, trans))
+                            string queryPO = "UPDATE purchase_order SET Status = 'Received' WHERE PO_ID = @poID";
+                            using (MySqlCommand cmdPO = new MySqlCommand(queryPO, conn, trans))
                             {
-                                cmdPO.Parameters.AddWithValue("@PO_ID", poID);
+                                cmdPO.Parameters.AddWithValue("@poID", poID);
                                 cmdPO.ExecuteNonQuery();
                             }
 
                             trans.Commit();
-                            MessageBox.Show($"Inventory ingestion transaction committed successfully!\n\n" +
-                                            $"GRN ID: {grnID}\n" +
-                                            $"Part ID [{partID}] stock level successfully increased by {qty} units.",
-                                            "Ingestion Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show($"Inventory ingestion transaction committed successfully!\n\nGRN ID: {grnID}\nMaterial ID [{materialID}] stock level successfully increased by {qty} units.", "Ingestion Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            // Reset view component states
-                            txtPOID.Clear();
-                            txtPartID.Clear();
-                            txtQty.Clear();
-                            GenerateGRNID();
+                            ClearFields();
                             LoadActivePurchaseOrders();
                         }
                         catch (Exception ex)
                         {
-                            trans.Rollback(); // Execute safe operational state recovery rollback
-                            throw new Exception("Stock ingestion transaction aborted. Control rolled back safely. Details:\n" + ex.Message);
+                            trans.Rollback();
+                            throw new Exception("Stock ingestion transaction aborted. Control rolled back safely.\nDetails: " + ex.Message);
                         }
                     }
                 }
@@ -365,6 +344,15 @@ namespace ITP4915M_Group11
                     MessageBox.Show(ex.Message, "Transaction Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private void ClearFields()
+        {
+            txtPOID.Clear();
+            txtMaterialID.Clear();
+            txtQty.Clear();
+            dgvPOItems.ClearSelection();
+            GenerateGRNID();
         }
         #endregion
     }
