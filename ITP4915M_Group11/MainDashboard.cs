@@ -86,8 +86,6 @@ namespace ITP4915M_Group11
 
         private void SetupNavigationMenu()
         {
-            // 🌟 修正：完全對齊你專案中真實存在的 Form 類別名稱，解決 CS0246 錯誤
-
             // ==== 系統與戰情室 ====
             AddNavHeader("📊 System Dashboards");
             AddNavButton("🏠 Home Dashboard", null, "HOME", "HOME");
@@ -97,7 +95,8 @@ namespace ITP4915M_Group11
                 AuthorizationHelper.HasMenuPermission("SALES_ORDER") ||
                 AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") ||
                 AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") ||
-                AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE"))
+                AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE") ||
+                AuthorizationHelper.HasMenuPermission("PRODUCT_MANUFACTURING")) // 🌟 這裡加入了生產表單的權限檢查
             {
                 AddNavHeader("💼 Core Modules");
                 AddNavButton("👥 Customer Mgmt", typeof(CustomerManagement), "FORM", "CUSTOMER_MGMT");
@@ -105,6 +104,9 @@ namespace ITP4915M_Group11
                 AddNavButton("🚚 Delivery Logistics", typeof(LogisticsForm), "FORM", "DELIVERY_LOGISTICS");
                 AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM", "GOODS_RECEIVED");
                 AddNavButton("🛋️ Product Maintenance", typeof(ProductManagement), "FORM", "PRODUCT_MAINTENANCE");
+
+                // 🌟 這裡完整加上了 Product Manufacturing 頁面的按鈕
+                AddNavButton("🛠️ Product Manufacturing", typeof(ProductManufacturingForm), "FORM", "PRODUCT_MANUFACTURING");
             }
 
             // ==== 內部營運控制 ====

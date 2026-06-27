@@ -177,6 +177,11 @@ namespace ITP4915M_Group11
             cboDeliveryStaff.Items.Add("Outsource - SF Express");
         }
 
+        private void LogisticsForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
         private void RefreshPendingOrdersGrid()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))

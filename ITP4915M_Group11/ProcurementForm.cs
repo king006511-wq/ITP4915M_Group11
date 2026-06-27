@@ -1,26 +1,27 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
+    public class POSupplierItem
+    {
+        public string ID { get; set; }
+        public string Name { get; set; }
+    }
+
     public partial class ProcurementForm : Form
     {
-        // ==========================================
-        // 🔒 Database Configuration
-        // ==========================================
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
-        // ==========================================
-        // 🎨 獨立防撞名 UI 變數 
-        // ==========================================
-        private TextBox custom_txtPOID, custom_txtRCID, custom_txtMaterialID, custom_txtQty, custom_txtPrice, custom_txtSupplierID, custom_txtStaffID;
+        private TextBox custom_txtPOID, custom_txtRCID, custom_txtMaterialID, custom_txtQty, custom_txtPrice, custom_txtStaffID;
+        private ComboBox custom_cmbSupplier;
         private DataGridView custom_dgvPendingRC;
-        private Button custom_btnCreatePO, custom_btnClear;
+        private Button custom_btnCreatePO, custom_btnReject, custom_btnClear;
 
-        // 核心佈局控制元件
         private Panel custom_pnlLeftCard;
         private Label custom_lblGridTitle;
 
@@ -29,8 +30,7 @@ namespace ITP4915M_Group11
             InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                ThemeManager.ApplyTheme(this);
-                SetupCustomSleekUI(); // 🚀 啟動防撞名精緻排版
+                SetupCustomSleekUI();
                 ResetPurchaseOrderID();
                 LoadPendingRequests();
 
@@ -69,45 +69,44 @@ namespace ITP4915M_Group11
             this.TopLevel = false;
             this.Dock = DockStyle.Fill;
 
-            // =========================================================
-            // 【左側】採購單建立卡片
-            // =========================================================
-            custom_pnlLeftCard = new Panel
-            {
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoScroll = true
-            };
+            custom_pnlLeftCard = new Panel { BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = true };
             custom_pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, custom_pnlLeftCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             this.Controls.Add(custom_pnlLeftCard);
 
-            Label lblCardTitle = new Label { Text = "🛒 Issue Purchase Order", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(22, 18), AutoSize = true };
+            Label lblCardTitle = new Label { Text = "🛒 Approve & Issue PO", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(22, 18), AutoSize = true };
             custom_pnlLeftCard.Controls.Add(lblCardTitle);
 
             int startY = 65;
             int inputWidth = 350;
 
             custom_txtPOID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "New PO ID (Auto):", true, inputWidth);
-            custom_txtRCID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Ref. ReOrder Card ID:", true, inputWidth);
-            custom_txtMaterialID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Raw Material ID:", true, inputWidth); // 🚀 Material ID
+            custom_txtRCID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Ref. Request ID:", true, inputWidth);
+            custom_txtMaterialID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Raw Material ID:", true, inputWidth);
             custom_txtQty = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Approved Quantity *:", false, inputWidth);
             custom_txtPrice = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Unit Cost Price ($) *:", false, inputWidth);
-            custom_txtSupplierID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Supplier ID *:", false, inputWidth);
-            custom_txtStaffID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Issued By (Staff ID):", true, inputWidth);
 
-            int btnWidth = 170;
-            custom_btnCreatePO = new Button { Text = "📝 Generate PO", Location = new Point(22, startY + 10), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
-            custom_btnClear = new Button { Text = "🔄 Clear Selection", Location = new Point(202, startY + 10), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
-            custom_btnCreatePO.FlatAppearance.BorderSize = 0; custom_btnClear.FlatAppearance.BorderSize = 0;
+            Label lblSup = new Label { Text = "Select Supplier (Vendor) *:", Location = new Point(22, startY), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            custom_cmbSupplier = new ComboBox { Location = new Point(22, startY + 24), Width = inputWidth, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 11F), BackColor = Color.White };
+            custom_pnlLeftCard.Controls.Add(lblSup);
+            custom_pnlLeftCard.Controls.Add(custom_cmbSupplier);
+            startY += 75;
+
+            custom_txtStaffID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Processed By (Staff ID):", true, inputWidth);
+
+            custom_btnCreatePO = new Button { Text = "✅ Approve & PO", Location = new Point(22, startY + 10), Size = new Size(130, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            custom_btnReject = new Button { Text = "❌ Reject", Location = new Point(160, startY + 10), Size = new Size(100, 42), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            custom_btnClear = new Button { Text = "🔄 Clear", Location = new Point(270, startY + 10), Size = new Size(100, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            custom_btnCreatePO.FlatAppearance.BorderSize = 0; custom_btnReject.FlatAppearance.BorderSize = 0; custom_btnClear.FlatAppearance.BorderSize = 0;
 
             custom_btnCreatePO.Click += btnCreatePO_Click;
+            custom_btnReject.Click += btnReject_Click;
             custom_btnClear.Click += (s, e) => ClearCustomFields();
 
-            custom_pnlLeftCard.Controls.Add(custom_btnCreatePO); custom_pnlLeftCard.Controls.Add(custom_btnClear);
+            custom_pnlLeftCard.Controls.Add(custom_btnCreatePO);
+            custom_pnlLeftCard.Controls.Add(custom_btnReject);
+            custom_pnlLeftCard.Controls.Add(custom_btnClear);
 
-            // =========================================================
-            // 【右側】數據表格與標題
-            // =========================================================
             custom_lblGridTitle = new Label { Text = "⏳ Pending Replenishment Requests", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(custom_lblGridTitle);
 
@@ -130,14 +129,12 @@ namespace ITP4915M_Group11
             custom_dgvPendingRC.DefaultCellStyle.Padding = new Padding(8);
             custom_dgvPendingRC.DefaultCellStyle.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
             custom_dgvPendingRC.RowTemplate.Height = 36;
-
             custom_dgvPendingRC.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             custom_dgvPendingRC.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             custom_dgvPendingRC.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             custom_dgvPendingRC.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold);
             custom_dgvPendingRC.ColumnHeadersDefaultCellStyle.Padding = new Padding(8);
             custom_dgvPendingRC.ColumnHeadersHeight = 42;
-
             custom_dgvPendingRC.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
             custom_dgvPendingRC.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
 
@@ -155,15 +152,11 @@ namespace ITP4915M_Group11
             return txt;
         }
 
-        private void ProcurementForm_SizeChanged(object sender, EventArgs e)
-        {
-            RecalculateDynamicLayout();
-        }
+        private void ProcurementForm_SizeChanged(object sender, EventArgs e) { RecalculateDynamicLayout(); }
 
         private void RecalculateDynamicLayout()
         {
             if (this.Width < 200 || this.Height < 200) return;
-
             this.SuspendLayout();
 
             custom_pnlLeftCard.Location = new Point(20, 20);
@@ -184,15 +177,81 @@ namespace ITP4915M_Group11
                     custom_dgvPendingRC.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
                 }
             }
-
             this.ResumeLayout(false);
         }
         #endregion
 
         #region 💾 資料庫連線與核心邏輯
+        private void LoadSuppliersForMaterial(string materialID)
+        {
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = @"
+                        SELECT s.SupplierID, s.SupplierName 
+                        FROM supplier s
+                        JOIN supplier_material sm ON s.SupplierID = sm.SupplierID
+                        WHERE sm.MaterialID = @matID";
+
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@matID", materialID);
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            List<POSupplierItem> list = new List<POSupplierItem>();
+                            while (reader.Read())
+                            {
+                                list.Add(new POSupplierItem
+                                {
+                                    ID = reader["SupplierID"].ToString(),
+                                    Name = reader["SupplierName"].ToString()
+                                });
+                            }
+
+                            custom_cmbSupplier.DataSource = list;
+                            custom_cmbSupplier.DisplayMember = "Name";
+                            custom_cmbSupplier.ValueMember = "ID";
+                            custom_cmbSupplier.SelectedIndex = -1;
+                        }
+                    }
+                }
+                catch (Exception) { }
+            }
+        }
+
+        // 🌟 核心優化：智能讀取資料庫最大單號，避免重複
         private void ResetPurchaseOrderID()
         {
-            custom_txtPOID.Text = "PO-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            string prefix = "PO" + DateTime.Now.ToString("yyyyMMdd") + "-";
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "SELECT PO_ID FROM purchase_order WHERE PO_ID LIKE @prefix ORDER BY PO_ID DESC LIMIT 1";
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@prefix", prefix + "%");
+                        object result = cmd.ExecuteScalar();
+
+                        if (result != null && result != DBNull.Value)
+                        {
+                            string lastID = result.ToString();
+                            string seqStr = lastID.Replace(prefix, "");
+                            if (int.TryParse(seqStr, out int seq))
+                            {
+                                custom_txtPOID.Text = prefix + (seq + 1).ToString("D3");
+                                return;
+                            }
+                        }
+                    }
+                }
+                catch (Exception) { /* Fail silently, use fallback */ }
+            }
+            // 如果今日仲未有單，就由 001 開始
+            custom_txtPOID.Text = prefix + "001";
         }
 
         private void LoadPendingRequests()
@@ -202,7 +261,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 🚀 核心修改：Join 到 raw_material 表，提取物料名稱
                     string query = @"
                         SELECT 
                             r.ReOrderCardID AS 'Request ID', 
@@ -212,7 +270,7 @@ namespace ITP4915M_Group11
                             r.TriggerDate AS 'Date' 
                         FROM reorder_card r
                         JOIN raw_material m ON r.MaterialID = m.MaterialID
-                        WHERE r.Status = 'Pending'
+                        WHERE r.Status = 'Pending Approval'
                         ORDER BY r.TriggerDate ASC";
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
@@ -223,22 +281,10 @@ namespace ITP4915M_Group11
                         custom_dgvPendingRC.DataSource = null;
                         custom_dgvPendingRC.DataSource = dt;
 
-                        foreach (DataGridViewColumn col in custom_dgvPendingRC.Columns)
-                        {
-                            col.MinimumWidth = 100;
-                        }
-
-                        if (custom_dgvPendingRC.Columns.Contains("Material Name"))
-                        {
-                            custom_dgvPendingRC.Columns["Material Name"].MinimumWidth = 180;
-                        }
-
                         if (custom_dgvPendingRC.Columns.Contains("Date"))
                         {
                             custom_dgvPendingRC.Columns["Date"].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm";
-                            custom_dgvPendingRC.Columns["Date"].MinimumWidth = 150;
                         }
-
                         RecalculateDynamicLayout();
                         custom_dgvPendingRC.ClearSelection();
                     }
@@ -256,11 +302,69 @@ namespace ITP4915M_Group11
             {
                 DataGridViewRow row = custom_dgvPendingRC.SelectedRows[0];
                 custom_txtRCID.Text = row.Cells["Request ID"].Value?.ToString() ?? "";
-                custom_txtMaterialID.Text = row.Cells["Material ID"].Value?.ToString() ?? "";
+                string matID = row.Cells["Material ID"].Value?.ToString() ?? "";
+                custom_txtMaterialID.Text = matID;
                 custom_txtQty.Text = row.Cells["Qty"].Value?.ToString() ?? "";
 
-                custom_txtPrice.Clear();
-                custom_txtSupplierID.Clear();
+                custom_cmbSupplier.DataSource = null;
+
+                if (!string.IsNullOrEmpty(matID))
+                {
+                    LoadSuppliersForMaterial(matID);
+
+                    using (MySqlConnection conn = new MySqlConnection(connString))
+                    {
+                        try
+                        {
+                            conn.Open();
+                            MySqlCommand cmd = new MySqlCommand("SELECT StandardCost FROM raw_material WHERE MaterialID = @mat", conn);
+                            cmd.Parameters.AddWithValue("@mat", matID);
+                            object result = cmd.ExecuteScalar();
+
+                            if (result != null && result != DBNull.Value)
+                                custom_txtPrice.Text = Convert.ToDecimal(result).ToString("F2");
+                            else
+                                custom_txtPrice.Text = "0.00";
+                        }
+                        catch (Exception) { custom_txtPrice.Text = ""; }
+                    }
+                }
+            }
+        }
+
+        private void btnReject_Click(object sender, EventArgs e)
+        {
+            string rcID = custom_txtRCID.Text.Trim();
+            if (string.IsNullOrWhiteSpace(rcID))
+            {
+                MessageBox.Show("Please select a pending request to reject.", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DialogResult dialogResult = MessageBox.Show($"Are you sure you want to REJECT the material request [{rcID}]?\n\nThis will notify the staff and remove it from pending.", "Confirm Rejection", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (dialogResult == DialogResult.Yes)
+            {
+                using (MySqlConnection conn = new MySqlConnection(connString))
+                {
+                    try
+                    {
+                        conn.Open();
+                        string rcSql = "UPDATE reorder_card SET Status = 'Rejected' WHERE ReOrderCardID = @RC";
+                        using (MySqlCommand cmd = new MySqlCommand(rcSql, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@RC", rcID);
+                            cmd.ExecuteNonQuery();
+                        }
+                        MessageBox.Show($"Request [{rcID}] has been rejected.", "Rejected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        ClearCustomFields();
+                        LoadPendingRequests();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Failed to reject request:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
             }
         }
 
@@ -271,14 +375,21 @@ namespace ITP4915M_Group11
             string matID = custom_txtMaterialID.Text.Trim();
             string qtyStr = custom_txtQty.Text.Trim();
             string priceStr = custom_txtPrice.Text.Trim();
-            string supID = custom_txtSupplierID.Text.Trim();
             string staffID = custom_txtStaffID.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(rcID) || string.IsNullOrWhiteSpace(matID) || string.IsNullOrWhiteSpace(supID))
+            if (string.IsNullOrWhiteSpace(rcID) || string.IsNullOrWhiteSpace(matID))
             {
-                MessageBox.Show("Please select a pending request and fill in the Supplier ID.", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select a pending request from the list.", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            if (custom_cmbSupplier.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a Supplier for this Purchase Order.", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string supID = ((POSupplierItem)custom_cmbSupplier.SelectedItem).ID;
 
             if (!int.TryParse(qtyStr, out int qty) || qty <= 0 || !decimal.TryParse(priceStr, out decimal price) || price <= 0)
             {
@@ -291,24 +402,10 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-
-                    // 檢查 Supplier 存唔存在
-                    string chkSup = "SELECT COUNT(*) FROM supplier WHERE SupplierID = @Sup";
-                    using (MySqlCommand cmdSup = new MySqlCommand(chkSup, conn))
-                    {
-                        cmdSup.Parameters.AddWithValue("@Sup", supID);
-                        if (Convert.ToInt32(cmdSup.ExecuteScalar()) == 0)
-                        {
-                            MessageBox.Show($"Supplier ID '{supID}' is invalid.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
                         {
-                            // 1. 建立 Purchase Order
                             string poSql = "INSERT INTO purchase_order (PO_ID, SupplierID, ReOrderCardID, PODate, Status, StaffID) VALUES (@PO, @Sup, @RC, NOW(), 'Ordered', @Staff)";
                             using (MySqlCommand cmd = new MySqlCommand(poSql, conn, trans))
                             {
@@ -319,7 +416,6 @@ namespace ITP4915M_Group11
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 2. 🚀 建立 PO LineItem (對接 MaterialID)
                             string polSql = "INSERT INTO po_lineitem (PO_ID, MaterialID, Quantity, UnitPrice) VALUES (@PO, @Mat, @Qty, @Price)";
                             using (MySqlCommand cmd = new MySqlCommand(polSql, conn, trans))
                             {
@@ -330,7 +426,6 @@ namespace ITP4915M_Group11
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 3. 更新 Reorder Card 狀態
                             string rcSql = "UPDATE reorder_card SET Status = 'Approved' WHERE ReOrderCardID = @RC";
                             using (MySqlCommand cmd = new MySqlCommand(rcSql, conn, trans))
                             {
@@ -342,19 +437,19 @@ namespace ITP4915M_Group11
                             MessageBox.Show($"Purchase Order [{poID}] successfully issued to Supplier!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                             ClearCustomFields();
-                            ResetPurchaseOrderID();
+                            ResetPurchaseOrderID(); // 成功後立即刷新 ID
                             LoadPendingRequests();
                         }
                         catch (Exception ex)
                         {
                             trans.Rollback();
-                            throw new Exception("Transaction failed, database rolled back. Reason: " + ex.Message);
+                            throw new Exception("Transaction failed. Reason: " + ex.Message);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Failed to create Purchase Order:\n" + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to create PO:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -365,8 +460,9 @@ namespace ITP4915M_Group11
             custom_txtMaterialID.Clear();
             custom_txtQty.Clear();
             custom_txtPrice.Clear();
-            custom_txtSupplierID.Clear();
+            custom_cmbSupplier.DataSource = null;
             custom_dgvPendingRC.ClearSelection();
+            ResetPurchaseOrderID(); // Clear 嗰陣都重新拎一次最新 ID 保平安
         }
         #endregion
     }

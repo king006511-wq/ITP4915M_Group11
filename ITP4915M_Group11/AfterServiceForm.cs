@@ -265,6 +265,11 @@ namespace ITP4915M_Group11
             }
         }
 
+        private void AfterServiceForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
         private void LoadComplaints()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))

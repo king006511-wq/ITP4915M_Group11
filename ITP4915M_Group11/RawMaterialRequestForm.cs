@@ -1,395 +1,404 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
+    public class MaterialItem
+    {
+        public string ID { get; set; }
+        public string Name { get; set; }
+        public decimal StandardCost { get; set; }
+    }
+
     public partial class RawMaterialRequestForm : Form
     {
-        // ==========================================
-        // 🔒 Database Configuration
-        // ==========================================
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+        private string currentStaffID;
+        private decimal currentUnitCost = 0;
+        private decimal globalTotal = 0;
 
-        // ==========================================
-        // 🎨 獨立防撞名 UI 變數 (加咗 custom_ 避免同 Designer 撞)
-        // ==========================================
-        private TextBox custom_txtCardID, custom_txtMaterialID, custom_txtQty;
-        private DataGridView custom_dgvRequests;
-        private Button custom_btnSubmit, custom_btnClear;
+        private TextBox txtRequestID, txtUnitPrice, txtQty;
+        private ComboBox cboMaterials;
+        private DataGridView dgvHistory, dgvCart;
+        private Button btnAddItem, btnRemoveItem, btnSubmitRequest, btnClear;
+        private Label lblTotalAmountDisplay;
+        private DataTable cartTable;
 
-        // 核心佈局控制元件
-        private Panel custom_pnlLeftCard;
-        private Label custom_lblGridTitle;
+        public RawMaterialRequestForm() : this(UserSession.LoggedInStaffID ?? "S001") { }
 
-        public RawMaterialRequestForm()
+        public RawMaterialRequestForm(string loggedInStaffID)
         {
-            InitializeComponent();
+            this.currentStaffID = loggedInStaffID;
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                ThemeManager.ApplyTheme(this);
-                SetupCustomSleekUI(); // 🚀 啟動防撞名精緻排版 (收身版)
-                GenerateNewCardID();
-                LoadRequests();
-
-                this.Load += RawMaterialRequestForm_Load;
-
-                // 🌟 核心防禦：綁定視窗縮放事件，強行用數學公式完美控制畫面
-                this.SizeChanged += RawMaterialRequestForm_SizeChanged;
-                this.Layout += (s, e) => RecalculateDynamicLayout();
+                InitializePremiumModernUI();
             }
         }
 
-        #region 🔒 Authorization Check
         private void RawMaterialRequestForm_Load(object sender, EventArgs e)
         {
-            // 🎯 Use new RBAC system for permission checking
-            string currentRole = UserSession.LoggedInStaffRole;
-            var currentRoleEnum = AuthorizationHelper.ParseRole(currentRole);
-
-            // Material Request form allowed roles: Manager, Administrator, WarehouseSpecialist, Staff
-            bool hasMenuAccess = AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS");
-
-            // But Dispatch button only allows Manager, Administrator, ProcurementOfficer
-            bool canSubmit = currentRoleEnum == AuthorizationHelper.UserRoleEnum.Manager ||
-                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.Administrator ||
-                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.ProcurementOfficer;
-
-            // If user cannot access the menu, close the form directly
-            if (!hasMenuAccess)
-            {
-                MessageBox.Show($"[SECURITY ALERT] Access Denied!\n\nYour current role ({currentRole ?? "Unknown"}) does not have permission to access Material Requests.\n\nOnly authorized personnel can access this feature.", 
-                    "System Security Enforcer", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                this.BeginInvoke(new MethodInvoker(this.Close));
-                return;
-            }
-
-            // If user cannot submit (but can view), disable submit button
-            if (!canSubmit)
-            {
-                custom_btnSubmit.Enabled = false;
-                custom_btnSubmit.BackColor = Color.FromArgb(156, 163, 175); // Gray color
-
-                MessageBox.Show($"⚠️ Access Level Notice\n\nYou can view existing material requests, but cannot submit new requests.\n\nCurrent Role: {currentRole ?? "Unknown"}\nSubmit Permission Required: Manager, Administrator, or Procurement Officer",
-                    "Access Level Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+            GenerateRequestBatchID();
+            LoadMaterialsToCombo();
+            RefreshHistoryGrid();
         }
-        #endregion
 
-        #region 🎨 Sleek Manual Layout Design (Precision Modern Business Style)
-        private void SetupCustomSleekUI()
+        #region 🎨 Premium Modern UI Setup
+        private void InitializePremiumModernUI()
         {
             this.Controls.Clear();
-            this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular); // Global font adjustment for standard size
+            this.Text = "Premium Living Furniture - Raw Material Purchase Request";
+            this.BackColor = Color.FromArgb(241, 245, 249);
             this.FormBorderStyle = FormBorderStyle.None;
-            this.TopLevel = false;
-            this.Dock = DockStyle.Fill;
+            this.Load += RawMaterialRequestForm_Load;
 
-            // =========================================================
-            // [Left Side] Material Request Input Card (Width adjusted from 420 to 400)
-            // =========================================================
-            custom_pnlLeftCard = new Panel
-            {
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoScroll = true
-            };
-            custom_pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, custom_pnlLeftCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
-            this.Controls.Add(custom_pnlLeftCard);
+            TableLayoutPanel mainTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Color.Transparent };
+            mainTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
+            mainTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.Controls.Add(mainTable);
 
-            Label lblCardTitle = new Label { Text = "📋 Material Replenishment", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(22, 18), AutoSize = true };
-            custom_pnlLeftCard.Controls.Add(lblCardTitle);
+            // --- Header ---
+            Panel pnlHeader = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
+            Label lblHeader = new Label { Text = "Internal Material Request", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(20, 20), AutoSize = true };
+            pnlHeader.Controls.Add(lblHeader);
+            Label lblStaff = new Label { Text = $"👤 Active Staff ID: {currentStaffID}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(13, 148, 136), Location = new Point(480, 26), AutoSize = true };
+            pnlHeader.Controls.Add(lblStaff);
+            mainTable.Controls.Add(pnlHeader, 0, 0);
 
-            int startY = 65;
-            int inputWidth = 350; // Input field fine adjustment
+            TableLayoutPanel contentTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Margin = new Padding(20, 0, 20, 20) };
+            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 510F));
+            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
+            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            mainTable.Controls.Add(contentTable, 0, 1);
 
-            custom_txtCardID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Reorder Card ID (Auto):", true, inputWidth);
-            custom_txtMaterialID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Raw Material ID *:", false, inputWidth);
-            custom_txtQty = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Requested Quantity *:", false, inputWidth);
+            // --- Left Card ---
+            Panel pnlCard = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = true };
+            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+            contentTable.Controls.Add(pnlCard, 0, 0);
 
-            int btnWidth = 170;
-            custom_btnSubmit = new Button { Text = "📤 Dispatch Request", Location = new Point(22, startY + 10), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
-            custom_btnClear = new Button { Text = "🔄 Clear Form", Location = new Point(202, startY + 10), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
-            custom_btnSubmit.FlatAppearance.BorderSize = 0; custom_btnClear.FlatAppearance.BorderSize = 0;
+            // --- Right Table (History) ---
+            TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0) };
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            Label lblGridTitle = new Label { Text = "📊 Recent Request History", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
+            rightTable.Controls.Add(lblGridTitle, 0, 0);
 
-            custom_btnSubmit.Click += btnSubmit_Click;
-            custom_btnClear.Click += (s, e) => ClearCustomFields();
+            dgvHistory = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, GridColor = Color.FromArgb(241, 245, 249) };
+            dgvHistory.EnableHeadersVisualStyles = false;
+            dgvHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
+            dgvHistory.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvHistory.ColumnHeadersHeight = 38;
 
-            custom_pnlLeftCard.Controls.Add(custom_btnSubmit); custom_pnlLeftCard.Controls.Add(custom_btnClear);
+            // 🌟 加入狀態顏色轉換事件
+            dgvHistory.CellFormatting += dgvHistory_CellFormatting;
 
-            // =========================================================
-            // [Right Side] Data Grid and Title (Refined Business Style)
-            // =========================================================
-            custom_lblGridTitle = new Label { Text = "📑 Ongoing Reorder Requests", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
-            this.Controls.Add(custom_lblGridTitle);
+            rightTable.Controls.Add(dgvHistory, 0, 1);
+            contentTable.Controls.Add(rightTable, 2, 0);
 
-            custom_dgvRequests = new DataGridView
-            {
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AllowUserToAddRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                RowHeadersVisible = false,
-                ScrollBars = ScrollBars.Both,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
-                EnableHeadersVisualStyles = false
-            };
+            // --- Builder Fields ---
+            Label lblCardTitle = new Label { Text = "📝 Request Builder", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };
+            pnlCard.Controls.Add(lblCardTitle);
 
-            // 📉 Size reduction: Creating clean and comfortable reading experience (Row height adjusted from 55px to 36px)
-            custom_dgvRequests.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            custom_dgvRequests.DefaultCellStyle.Padding = new Padding(8);
-            custom_dgvRequests.DefaultCellStyle.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
-            custom_dgvRequests.RowTemplate.Height = 36;
+            int startY = 50;
+            txtRequestID = CreateStyledTextBox(pnlCard, ref startY, "Batch ID (Auto):", true, 450, 20);
 
-            custom_dgvRequests.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            custom_dgvRequests.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
-            custom_dgvRequests.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            custom_dgvRequests.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold);
-            custom_dgvRequests.ColumnHeadersDefaultCellStyle.Padding = new Padding(8);
-            custom_dgvRequests.ColumnHeadersHeight = 42;
+            Label lblMat = new Label { Text = "Select Material *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboMaterials = new ComboBox { Location = new Point(20, startY + 25), Width = 450, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F), BackColor = Color.White };
+            cboMaterials.SelectedIndexChanged += cboMaterials_SelectedIndexChanged;
+            pnlCard.Controls.Add(lblMat);
+            pnlCard.Controls.Add(cboMaterials);
+            startY += 65;
 
-            custom_dgvRequests.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            custom_dgvRequests.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
+            int tempY = startY;
+            txtUnitPrice = CreateStyledTextBox(pnlCard, ref tempY, "Ref. Unit Cost ($):", true, 210, 20);
 
-            custom_dgvRequests.SelectionChanged += dgvRequests_SelectionChanged;
-            this.Controls.Add(custom_dgvRequests);
+            tempY = startY;
+            txtQty = CreateStyledTextBox(pnlCard, ref tempY, "Quantity *:", false, 210, 260);
+            startY = tempY;
+
+            btnAddItem = new Button { Text = "➕ Add Item", Location = new Point(20, startY), Size = new Size(210, 35), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnAddItem.Click += BtnAddItem_Click;
+            pnlCard.Controls.Add(btnAddItem);
+
+            btnRemoveItem = new Button { Text = "❌ Remove", Location = new Point(260, startY), Size = new Size(210, 35), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnRemoveItem.Click += BtnRemoveItem_Click;
+            pnlCard.Controls.Add(btnRemoveItem);
+            startY += 60;
+
+            Label lblCartGridTitle = new Label { Text = "📦 Staging Cart", Location = new Point(20, startY), Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            pnlCard.Controls.Add(lblCartGridTitle);
+            startY += 30;
+
+            cartTable = new DataTable();
+            cartTable.Columns.Add("MaterialID", typeof(string));
+            cartTable.Columns.Add("Material", typeof(string));
+            cartTable.Columns.Add("Qty", typeof(int));
+            cartTable.Columns.Add("Unit Price", typeof(decimal));
+            cartTable.Columns.Add("Subtotal", typeof(decimal));
+
+            dgvCart = new DataGridView { Location = new Point(20, startY), Size = new Size(450, 160), DataSource = cartTable, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, BackgroundColor = Color.White, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            dgvCart.EnableHeadersVisualStyles = false;
+            dgvCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
+            dgvCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            pnlCard.Controls.Add(dgvCart);
+            startY += 175;
+
+            lblTotalAmountDisplay = new Label { Text = "Total Est. Cost: $0.00", Location = new Point(20, startY), Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), AutoSize = true };
+            pnlCard.Controls.Add(lblTotalAmountDisplay);
+            startY += 40;
+
+            btnSubmitRequest = new Button { Text = "🚀 Submit Request", Location = new Point(20, startY), Size = new Size(210, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnSubmitRequest.Click += BtnSubmitRequest_Click;
+            pnlCard.Controls.Add(btnSubmitRequest);
+
+            btnClear = new Button { Text = "🧹 Clear Everything", Location = new Point(260, startY), Size = new Size(210, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnClear.Click += (s, e) => ClearFields();
+            pnlCard.Controls.Add(btnClear);
         }
 
-        private TextBox CreateCustomTextBox(Panel container, ref int topY, string labelText, bool readOnly, int width)
+        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly, int width, int offsetX = 20)
         {
-            Label lbl = new Label { Text = labelText, Location = new Point(22, topY), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            TextBox txt = new TextBox { Location = new Point(22, topY + 24), Width = width, Font = new Font("Segoe UI", 11F), BorderStyle = BorderStyle.FixedSingle };
+            Label lbl = new Label { Text = labelText, Location = new Point(offsetX, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(offsetX, topY + 25), Width = width, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White };
             if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
-            container.Controls.Add(lbl); container.Controls.Add(txt);
-            topY += 75; // 元件間距由 85 縮窄到 75，介面更緊湊
+            container.Controls.Add(lbl);
+            container.Controls.Add(txt);
+            topY += 65;
             return txt;
         }
 
-        private void RawMaterialRequestForm_SizeChanged(object sender, EventArgs e)
+        // 🌟 給予 Request 歷史清單狀態顏色
+        private void dgvHistory_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            RecalculateDynamicLayout();
-        }
-
-        /// <summary>
-        /// 🛠️ 鋼鐵動態佈局：不依賴 Dock，完全用像素公式精確定位
-        /// </summary>
-        private void RecalculateDynamicLayout()
-        {
-            if (this.Width < 200 || this.Height < 200) return;
-
-            this.SuspendLayout();
-
-            // 1. 指定左側卡片位置 (固定 400px 闊度)
-            custom_pnlLeftCard.Location = new Point(20, 20);
-            custom_pnlLeftCard.Size = new Size(400, this.Height - 40);
-
-            // 2. 計算右側對齊錨點
-            int rightStartX = custom_pnlLeftCard.Right + 20;
-            int rightWidth = this.Width - rightStartX - 20;
-
-            if (rightWidth > 100)
+            if (dgvHistory.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
             {
-                // 3. 固定標題
-                custom_lblGridTitle.Location = new Point(rightStartX, 20);
-
-                // 4. 右側表格動態拉大填滿，精準漂亮
-                custom_dgvRequests.Location = new Point(rightStartX, 55);
-                custom_dgvRequests.Size = new Size(rightWidth, this.Height - 75);
-
-                // 5. Automatically distribute columns equally
-                if (custom_dgvRequests.Columns.Count > 0)
+                string status = e.Value.ToString();
+                if (status == "Pending Approval" || status == "Pending")
                 {
-                    custom_dgvRequests.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
-                    custom_dgvRequests.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+                    e.CellStyle.ForeColor = Color.DarkOrange;
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "Approved")
+                {
+                    e.CellStyle.ForeColor = Color.MediumSeaGreen;
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "Rejected" || status == "Cancelled")
+                {
+                    e.CellStyle.ForeColor = Color.Crimson;
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Strikeout | FontStyle.Bold);
                 }
             }
-
-            this.ResumeLayout(false);
         }
         #endregion
 
-        #region 💾 Core Database Connection Logic
-        private void GenerateNewCardID()
+        #region 🔄 Dynamic Data Loading
+        private void LoadMaterialsToCombo()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string query = "SELECT ReOrderCardID FROM reorder_card ORDER BY ReOrderCardID DESC LIMIT 1";
+                    string query = "SELECT MaterialID, MaterialName, StandardCost FROM raw_material";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        object result = cmd.ExecuteScalar();
-                        if (result != null)
+                        List<MaterialItem> list = new List<MaterialItem>();
+                        while (reader.Read())
                         {
-                            string lastID = result.ToString();
-                            if (lastID.StartsWith("RC") && int.TryParse(lastID.Substring(2), out int num))
+                            list.Add(new MaterialItem
                             {
-                                custom_txtCardID.Text = "RC" + (num + 1).ToString("D3");
-                                return;
-                            }
+                                ID = reader["MaterialID"].ToString(),
+                                Name = reader["MaterialName"].ToString(),
+                                StandardCost = reader["StandardCost"] != DBNull.Value ? Convert.ToDecimal(reader["StandardCost"]) : 0
+                            });
                         }
-                        custom_txtCardID.Text = "RC001";
+                        cboMaterials.DataSource = list;
+                        cboMaterials.DisplayMember = "Name";
+                        cboMaterials.ValueMember = "ID";
+                        cboMaterials.SelectedIndex = -1;
                     }
                 }
-                catch (Exception)
-                {
-                    custom_txtCardID.Text = "RC" + DateTime.Now.ToString("MMddHHmmss");
-                }
+                catch (Exception ex) { MessageBox.Show("Failed to load Materials: " + ex.Message); }
             }
         }
 
-        private void LoadRequests()
+        private void cboMaterials_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cboMaterials.SelectedItem != null)
+            {
+                MaterialItem mat = (MaterialItem)cboMaterials.SelectedItem;
+                currentUnitCost = mat.StandardCost;
+                txtUnitPrice.Text = currentUnitCost.ToString("F2");
+            }
+        }
+        #endregion
+
+        #region ➕ Add/Remove Cart Items
+        private void BtnAddItem_Click(object sender, EventArgs e)
+        {
+            if (cboMaterials.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a Material.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!int.TryParse(txtQty.Text.Trim(), out int qty) || qty <= 0)
+            {
+                MessageBox.Show("Please enter a valid positive quantity.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            MaterialItem mat = (MaterialItem)cboMaterials.SelectedItem;
+            decimal subtotal = currentUnitCost * qty;
+
+            bool itemExists = false;
+            foreach (DataRow row in cartTable.Rows)
+            {
+                if (row["MaterialID"].ToString() == mat.ID)
+                {
+                    row["Qty"] = Convert.ToInt32(row["Qty"]) + qty;
+                    row["Subtotal"] = Convert.ToDecimal(row["Qty"]) * currentUnitCost;
+                    itemExists = true;
+                    break;
+                }
+            }
+
+            if (!itemExists)
+            {
+                cartTable.Rows.Add(mat.ID, mat.Name, qty, currentUnitCost, subtotal);
+            }
+
+            UpdateGlobalTotal();
+            txtQty.Clear();
+            cboMaterials.SelectedIndex = -1;
+            txtUnitPrice.Clear();
+            currentUnitCost = 0;
+        }
+
+        private void BtnRemoveItem_Click(object sender, EventArgs e)
+        {
+            if (dgvCart.SelectedRows.Count > 0)
+            {
+                foreach (DataGridViewRow row in dgvCart.SelectedRows)
+                {
+                    if (!row.IsNewRow) dgvCart.Rows.Remove(row);
+                }
+                UpdateGlobalTotal();
+            }
+        }
+
+        private void UpdateGlobalTotal()
+        {
+            globalTotal = 0;
+            foreach (DataRow row in cartTable.Rows)
+            {
+                globalTotal += Convert.ToDecimal(row["Subtotal"]);
+            }
+            lblTotalAmountDisplay.Text = $"Total Est. Cost: ${globalTotal:N2}";
+        }
+        #endregion
+
+        #region 🚀 Submit Transaction
+        private void BtnSubmitRequest_Click(object sender, EventArgs e)
+        {
+            if (cartTable.Rows.Count == 0)
+            {
+                MessageBox.Show("Staging Cart is empty! Please add materials first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    using (MySqlTransaction trans = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            string batchPrefix = "R" + DateTime.Now.ToString("yyMMdd");
+                            int seq = 1;
+
+                            foreach (DataRow row in cartTable.Rows)
+                            {
+                                string rcID = batchPrefix + (new Random().Next(10, 99)).ToString() + seq.ToString("D2");
+                                if (rcID.Length > 14) rcID = rcID.Substring(0, 14);
+
+                                string query = @"INSERT INTO reorder_card 
+                                                 (ReOrderCardID, MaterialID, RequestedQty, Status, TriggerDate) 
+                                                 VALUES (@rcID, @matID, @qty, 'Pending Approval', NOW())";
+
+                                using (MySqlCommand cmd = new MySqlCommand(query, conn, trans))
+                                {
+                                    cmd.Parameters.AddWithValue("@rcID", rcID);
+                                    cmd.Parameters.AddWithValue("@matID", row["MaterialID"]);
+                                    cmd.Parameters.AddWithValue("@qty", row["Qty"]);
+                                    cmd.ExecuteNonQuery();
+                                }
+                                seq++;
+                            }
+
+                            trans.Commit();
+                            MessageBox.Show($"Successfully submitted {cartTable.Rows.Count} material requests to Procurement for approval!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            ClearFields();
+                            RefreshHistoryGrid();
+                        }
+                        catch (Exception ex)
+                        {
+                            trans.Rollback();
+                            throw ex;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Submission failed:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+        #endregion
+
+        #region 🔄 Refresh & Clear
+        private void RefreshHistoryGrid()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string query = @"
-                        SELECT 
-                            r.ReOrderCardID AS 'Request ID', 
-                            r.MaterialID AS 'Material ID', 
-                            m.MaterialName AS 'Material Name',
-                            r.RequestedQty AS 'Qty', 
-                            r.Status AS 'Status', 
-                            r.TriggerDate AS 'Date' 
-                        FROM reorder_card r
-                        LEFT JOIN raw_material m ON r.MaterialID = m.MaterialID
-                        ORDER BY r.TriggerDate DESC";
-
+                    string query = @"SELECT ReOrderCardID AS 'Request ID', MaterialID AS 'Material', RequestedQty AS 'Qty', Status, TriggerDate AS 'Date' 
+                                     FROM reorder_card ORDER BY TriggerDate DESC LIMIT 20";
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
-
-                        custom_dgvRequests.DataSource = null;
-                        custom_dgvRequests.DataSource = dt;
-
-                        // Set minimum column width to prevent content compression
-                        foreach (DataGridViewColumn col in custom_dgvRequests.Columns)
-                        {
-                            col.MinimumWidth = 100;
-                        }
-
-                        if (custom_dgvRequests.Columns.Contains("Request ID")) custom_dgvRequests.Columns["Request ID"].MinimumWidth = 120;
-                        if (custom_dgvRequests.Columns.Contains("Material ID")) custom_dgvRequests.Columns["Material ID"].MinimumWidth = 120;
-                        if (custom_dgvRequests.Columns.Contains("Material Name")) custom_dgvRequests.Columns["Material Name"].MinimumWidth = 180;
-                        if (custom_dgvRequests.Columns.Contains("Date"))
-                        {
-                            custom_dgvRequests.Columns["Date"].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm";
-                            custom_dgvRequests.Columns["Date"].MinimumWidth = 150;
-                        }
-
-                        RecalculateDynamicLayout();
-                        custom_dgvRequests.ClearSelection();
+                        dgvHistory.DataSource = dt;
                     }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Failed to load requests data:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                catch (Exception) { /* Fail silently */ }
             }
         }
 
-        private void btnSubmit_Click(object sender, EventArgs e)
+        private void GenerateRequestBatchID()
         {
-            // 🔒 Secondary permission verification - Prevent direct invocation (silent check)
-            string currentRole = UserSession.LoggedInStaffRole;
-            var currentRoleEnum = AuthorizationHelper.ParseRole(currentRole);
-
-            bool canSubmit = currentRoleEnum == AuthorizationHelper.UserRoleEnum.Manager ||
-                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.Administrator ||
-                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.ProcurementOfficer;
-
-            // Silent check - button should be disabled anyway
-            if (!canSubmit)
-            {
-                return;
-            }
-
-            string cardID = custom_txtCardID.Text.Trim();
-            string materialID = custom_txtMaterialID.Text.Trim();
-            string qtyStr = custom_txtQty.Text.Trim();
-
-            if (string.IsNullOrWhiteSpace(materialID) || string.IsNullOrWhiteSpace(qtyStr))
-            {
-                MessageBox.Show("Please fill in Raw Material ID and Quantity.", "Validation Missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (!int.TryParse(qtyStr, out int qty) || qty <= 0)
-            {
-                MessageBox.Show("Quantity must be a valid positive integer.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            using (MySqlConnection conn = new MySqlConnection(connString))
-            {
-                try
-                {
-                    conn.Open();
-                    string checkSql = "SELECT COUNT(*) FROM raw_material WHERE MaterialID = @matID";
-                    using (MySqlCommand checkCmd = new MySqlCommand(checkSql, conn))
-                    {
-                        checkCmd.Parameters.AddWithValue("@matID", materialID);
-                        int exists = Convert.ToInt32(checkCmd.ExecuteScalar());
-                        if (exists == 0)
-                        {
-                            MessageBox.Show($"Raw Material ID '{materialID}' does not exist in the master inventory database. Please verify.", "Invalid Material", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-
-                    string query = "INSERT INTO reorder_card (ReOrderCardID, MaterialID, TriggerDate, RequestedQty, Status) VALUES (@cID, @matID, NOW(), @qty, 'Pending')";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@cID", cardID);
-                        cmd.Parameters.AddWithValue("@matID", materialID);
-                        cmd.Parameters.AddWithValue("@qty", qty);
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    MessageBox.Show("Raw Material replenishment request successfully dispatched!", "Request Submitted", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    ClearCustomFields();
-                    LoadRequests();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Submission failed. Please verify the database connection.\n\nError: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+            txtRequestID.Text = "BATCH-" + DateTime.Now.ToString("yyMMddHHmm");
         }
 
-        private void dgvRequests_SelectionChanged(object sender, EventArgs e)
+        private void ClearFields()
         {
-            if (custom_dgvRequests.SelectedRows.Count > 0)
-            {
-                DataGridViewRow row = custom_dgvRequests.SelectedRows[0];
-                custom_txtCardID.Text = row.Cells["Request ID"].Value?.ToString() ?? "";
-                custom_txtMaterialID.Text = row.Cells["Material ID"].Value?.ToString() ?? "";
-                custom_txtQty.Text = row.Cells["Qty"].Value?.ToString() ?? "";
-
-                custom_btnSubmit.Enabled = false;
-                custom_btnSubmit.BackColor = Color.LightGray;
-            }
-        }
-
-        private void ClearCustomFields()
-        {
-            custom_txtMaterialID.Clear();
-            custom_txtQty.Clear();
-            custom_dgvRequests.ClearSelection();
-            GenerateNewCardID();
-
-            custom_btnSubmit.Enabled = true;
-            custom_btnSubmit.BackColor = Color.FromArgb(16, 185, 129);
+            cartTable.Clear();
+            UpdateGlobalTotal();
+            cboMaterials.SelectedIndex = -1;
+            txtQty.Clear();
+            txtUnitPrice.Clear();
+            GenerateRequestBatchID();
         }
         #endregion
     }
