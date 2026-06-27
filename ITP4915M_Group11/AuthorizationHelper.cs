@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
@@ -49,6 +50,88 @@ namespace ITP4915M_Group11
             public const string SystemManager = "System Manager";
         }
 
+        /// <summary>
+        /// 菜單按鈕 ID 到所需角色的映射字典
+        /// 按鈕 ID 對應菜單按鈕的文本，所需角色為允許訪問該功能的角色清單
+        /// </summary>
+        private static readonly Dictionary<string, HashSet<UserRoleEnum>> MenuPermissions = new Dictionary<string, HashSet<UserRoleEnum>>
+        {
+            // Home Dashboard - 所有角色都可以訪問
+            { "HOME", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.SalesRepresentative,
+                UserRoleEnum.LogisticsDriver,
+                UserRoleEnum.WarehouseSpecialist,
+                UserRoleEnum.ProcurementOfficer,
+                UserRoleEnum.SystemManager,
+                UserRoleEnum.Staff
+            }},
+
+            // Core Modules
+            { "CUSTOMER_MGMT", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.SalesRepresentative,
+                UserRoleEnum.Staff
+            }},
+
+            { "SALES_ORDER", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.SalesRepresentative,
+                UserRoleEnum.Staff
+            }},
+
+            { "DELIVERY_LOGISTICS", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.LogisticsDriver,
+                UserRoleEnum.Staff
+            }},
+
+            { "GOODS_RECEIVED", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.WarehouseSpecialist,
+                UserRoleEnum.Staff
+            }},
+
+            { "PRODUCT_MAINTENANCE", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.SystemManager
+            }},
+
+            // Internal Ops
+            { "MATERIAL_REQUESTS", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.WarehouseSpecialist,
+                UserRoleEnum.Staff
+            }},
+
+            { "PROCUREMENT_CONTROL", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.ProcurementOfficer,
+                UserRoleEnum.Staff
+            }},
+
+            { "HR_STAFF_MGMT", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator,
+                UserRoleEnum.SystemManager
+            }},
+
+            { "CUSTOMER_SUPPORT", new HashSet<UserRoleEnum> { 
+                UserRoleEnum.Manager, 
+                UserRoleEnum.Administrator, 
+                UserRoleEnum.SalesRepresentative,
+                UserRoleEnum.Staff
+            }}
+        };
+
         public static bool IsInRole(params string[] roles)
         {
             string current = UserSession.LoggedInStaffRole;
@@ -86,6 +169,42 @@ namespace ITP4915M_Group11
         }
 
         public static bool IsInAnyRole(string[] roles) => IsInRole(roles);
+
+        /// <summary>
+        /// 檢查當前用戶是否有權訪問指定的菜單按鈕/功能
+        /// </summary>
+        /// <param name="menuId">菜單按鈕的 ID（如 "CUSTOMER_MGMT", "HOME"）</param>
+        /// <returns>如果當前用戶有權訪問該功能，則返回 true；否則返回 false</returns>
+        public static bool HasMenuPermission(string menuId)
+        {
+            if (string.IsNullOrWhiteSpace(menuId)) return false;
+
+            // 獲取當前用戶的角色
+            var currentRole = ParseRole(UserSession.LoggedInStaffRole);
+            if (currentRole == UserRoleEnum.Unknown) return false;
+
+            // 檢查菜單是否在權限字典中
+            if (!MenuPermissions.ContainsKey(menuId))
+            {
+                // 如果菜單未定義，預設不允許訪問
+                return false;
+            }
+
+            // 檢查當前用戶的角色是否在允許列表中
+            return MenuPermissions[menuId].Contains(currentRole);
+        }
+
+        /// <summary>
+        /// 根據菜單 ID 獲取允許訪問的角色清單（用於診斷/調試）
+        /// </summary>
+        public static HashSet<UserRoleEnum> GetMenuAllowedRoles(string menuId)
+        {
+            if (MenuPermissions.ContainsKey(menuId))
+            {
+                return new HashSet<UserRoleEnum>(MenuPermissions[menuId]);
+            }
+            return new HashSet<UserRoleEnum>();
+        }
 
         /// <summary>
         /// 在表單啟動時強制檢查，若不符則顯示訊息並關閉表單

@@ -90,26 +90,39 @@ namespace ITP4915M_Group11
 
             // ==== 系統與戰情室 ====
             AddNavHeader("📊 System Dashboards");
-            AddNavButton("🏠 Home Dashboard", null, "HOME");
+            AddNavButton("🏠 Home Dashboard", null, "HOME", "HOME");
 
             // ==== 核心業務模組 ====
-            AddNavHeader("💼 Core Modules");
-            AddNavButton("👥 Customer Mgmt", typeof(CustomerManagement), "FORM");
-            AddNavButton("🛒 Sales Order Mgmt", typeof(OrderManagementForm), "FORM");
-            AddNavButton("🚚 Delivery Logistics", typeof(LogisticsForm), "FORM");
-            AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM");
-            AddNavButton("🛋️ Product Maintenance", typeof(ProductManagement), "FORM");
+            if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") ||
+                AuthorizationHelper.HasMenuPermission("SALES_ORDER") ||
+                AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") ||
+                AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") ||
+                AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE"))
+            {
+                AddNavHeader("💼 Core Modules");
+                AddNavButton("👥 Customer Mgmt", typeof(CustomerManagement), "FORM", "CUSTOMER_MGMT");
+                AddNavButton("🛒 Sales Order Mgmt", typeof(OrderManagementForm), "FORM", "SALES_ORDER");
+                AddNavButton("🚚 Delivery Logistics", typeof(LogisticsForm), "FORM", "DELIVERY_LOGISTICS");
+                AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM", "GOODS_RECEIVED");
+                AddNavButton("🛋️ Product Maintenance", typeof(ProductManagement), "FORM", "PRODUCT_MAINTENANCE");
+            }
 
             // ==== 內部營運控制 ====
-            AddNavHeader("⚙️ Internal Ops");
-            AddNavButton("🏭 Material Requests", typeof(RawMaterialRequestForm), "FORM");
-            AddNavButton("📈 Procurement Control", typeof(ProcurementForm), "FORM");
-            AddNavButton("👔 HR / Staff Mgmt", typeof(EmployeeManagement), "FORM");
-            AddNavButton("📞 Customer Support", typeof(AfterServiceForm), "FORM");
+            if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") ||
+                AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") ||
+                AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") ||
+                AuthorizationHelper.HasMenuPermission("CUSTOMER_SUPPORT"))
+            {
+                AddNavHeader("⚙️ Internal Ops");
+                AddNavButton("🏭 Material Requests", typeof(RawMaterialRequestForm), "FORM", "MATERIAL_REQUESTS");
+                AddNavButton("📈 Procurement Control", typeof(ProcurementForm), "FORM", "PROCUREMENT_CONTROL");
+                AddNavButton("👔 HR / Staff Mgmt", typeof(EmployeeManagement), "FORM", "HR_STAFF_MGMT");
+                AddNavButton("📞 Customer Support", typeof(AfterServiceForm), "FORM", "CUSTOMER_SUPPORT");
+            }
 
             // ==== 系統操作 ====
             AddNavHeader(""); // 分隔用空白列
-            AddNavButton("🚪 Logout System", null, "LOGOUT");
+            AddNavButton("🚪 Logout System", null, "LOGOUT", "LOGOUT");
         }
 
         private void AddNavHeader(string text)
@@ -132,8 +145,14 @@ namespace ITP4915M_Group11
             flpNavMenu.Controls.Add(lblHeader);
         }
 
-        private void AddNavButton(string text, Type formType, string actionType)
+        private void AddNavButton(string text, Type formType, string actionType, string menuId = "")
         {
+            // 如果是表單按鈕且沒有權限，則直接返回不添加
+            if (actionType == "FORM" && !AuthorizationHelper.HasMenuPermission(menuId))
+            {
+                return;
+            }
+
             Button btn = new Button
             {
                 Text = "  " + text,
@@ -145,7 +164,8 @@ namespace ITP4915M_Group11
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(5, 2, 5, 2)
+                Margin = new Padding(5, 2, 5, 2),
+                Tag = menuId  // 儲存菜單 ID 供參考
             };
 
             btn.FlatAppearance.BorderSize = 0;

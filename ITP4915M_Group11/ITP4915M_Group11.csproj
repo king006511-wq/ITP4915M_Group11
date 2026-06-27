@@ -217,7 +217,12 @@
     <EmbeddedResource Include="ViewOrders.resx">
       <DependentUpon>ViewOrders.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="BEFORE_AND_AFTER_COMPARISON.md" />
+    <None Include="ENGLISH_TRANSLATION_COMPLETE.md" />
+    <None Include="ENGLISH_UI_REFERENCE.md" />
+    <None Include="ENGLISH_UI_TRANSLATION.md" />
     <None Include="packages.config" />
+    <None Include="PERMISSION_TROUBLESHOOTING_CHECKLIST.md" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -227,6 +232,9 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <None Include="RAWMATERIAL_PERMISSION_GUIDE.md" />
+    <None Include="RBAC_IMPLEMENTATION_GUIDE.md" />
+    <None Include="RBAC_QUICK_REFERENCE.md" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

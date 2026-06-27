@@ -42,35 +42,54 @@ namespace ITP4915M_Group11
             }
         }
 
-        #region 🔒 權限驗證
+        #region 🔒 Authorization Check
         private void RawMaterialRequestForm_Load(object sender, EventArgs e)
         {
+            // 🎯 Use new RBAC system for permission checking
             string currentRole = UserSession.LoggedInStaffRole;
-            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
-                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Procurement Officer", StringComparison.OrdinalIgnoreCase));
+            var currentRoleEnum = AuthorizationHelper.ParseRole(currentRole);
 
-            if (!isAuthorized)
+            // Material Request form allowed roles: Manager, Administrator, WarehouseSpecialist, Staff
+            bool hasMenuAccess = AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS");
+
+            // But Dispatch button only allows Manager, Administrator, ProcurementOfficer
+            bool canSubmit = currentRoleEnum == AuthorizationHelper.UserRoleEnum.Manager ||
+                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.Administrator ||
+                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.ProcurementOfficer;
+
+            // If user cannot access the menu, close the form directly
+            if (!hasMenuAccess)
             {
-                MessageBox.Show("[SECURITY ALERT] Access Denied!\n\nOnly Procurement Officers and Management can submit material replenishment requests.", "System Security Enforcer", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                MessageBox.Show($"[SECURITY ALERT] Access Denied!\n\nYour current role ({currentRole ?? "Unknown"}) does not have permission to access Material Requests.\n\nOnly authorized personnel can access this feature.", 
+                    "System Security Enforcer", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 this.BeginInvoke(new MethodInvoker(this.Close));
+                return;
+            }
+
+            // If user cannot submit (but can view), disable submit button
+            if (!canSubmit)
+            {
+                custom_btnSubmit.Enabled = false;
+                custom_btnSubmit.BackColor = Color.FromArgb(156, 163, 175); // Gray color
+
+                MessageBox.Show($"⚠️ Access Level Notice\n\nYou can view existing material requests, but cannot submit new requests.\n\nCurrent Role: {currentRole ?? "Unknown"}\nSubmit Permission Required: Manager, Administrator, or Procurement Officer",
+                    "Access Level Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
         #endregion
 
-        #region 🎨 精緻手動算繪排版 (告別臃腫，變回精準現代商務風)
+        #region 🎨 Sleek Manual Layout Design (Precision Modern Business Style)
         private void SetupCustomSleekUI()
         {
             this.Controls.Clear();
             this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular); // 全局字體調整為標準大細
+            this.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular); // Global font adjustment for standard size
             this.FormBorderStyle = FormBorderStyle.None;
             this.TopLevel = false;
             this.Dock = DockStyle.Fill;
 
             // =========================================================
-            // 【左側】物料請求輸入卡片 (寬度由 420 縮窄至 400)
+            // [Left Side] Material Request Input Card (Width adjusted from 420 to 400)
             // =========================================================
             custom_pnlLeftCard = new Panel
             {
@@ -85,7 +104,7 @@ namespace ITP4915M_Group11
             custom_pnlLeftCard.Controls.Add(lblCardTitle);
 
             int startY = 65;
-            int inputWidth = 350; // 輸入框微調
+            int inputWidth = 350; // Input field fine adjustment
 
             custom_txtCardID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Reorder Card ID (Auto):", true, inputWidth);
             custom_txtMaterialID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Raw Material ID *:", false, inputWidth);
@@ -102,7 +121,7 @@ namespace ITP4915M_Group11
             custom_pnlLeftCard.Controls.Add(custom_btnSubmit); custom_pnlLeftCard.Controls.Add(custom_btnClear);
 
             // =========================================================
-            // 【右側】數據表格與標題 (精緻商務化)
+            // [Right Side] Data Grid and Title (Refined Business Style)
             // =========================================================
             custom_lblGridTitle = new Label { Text = "📑 Ongoing Reorder Requests", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(custom_lblGridTitle);
@@ -122,7 +141,7 @@ namespace ITP4915M_Group11
                 EnableHeadersVisualStyles = false
             };
 
-            // 📉 縮減大細：打造俐落舒適嘅閱讀感 (行高由 55px 修正為 36px)
+            // 📉 Size reduction: Creating clean and comfortable reading experience (Row height adjusted from 55px to 36px)
             custom_dgvRequests.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             custom_dgvRequests.DefaultCellStyle.Padding = new Padding(8);
             custom_dgvRequests.DefaultCellStyle.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
@@ -183,7 +202,7 @@ namespace ITP4915M_Group11
                 custom_dgvRequests.Location = new Point(rightStartX, 55);
                 custom_dgvRequests.Size = new Size(rightWidth, this.Height - 75);
 
-                // 5. 自動平分欄位
+                // 5. Automatically distribute columns equally
                 if (custom_dgvRequests.Columns.Count > 0)
                 {
                     custom_dgvRequests.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
@@ -195,7 +214,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 💾 核心資料庫連線邏輯
+        #region 💾 Core Database Connection Logic
         private void GenerateNewCardID()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -253,7 +272,7 @@ namespace ITP4915M_Group11
                         custom_dgvRequests.DataSource = null;
                         custom_dgvRequests.DataSource = dt;
 
-                        // 設定最小防禦欄寬，防止內容擠壓
+                        // Set minimum column width to prevent content compression
                         foreach (DataGridViewColumn col in custom_dgvRequests.Columns)
                         {
                             col.MinimumWidth = 100;
@@ -281,6 +300,20 @@ namespace ITP4915M_Group11
 
         private void btnSubmit_Click(object sender, EventArgs e)
         {
+            // 🔒 Secondary permission verification - Prevent direct invocation (silent check)
+            string currentRole = UserSession.LoggedInStaffRole;
+            var currentRoleEnum = AuthorizationHelper.ParseRole(currentRole);
+
+            bool canSubmit = currentRoleEnum == AuthorizationHelper.UserRoleEnum.Manager ||
+                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.Administrator ||
+                           currentRoleEnum == AuthorizationHelper.UserRoleEnum.ProcurementOfficer;
+
+            // Silent check - button should be disabled anyway
+            if (!canSubmit)
+            {
+                return;
+            }
+
             string cardID = custom_txtCardID.Text.Trim();
             string materialID = custom_txtMaterialID.Text.Trim();
             string qtyStr = custom_txtQty.Text.Trim();
