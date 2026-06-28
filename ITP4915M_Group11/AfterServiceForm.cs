@@ -20,12 +20,13 @@ namespace ITP4915M_Group11
         private TextBox txtComplaintID, txtCustomerID, txtOrderID, txtSearchHistory;
         private TextBox txtDetails, txtRefundAmount;
         private ComboBox cboStatus, cboRequestType;
-        private DataGridView dgvComplaints;
-        private Button btnSubmit, btnClear;
+        private DataGridView dgvComplaints, dgvOrderItems;
+        private Button btnSubmit, btnClear, btnVerifyOrder;
+        private Label lblOrderSummary;
 
-        // 核心卡片容器
+        // 核心容器
         private Panel pnlLeftCard;
-        private Label lblGridTitle;
+        private Label lblGridTitle, lblItemsTitle;
 
         public AfterServiceForm()
         {
@@ -33,30 +34,29 @@ namespace ITP4915M_Group11
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 ThemeManager.ApplyTheme(this);
-                InitializeBulletproofUI(); // 🚀 啟用全新「動態座標公式」排版
+                InitializeEnterpriseHelpdeskUI();
                 SetupDropdowns();
                 EnsureComplaintTableExists();
                 GenerateNewTicketID();
                 LoadComplaints();
 
-                // 🌟 核心防禦：綁定 Layout 同 SizeChanged，無論點放大縮小都由程式碼手動計算像素大細
                 this.SizeChanged += AfterServiceForm_SizeChanged;
                 this.Layout += (s, e) => RecalculateCustomLayout();
             }
         }
 
-        #region 🎨 暴力手動算繪排版 (徹底消滅白布遮擋、表格隱形 Bug)
-        private void InitializeBulletproofUI()
+        #region 🎨 企業級 Helpdesk & RMA 排版
+        private void InitializeEnterpriseHelpdeskUI()
         {
             this.Controls.Clear();
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.None;
             this.TopLevel = false;
-            this.Dock = DockStyle.Fill; // 填滿 Main Form 嘅容器 Panel
+            this.Dock = DockStyle.Fill;
 
             // =========================================================
-            // 【左側】獨立資料輸入白底卡片面板
+            // 【左側】Helpdesk Ticket 操作卡片
             // =========================================================
             pnlLeftCard = new Panel
             {
@@ -67,60 +67,86 @@ namespace ITP4915M_Group11
             pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlLeftCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             this.Controls.Add(pnlLeftCard);
 
-            Label lblCardTitle = new Label { Text = "📝 Support Ticket Details", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 20), AutoSize = true };
+            Label lblCardTitle = new Label { Text = "🎧 Helpdesk Ticket Action", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 20), AutoSize = true };
             pnlLeftCard.Controls.Add(lblCardTitle);
 
             int startY = 70;
-            int inputWidth = 330; // 固定輸入框闊度
+            int inputWidth = 330;
 
-            txtComplaintID = CreateStyledTextBox(pnlLeftCard, ref startY, "Ticket / Complaint ID (Auto):", true, inputWidth);
-            txtCustomerID = CreateStyledTextBox(pnlLeftCard, ref startY, "Customer ID *:", false, inputWidth);
-            txtOrderID = CreateStyledTextBox(pnlLeftCard, ref startY, "Related Order ID (Optional):", false, inputWidth);
+            txtComplaintID = CreateStyledTextBox(pnlLeftCard, ref startY, "Ticket ID (Auto):", true, inputWidth);
 
-            Label lblReqType = new Label { Text = "Request Type *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            // 🌟 訂單驗證區 (Order Verification)
+            Label lblOrder = new Label { Text = "Related Order ID *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtOrderID = new TextBox { Location = new Point(20, startY + 22), Width = 230, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            btnVerifyOrder = new Button { Text = "🔍 Lookup", Location = new Point(260, startY + 21), Size = new Size(90, 28), BackColor = Color.FromArgb(14, 165, 233), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnVerifyOrder.FlatAppearance.BorderSize = 0;
+            btnVerifyOrder.Click += BtnVerifyOrder_Click;
+            pnlLeftCard.Controls.Add(lblOrder); pnlLeftCard.Controls.Add(txtOrderID); pnlLeftCard.Controls.Add(btnVerifyOrder);
+            startY += 65;
+
+            txtCustomerID = CreateStyledTextBox(pnlLeftCard, ref startY, "Verified Customer ID:", true, inputWidth); // 驗證後自動填寫，防止亂打
+
+            Label lblReqType = new Label { Text = "Support Request Type *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboRequestType = new ComboBox { Location = new Point(20, startY + 22), Width = inputWidth, Font = new Font("Segoe UI", 10.5F), DropDownStyle = ComboBoxStyle.DropDownList };
             cboRequestType.SelectedIndexChanged += CboRequestType_SelectedIndexChanged;
             pnlLeftCard.Controls.Add(lblReqType); pnlLeftCard.Controls.Add(cboRequestType);
-            startY += 70;
+            startY += 65;
 
-            Label lblDetails = new Label { Text = "Complaint Details / Records:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtDetails = new TextBox { Location = new Point(20, startY + 22), Width = inputWidth, Height = 80, Multiline = true, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            Label lblDetails = new Label { Text = "Issue Description / Notes:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtDetails = new TextBox { Location = new Point(20, startY + 22), Width = inputWidth, Height = 75, Multiline = true, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             pnlLeftCard.Controls.Add(lblDetails); pnlLeftCard.Controls.Add(txtDetails);
-            startY += 115;
+            startY += 110;
 
-            Label lblRefund = new Label { Text = "Refund Amount ($):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtRefundAmount = new TextBox { Location = new Point(20, startY + 22), Width = inputWidth, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, Enabled = false, Text = "0.00", BackColor = Color.FromArgb(241, 245, 249) };
+            Label lblRefund = new Label { Text = "RMA Refund Amount (HKD):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38) };
+            txtRefundAmount = new TextBox { Location = new Point(20, startY + 22), Width = inputWidth, Font = new Font("Segoe UI", 11F, FontStyle.Bold), BorderStyle = BorderStyle.FixedSingle, Enabled = false, Text = "0.00", BackColor = Color.FromArgb(241, 245, 249) };
             pnlLeftCard.Controls.Add(lblRefund); pnlLeftCard.Controls.Add(txtRefundAmount);
-            startY += 70;
+            startY += 65;
 
             Label lblStatus = new Label { Text = "Resolution Status *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboStatus = new ComboBox { Location = new Point(20, startY + 22), Width = inputWidth, Font = new Font("Segoe UI", 10.5F), DropDownStyle = ComboBoxStyle.DropDownList };
             pnlLeftCard.Controls.Add(lblStatus); pnlLeftCard.Controls.Add(cboStatus);
-            startY += 70;
+            startY += 75;
 
             int btnWidth = 160;
-            btnSubmit = new Button { Text = "💾 Save Ticket", Location = new Point(20, startY), Size = new Size(btnWidth, 40), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnClear = new Button { Text = "✨ Reset", Location = new Point(190, startY), Size = new Size(btnWidth, 40), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnSubmit = new Button { Text = "💾 Save Ticket", Location = new Point(20, startY), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnClear = new Button { Text = "✨ Clear", Location = new Point(190, startY), Size = new Size(btnWidth, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnSubmit.FlatAppearance.BorderSize = 0; btnClear.FlatAppearance.BorderSize = 0;
             btnSubmit.Click += btnSubmitComplaint_Click; btnClear.Click += (s, e) => ClearFields();
             pnlLeftCard.Controls.Add(btnSubmit); pnlLeftCard.Controls.Add(btnClear);
 
             // =========================================================
-            // 【右側】元件直接置頂（不嵌套 Panel，防止 layout 崩塌）
+            // 【右側】Master-Detail 雙表格設計 (Tickets + Order Context)
             // =========================================================
-            lblGridTitle = new Label { Text = "📂 Support Tickets History", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            lblGridTitle = new Label { Text = "📂 Support Tickets Center", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(lblGridTitle);
 
-            txtSearchHistory = new TextBox { Width = 260, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
-            txtSearchHistory.Text = "Type ID to search...";
-            txtSearchHistory.ForeColor = Color.Gray;
-            txtSearchHistory.GotFocus += (s, e) => { if (txtSearchHistory.Text == "Type ID to search...") { txtSearchHistory.Text = ""; txtSearchHistory.ForeColor = Color.Black; } };
-            txtSearchHistory.LostFocus += (s, e) => { if (string.IsNullOrWhiteSpace(txtSearchHistory.Text)) { txtSearchHistory.Text = "Type ID to search..."; txtSearchHistory.ForeColor = Color.Gray; } };
+            txtSearchHistory = new TextBox { Width = 300, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Search by Ticket or Order ID..." };
+            txtSearchHistory.GotFocus += (s, e) => { if (txtSearchHistory.Text == "Search by Ticket or Order ID...") { txtSearchHistory.Text = ""; txtSearchHistory.ForeColor = Color.Black; } };
+            txtSearchHistory.LostFocus += (s, e) => { if (string.IsNullOrWhiteSpace(txtSearchHistory.Text)) { txtSearchHistory.Text = "Search by Ticket or Order ID..."; txtSearchHistory.ForeColor = Color.Gray; } };
             txtSearchHistory.TextChanged += txtSearchHistory_TextChanged;
             this.Controls.Add(txtSearchHistory);
 
-            // 數據網格表格直接掛載到表單，保證享有第一級別尺寸調整權限
-            dgvComplaints = new DataGridView
+            dgvComplaints = CreateCleanGrid();
+            dgvComplaints.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(79, 70, 229);
+            dgvComplaints.SelectionChanged += dgvComplaints_SelectionChanged;
+            dgvComplaints.CellFormatting += DgvComplaints_CellFormatting;
+            this.Controls.Add(dgvComplaints);
+
+            // 🌟 訂單內容子表格 (Order Context)
+            lblItemsTitle = new Label { Text = "🛍️ Purchased Items Context (Select a ticket to view)", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            this.Controls.Add(lblItemsTitle);
+
+            lblOrderSummary = new Label { Text = "Total Amount Paid: $0.00", Font = new Font("Segoe UI", 11F, FontStyle.Bold), ForeColor = Color.FromArgb(16, 185, 129), AutoSize = true };
+            this.Controls.Add(lblOrderSummary);
+
+            dgvOrderItems = CreateCleanGrid();
+            dgvOrderItems.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
+            this.Controls.Add(dgvOrderItems);
+        }
+
+        private DataGridView CreateCleanGrid()
+        {
+            DataGridView dgv = new DataGridView
             {
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
@@ -129,69 +155,49 @@ namespace ITP4915M_Group11
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 RowHeadersVisible = false,
-                ScrollBars = ScrollBars.Both,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,
                 EnableHeadersVisualStyles = false
             };
-
-            dgvComplaints.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            dgvComplaints.DefaultCellStyle.Padding = new Padding(10);
-            dgvComplaints.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
-
-            dgvComplaints.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(79, 70, 229);
-            dgvComplaints.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvComplaints.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvComplaints.ColumnHeadersDefaultCellStyle.Padding = new Padding(10);
-            dgvComplaints.ColumnHeadersHeight = 45;
-
-            dgvComplaints.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            dgvComplaints.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
-
-            dgvComplaints.SelectionChanged += dgvComplaints_SelectionChanged;
-            this.Controls.Add(dgvComplaints);
+            dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            dgv.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
+            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgv.ColumnHeadersHeight = 35;
+            return dgv;
         }
 
-        private void AfterServiceForm_SizeChanged(object sender, EventArgs e)
-        {
-            RecalculateCustomLayout();
-        }
+        private void AfterServiceForm_SizeChanged(object sender, EventArgs e) { RecalculateCustomLayout(); }
 
-        /// <summary>
-        /// 🛠️ 暴力手動佈局計算法：避開所有 WinForms 內置 Docking 漏洞，強行用數學擴展所有容器
-        /// </summary>
         private void RecalculateCustomLayout()
         {
             if (this.Width < 200 || this.Height < 200) return;
-
             this.SuspendLayout();
 
-            // 1. 強指定左側表單位置與高度
             pnlLeftCard.Location = new Point(20, 20);
             pnlLeftCard.Size = new Size(380, this.Height - 40);
 
-            // 2. 計算右側可用範圍起始點
             int rightStartX = pnlLeftCard.Right + 20;
             int rightWidth = this.Width - rightStartX - 20;
 
             if (rightWidth > 100)
             {
-                // 3. 強行鎖死右側標題與搜尋欄
                 lblGridTitle.Location = new Point(rightStartX, 22);
                 txtSearchHistory.Location = new Point(this.Width - txtSearchHistory.Width - 25, 22);
 
-                // 4. 🔥 核心：用絕對數學計算指定 DataGridView 寬高，逼迫佢食盡賸餘右邊全部畫面！
-                dgvComplaints.Location = new Point(rightStartX, 65);
-                dgvComplaints.Size = new Size(rightWidth, this.Height - 85);
+                int availableHeight = this.Height - 110;
+                int topGridHeight = (int)(availableHeight * 0.55); // 55% 給 Tickets
+                int botGridHeight = availableHeight - topGridHeight; // 45% 給 Items
 
-                // 5. 每次大細變更，都通知 DataGridView 重新刷滿每一列
-                if (dgvComplaints.Columns.Count > 0)
-                {
-                    dgvComplaints.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
-                    dgvComplaints.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-                }
+                dgvComplaints.Location = new Point(rightStartX, 60);
+                dgvComplaints.Size = new Size(rightWidth, topGridHeight);
+
+                int bottomSectionY = dgvComplaints.Bottom + 15;
+                lblItemsTitle.Location = new Point(rightStartX, bottomSectionY);
+                lblOrderSummary.Location = new Point(this.Width - lblOrderSummary.Width - 25, bottomSectionY);
+
+                dgvOrderItems.Location = new Point(rightStartX, bottomSectionY + 30);
+                dgvOrderItems.Size = new Size(rightWidth, botGridHeight);
             }
-
             this.ResumeLayout(false);
         }
 
@@ -201,13 +207,13 @@ namespace ITP4915M_Group11
             TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = width, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
             container.Controls.Add(lbl); container.Controls.Add(txt);
-            topY += 70;
+            topY += 65;
             return txt;
         }
 
         private void CboRequestType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (string.Equals(cboRequestType.Text.Trim(), "Refund", StringComparison.OrdinalIgnoreCase))
+            if (cboRequestType.Text.Contains("Refund") || cboRequestType.Text.Contains("Return"))
             {
                 txtRefundAmount.Enabled = true;
                 txtRefundAmount.BackColor = Color.White;
@@ -221,19 +227,92 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 💾 資料庫商業邏輯層
+        #region 💾 企業級智能商業邏輯
         private void SetupDropdowns()
         {
             cboRequestType.Items.Clear();
-            cboRequestType.Items.AddRange(new string[] { "General Complaint", "Return", "Replacement", "Refund" });
+            cboRequestType.Items.AddRange(new string[] { "General Complaint", "Return & Refund", "Product Replacement", "Partial Refund" });
 
             cboStatus.Items.Clear();
-            cboStatus.Items.AddRange(new string[] { "Pending", "In Progress", "Resolved", "Refunded", "Closed" });
+            cboStatus.Items.AddRange(new string[] { "Pending Investigation", "In Progress", "Resolved", "Refunded", "Closed" });
         }
 
         private void GenerateNewTicketID()
         {
-            txtComplaintID.Text = "COMP-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            txtComplaintID.Text = "TKT-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
+        }
+
+        // 🌟 訂單智能驗證：輸入 Order ID，自動去 DB 搵 CustomerID 出嚟，確保單號真實存在！
+        private void BtnVerifyOrder_Click(object sender, EventArgs e)
+        {
+            string searchOID = txtOrderID.Text.Trim();
+            if (string.IsNullOrWhiteSpace(searchOID)) { MessageBox.Show("Please enter an Order ID to lookup.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "SELECT CustomerID, TotalAmount FROM orders WHERE OrderID = @OID";
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@OID", searchOID);
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                txtCustomerID.Text = reader["CustomerID"].ToString();
+                                MessageBox.Show($"Order Verified!\nCustomer ID: {txtCustomerID.Text}\nOrder Total: ${Convert.ToDecimal(reader["TotalAmount"]):N2}", "Order Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                LoadOrderContextItems(searchOID); // 即刻顯示買咗咩
+                            }
+                            else
+                            {
+                                MessageBox.Show("Order ID not found in the system. Please verify with the customer.", "Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                txtCustomerID.Clear();
+                                dgvOrderItems.DataSource = null;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex) { MessageBox.Show("Database Error: " + ex.Message); }
+            }
+        }
+
+        // 🌟 載入該訂單嘅商品明細 (Order Context)
+        private void LoadOrderContextItems(string orderId)
+        {
+            if (string.IsNullOrWhiteSpace(orderId)) { dgvOrderItems.DataSource = null; lblOrderSummary.Text = "Total Amount Paid: $0.00"; return; }
+
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    // 1. 獲取訂單總額
+                    MySqlCommand cmdSum = new MySqlCommand("SELECT TotalAmount FROM orders WHERE OrderID = @OID", conn);
+                    cmdSum.Parameters.AddWithValue("@OID", orderId);
+                    object totalObj = cmdSum.ExecuteScalar();
+                    if (totalObj != null && totalObj != DBNull.Value) lblOrderSummary.Text = $"Total Amount Paid: ${Convert.ToDecimal(totalObj):N2}";
+
+                    // 2. 獲取購買明細
+                    string query = @"SELECT p.ProductName AS 'Product Name', 
+                                            l.Quantity AS 'Qty', 
+                                            l.UnitPrice AS 'Unit Price ($)', 
+                                            (l.Quantity * l.UnitPrice) AS 'Subtotal ($)' 
+                                     FROM order_lineitem l 
+                                     JOIN product p ON l.ProductID = p.ProductID 
+                                     WHERE l.OrderID = @OID";
+                    using (MySqlDataAdapter da = new MySqlDataAdapter(query, conn))
+                    {
+                        da.SelectCommand.Parameters.AddWithValue("@OID", orderId);
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+                        dgvOrderItems.DataSource = dt;
+                        dgvOrderItems.ClearSelection();
+                    }
+                }
+                catch (Exception) { dgvOrderItems.DataSource = null; }
+            }
         }
 
         private void EnsureComplaintTableExists()
@@ -249,7 +328,7 @@ namespace ITP4915M_Group11
                           `CustomerID` varchar(15) NOT NULL,
                           `OrderID` varchar(20) DEFAULT NULL,
                           `Date` datetime NOT NULL,
-                          `Status` varchar(20) NOT NULL,
+                          `Status` varchar(30) NOT NULL,
                           PRIMARY KEY (`ComplaintID`)
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
                     using (MySqlCommand cmd = new MySqlCommand(createTableQuery, conn)) { cmd.ExecuteNonQuery(); }
@@ -258,16 +337,8 @@ namespace ITP4915M_Group11
                     try { new MySqlCommand("ALTER TABLE `complaint` ADD COLUMN `Description` text;", conn).ExecuteNonQuery(); } catch { }
                     try { new MySqlCommand("ALTER TABLE `complaint` ADD COLUMN `RefundAmount` decimal(10,2) DEFAULT 0.00;", conn).ExecuteNonQuery(); } catch { }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Failed to verify system tables:\n" + ex.Message, "Database Alert", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+                catch (Exception) { }
             }
-        }
-
-        private void AfterServiceForm_Load(object sender, EventArgs e)
-        {
-
         }
 
         private void LoadComplaints()
@@ -277,63 +348,54 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT ComplaintID, CustomerID, OrderID, RequestType, RefundAmount, Date, Status, Description FROM complaint ORDER BY Date DESC";
+                    string query = "SELECT ComplaintID AS 'Ticket ID', OrderID AS 'Order Ref', CustomerID AS 'Customer', RequestType AS 'Type', RefundAmount AS 'Refund HKD', Date, Status, Description FROM complaint ORDER BY Date DESC";
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         originalComplaintsTable = new DataTable();
                         adapter.Fill(originalComplaintsTable);
-
                         dgvComplaints.DataSource = originalComplaintsTable;
                     }
-
                     if (dgvComplaints.Columns.Contains("Description")) dgvComplaints.Columns["Description"].Visible = false;
 
-                    // 防禦性定義每一列嘅標頭與基本寬度大細
-                    SetColumnStyle("ComplaintID", "Ticket ID", 150);
-                    SetColumnStyle("CustomerID", "Customer ID", 110);
-                    SetColumnStyle("OrderID", "Order ID", 110);
-                    SetColumnStyle("RequestType", "Request Type", 130);
-                    SetColumnStyle("Status", "Status", 100);
+                    if (dgvComplaints.Columns.Contains("Date")) dgvComplaints.Columns["Date"].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm";
+                    if (dgvComplaints.Columns.Contains("Refund HKD")) dgvComplaints.Columns["Refund HKD"].DefaultCellStyle.Format = "N2";
 
-                    if (dgvComplaints.Columns.Contains("RefundAmount"))
-                    {
-                        dgvComplaints.Columns["RefundAmount"].HeaderText = "Refund ($)";
-                        dgvComplaints.Columns["RefundAmount"].DefaultCellStyle.Format = "F2";
-                        dgvComplaints.Columns["RefundAmount"].MinimumWidth = 100;
-                    }
-
-                    if (dgvComplaints.Columns.Contains("Date"))
-                    {
-                        dgvComplaints.Columns["Date"].HeaderText = "Created Date";
-                        dgvComplaints.Columns["Date"].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm";
-                        dgvComplaints.Columns["Date"].MinimumWidth = 140;
-                    }
-
-                    RecalculateCustomLayout();
                     dgvComplaints.ClearSelection();
                 }
                 catch (Exception ex) { MessageBox.Show("Database Load Error: " + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
         }
 
-        private void SetColumnStyle(string colName, string headerText, int minWidth)
+        // 🌟 狀態視覺化 (Status Color Coding)
+        private void DgvComplaints_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (dgvComplaints.Columns.Contains(colName))
+            if (dgvComplaints.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
             {
-                dgvComplaints.Columns[colName].HeaderText = headerText;
-                dgvComplaints.Columns[colName].MinimumWidth = minWidth;
+                string status = e.Value.ToString();
+                if (status.Contains("Pending"))
+                {
+                    e.CellStyle.ForeColor = Color.FromArgb(234, 88, 12); // Orange
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "Resolved" || status == "Refunded")
+                {
+                    e.CellStyle.ForeColor = Color.FromArgb(16, 185, 129); // Green
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "Closed")
+                {
+                    e.CellStyle.ForeColor = Color.Gray;
+                }
             }
         }
 
         private void txtSearchHistory_TextChanged(object sender, EventArgs e)
         {
-            if (dgvComplaints.DataSource is DataTable dt && txtSearchHistory.Text != "Type ID to search...")
+            if (dgvComplaints.DataSource is DataTable dt && txtSearchHistory.Text != "Search by Ticket or Order ID...")
             {
                 string keyword = txtSearchHistory.Text.Trim().Replace("'", "''");
-                if (string.IsNullOrWhiteSpace(keyword))
-                    dt.DefaultView.RowFilter = "";
-                else
-                    dt.DefaultView.RowFilter = string.Format("ComplaintID LIKE '%{0}%' OR CustomerID LIKE '%{0}%' OR OrderID LIKE '%{0}%'", keyword);
+                if (string.IsNullOrWhiteSpace(keyword)) dt.DefaultView.RowFilter = "";
+                else dt.DefaultView.RowFilter = string.Format("[Ticket ID] LIKE '%{0}%' OR [Order Ref] LIKE '%{0}%'", keyword);
             }
         }
 
@@ -342,18 +404,21 @@ namespace ITP4915M_Group11
             if (dgvComplaints.SelectedRows.Count > 0)
             {
                 DataGridViewRow row = dgvComplaints.SelectedRows[0];
-                txtComplaintID.Text = row.Cells["ComplaintID"].Value?.ToString() ?? "";
-                txtCustomerID.Text = row.Cells["CustomerID"].Value?.ToString() ?? "";
-                txtOrderID.Text = row.Cells["OrderID"].Value?.ToString() ?? "";
+                txtComplaintID.Text = row.Cells["Ticket ID"].Value?.ToString() ?? "";
+                txtOrderID.Text = row.Cells["Order Ref"].Value?.ToString() ?? "";
+                txtCustomerID.Text = row.Cells["Customer"].Value?.ToString() ?? "";
 
-                string reqType = row.Cells["RequestType"].Value?.ToString()?.Trim() ?? "General Complaint";
+                string reqType = row.Cells["Type"].Value?.ToString()?.Trim() ?? "General Complaint";
                 cboRequestType.Text = reqType;
 
-                txtRefundAmount.Text = row.Cells["RefundAmount"].Value?.ToString() ?? "0.00";
+                txtRefundAmount.Text = row.Cells["Refund HKD"].Value?.ToString() ?? "0.00";
                 txtDetails.Text = row.Cells["Description"].Value?.ToString() ?? "";
 
                 string status = row.Cells["Status"].Value?.ToString();
                 if (cboStatus.Items.Contains(status)) cboStatus.Text = status;
+
+                // 自動載入該 Ticket 對應嘅訂單明細
+                LoadOrderContextItems(txtOrderID.Text.Trim());
             }
         }
 
@@ -361,13 +426,12 @@ namespace ITP4915M_Group11
         {
             string customerID = txtCustomerID.Text.Trim();
             string orderID = txtOrderID.Text.Trim();
-
             string cleanAmt = txtRefundAmount.Text.Replace("$", "").Trim();
             decimal.TryParse(cleanAmt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal refundAmt);
 
             if (string.IsNullOrWhiteSpace(customerID) || string.IsNullOrWhiteSpace(cboStatus.Text) || string.IsNullOrWhiteSpace(cboRequestType.Text))
             {
-                MessageBox.Show("Please provide Customer ID, Request Type, and Resolution Status!", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please complete the required fields (Customer ID, Request Type, Status). Tip: Use the 'Lookup' button to fetch Customer ID automatically from Order ID.", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -376,7 +440,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-
                     string sql = @"INSERT INTO complaint (ComplaintID, CustomerID, OrderID, RequestType, Description, RefundAmount, Date, Status) 
                                    VALUES (@CID, @CustID, @OID, @ReqType, @Desc, @RefundAmt, NOW(), @Status)
                                    ON DUPLICATE KEY UPDATE Status = @Status, OrderID = @OID, RequestType = @ReqType, Description = @Desc, RefundAmount = @RefundAmt;";
@@ -393,7 +456,7 @@ namespace ITP4915M_Group11
                         cmd.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show("Support Ticket has been successfully saved/updated!", "Transaction Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Support Ticket has been successfully saved!", "Transaction Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     ClearFields();
                     LoadComplaints();
                 }
@@ -412,6 +475,8 @@ namespace ITP4915M_Group11
             txtRefundAmount.Enabled = false;
             txtRefundAmount.BackColor = Color.FromArgb(241, 245, 249);
             dgvComplaints.ClearSelection();
+            dgvOrderItems.DataSource = null;
+            lblOrderSummary.Text = "Total Amount Paid: $0.00";
             GenerateNewTicketID();
         }
         #endregion
