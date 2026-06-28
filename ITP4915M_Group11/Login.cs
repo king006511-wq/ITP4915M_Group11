@@ -17,7 +17,7 @@ namespace ITP4915M_Group11
         // 🎨 Modern UI Element Variables
         // ==========================================
         private TextBox txtUser, txtPass;
-        private Button btnLogin, btnExit, btnMinimize;
+        private Button btnLogin;
         private Panel pnlCard;
 
         // ⏳ 動畫引擎變數
@@ -34,24 +34,30 @@ namespace ITP4915M_Group11
             }
         }
 
-        #region 🎨 網頁級動態全螢幕 UI 構建
+        #region 🎨 網頁級動態 UI 構建 (Web-like Dynamic UI)
         private void InitializeAnimatedPremiumUI()
         {
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Enterprise ERP Login";
+            this.Size = new Size(1000, 650);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
 
-            // 🌟 核心修改：改為電影感無邊框全螢幕 (Borderless Fullscreen)
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;
-            this.DoubleBuffered = true; // 開啟雙重緩衝避免閃爍
+            // 開啟雙重緩衝，防止動畫閃爍 (Anti-Flicker)
+            this.DoubleBuffered = true;
 
-            // 💳 懸浮登入卡片 (Login Card)
+            // ==========================================
+            // 💳 置中懸浮登入卡片 (Login Card)
+            // ==========================================
             pnlCard = new Panel
             {
                 Size = new Size(440, 480),
                 BackColor = Color.White,
                 Padding = new Padding(40)
             };
+            // 將卡片置中
+            pnlCard.Location = new Point((this.Width - pnlCard.Width) / 2, (this.Height - pnlCard.Height) / 2 - 20);
             this.Controls.Add(pnlCard);
 
             // 頂部琥珀金飾條
@@ -89,27 +95,12 @@ namespace ITP4915M_Group11
             // 登入按鈕
             btnLogin = new Button { Text = "Sign In / 登入", Location = new Point(45, currentY), Size = new Size(350, 48), BackColor = Color.FromArgb(15, 23, 42), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnLogin.FlatAppearance.BorderSize = 0;
-            btnLogin.MouseEnter += (s, e) => btnLogin.BackColor = Color.FromArgb(30, 41, 59);
-            btnLogin.MouseLeave += (s, e) => btnLogin.BackColor = Color.FromArgb(15, 23, 42);
+
+            // 按鈕 Hover 動畫效果
+            btnLogin.MouseEnter += (s, e) => btnLogin.BackColor = Color.FromArgb(30, 41, 59); // Slate 800
+            btnLogin.MouseLeave += (s, e) => btnLogin.BackColor = Color.FromArgb(15, 23, 42); // Slate 900
             btnLogin.Click += btnLogin_Click;
             pnlCard.Controls.Add(btnLogin);
-
-            // 🛠️ 建立右上角全螢幕專用「最小化」與「關閉」按鈕
-            btnMinimize = new Button { Text = "—", Font = new Font("Segoe UI", 9F, FontStyle.Bold), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, BackColor = Color.Transparent };
-            btnMinimize.FlatAppearance.BorderSize = 0;
-            this.Controls.Add(btnMinimize);
-
-            btnExit = new Button { Text = "✕", Font = new Font("Segoe UI", 11F, FontStyle.Bold), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, BackColor = Color.Transparent };
-            btnExit.FlatAppearance.BorderSize = 0;
-            btnExit.Click += (s, e) => Application.Exit();
-            this.Controls.Add(btnExit);
-
-            // 🔄 智能 Resize 引擎：無論任何解析度，永遠即時重新導向計算「絕對置中」
-            this.Resize += (s, e) => {
-                if (pnlCard != null) pnlCard.Location = new Point((this.Width - pnlCard.Width) / 2, (this.Height - pnlCard.Height) / 2);
-                if (btnExit != null) btnExit.Location = new Point(this.Width - 45, 10);
-                if (btnMinimize != null) btnMinimize.Location = new Point(this.Width - 85, 10);
-            };
 
             this.AcceptButton = btnLogin;
         }
@@ -135,15 +126,15 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 🌌 日夜交替全螢幕重繪引擎
+        #region 🌌 日夜交替動畫引擎 (Sky Cycle Animation Engine)
         private void StartBackgroundAnimation()
         {
-            animTimer = new Timer { Interval = 30 };
+            animTimer = new Timer { Interval = 30 }; // ~33 FPS
             animTimer.Tick += (s, e) =>
             {
-                timeOffset += 0.012f; // 稍微放慢一點點，大螢幕滑動更流暢優雅
+                timeOffset += 0.015f; // 控制日夜交替速度
                 if (timeOffset > Math.PI * 2) timeOffset -= (float)(Math.PI * 2);
-                this.Invalidate();
+                this.Invalidate(); // 觸發 Form 的 OnPaint 重繪背景
             };
             animTimer.Start();
         }
@@ -154,67 +145,72 @@ namespace ITP4915M_Group11
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
+            // 1. 計算日夜比例 (0 = 日, 1 = 夜)
             float ratio = (float)(Math.Sin(timeOffset) + 1) / 2f;
 
-            Color dayColor = Color.FromArgb(243, 244, 246);
-            Color nightColor = Color.FromArgb(15, 23, 42);
+            // 提取網頁版嘅日夜顏色
+            Color dayColor = Color.FromArgb(243, 244, 246);   // Slate 50 (白晝)
+            Color nightColor = Color.FromArgb(15, 23, 42);    // Slate 900 (黑夜)
 
+            // 平滑過渡 RGB 值
             int r = (int)(dayColor.R + (nightColor.R - dayColor.R) * ratio);
             int gCol = (int)(dayColor.G + (nightColor.G - dayColor.G) * ratio);
             int b = (int)(dayColor.B + (nightColor.B - dayColor.B) * ratio);
 
             Color currentSky = Color.FromArgb(r, gCol, b);
-            g.Clear(currentSky);
+            g.Clear(currentSky); // 繪製背景
 
-            // 🌟 智能動態反轉控制掣顏色，避免按鈕喺日頭/黑夜被背景「食咗」
-            Color controlColor = ratio > 0.5f ? Color.FromArgb(203, 213, 225) : Color.FromArgb(71, 85, 105);
-            if (btnExit != null) btnExit.ForeColor = controlColor;
-            if (btnMinimize != null) btnMinimize.ForeColor = controlColor;
-
-            // 2. 針對全螢幕優化的日月軌跡計算
+            // 2. 準備繪製日月光暈
             int centerX = this.Width / 2;
-            int centerY = this.Height + 200; // 降低圓心，擴大拱形拋物線
-            int orbitRadius = this.Width / 2 + 150;
+            int centerY = this.Height + 100; // 圓心在視窗底部下方，形成拱形軌跡
+            int orbitRadius = this.Width / 2 + 100;
 
             // ☀️ 繪製太陽 (Sun Glow)
             float sunAngle = timeOffset;
             int sunX = centerX - (int)(Math.Cos(sunAngle) * orbitRadius);
             int sunY = centerY - (int)(Math.Sin(sunAngle) * orbitRadius);
 
+            // 太陽在夜晚會變透明
             int sunAlpha = (int)(180 * (1 - ratio));
             if (sunAlpha > 0)
             {
                 using (GraphicsPath path = new GraphicsPath())
                 {
-                    path.AddEllipse(sunX - 350, sunY - 350, 700, 700); // 放大光暈範圍至 700px 迎合大螢幕
+                    path.AddEllipse(sunX - 250, sunY - 250, 500, 500);
                     using (PathGradientBrush pgb = new PathGradientBrush(path))
                     {
-                        pgb.CenterColor = Color.FromArgb(sunAlpha, 245, 158, 11);
+                        pgb.CenterColor = Color.FromArgb(sunAlpha, 245, 158, 11); // Amber
                         pgb.SurroundColors = new Color[] { Color.Transparent };
                         g.FillPath(pgb, path);
                     }
                 }
             }
 
-            // 🌙 繪製月亮 (Moon Glow)
+            // 🌙 繪製月亮 (Moon Glow) - 在太陽對面 (+180度/PI)
             float moonAngle = timeOffset + (float)Math.PI;
             int moonX = centerX - (int)(Math.Cos(moonAngle) * orbitRadius);
             int moonY = centerY - (int)(Math.Sin(moonAngle) * orbitRadius);
 
+            // 月亮在白天會變透明
             int moonAlpha = (int)(180 * ratio);
             if (moonAlpha > 0)
             {
                 using (GraphicsPath path = new GraphicsPath())
                 {
-                    path.AddEllipse(moonX - 300, moonY - 300, 600, 600); // 放大光暈範圍至 600px
+                    path.AddEllipse(moonX - 200, moonY - 200, 400, 400);
                     using (PathGradientBrush pgb = new PathGradientBrush(path))
                     {
-                        pgb.CenterColor = Color.FromArgb(moonAlpha, 186, 230, 253);
+                        pgb.CenterColor = Color.FromArgb(moonAlpha, 186, 230, 253); // Light Blue
                         pgb.SurroundColors = new Color[] { Color.Transparent };
                         g.FillPath(pgb, path);
                     }
                 }
             }
+        }
+
+        private void Login_Load(object sender, EventArgs e)
+        {
+
         }
         #endregion
 
@@ -238,6 +234,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
+
+                    // 使用 SHA2(256) 比對已雜湊的密碼
                     string loginQuery = "SELECT StaffID, Name, Role FROM staff WHERE StaffID = @user AND Password = SHA2(@pass,256)";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
@@ -249,16 +247,19 @@ namespace ITP4915M_Group11
                         {
                             if (reader.Read())
                             {
+                                // 💾 儲存 Session
                                 UserSession.LoggedInStaffID = reader["StaffID"].ToString();
                                 UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
                                 UserSession.LoggedInStaffRole = reader["Role"] != DBNull.Value ? reader["Role"].ToString().Trim() : "";
                                 UserSession.LoginTime = DateTime.Now;
                                 UserSession.LoggedInDepartment = "General";
 
+                                // 停止動畫節省資源
                                 if (animTimer != null) animTimer.Stop();
 
                                 MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName} ({UserSession.LoggedInStaffRole}).", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                                // 跳轉至主控制面板
                                 MainDashboard dashboard = new MainDashboard();
                                 dashboard.FormClosed += (s, args) => this.Close();
                                 dashboard.Show();
