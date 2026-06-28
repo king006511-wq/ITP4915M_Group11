@@ -198,6 +198,11 @@ namespace ITP4915M_Group11
 
             this.ResumeLayout(false);
         }
+
+        private void GoodsReceivedForm_Load_1(object sender, EventArgs e)
+        {
+
+        }
         #endregion
 
         #region 💾 資料庫連線與核心邏輯

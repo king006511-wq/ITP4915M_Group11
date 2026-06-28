@@ -325,23 +325,30 @@ namespace ITP4915M_Group11
                             string batchPrefix = "R" + DateTime.Now.ToString("yyMMdd");
                             int seq = 1;
 
-                            foreach (DataRow row in cartTable.Rows)
+                            // 🌟 修正 1: 將 Random 移出迴圈外，保證產生真正嘅隨機數
+                            Random rnd = new Random();
+
+                            // 🌟 修正 2: 將 SQL Query 同 SqlCommand 宣告移出迴圈外提升效能
+                            string query = @"INSERT INTO reorder_card 
+                                             (ReOrderCardID, MaterialID, RequestedQty, Status, TriggerDate) 
+                                             VALUES (@rcID, @matID, @qty, 'Pending Approval', NOW())";
+
+                            using (MySqlCommand cmd = new MySqlCommand(query, conn, trans))
                             {
-                                string rcID = batchPrefix + (new Random().Next(10, 99)).ToString() + seq.ToString("D2");
-                                if (rcID.Length > 14) rcID = rcID.Substring(0, 14);
-
-                                string query = @"INSERT INTO reorder_card 
-                                                 (ReOrderCardID, MaterialID, RequestedQty, Status, TriggerDate) 
-                                                 VALUES (@rcID, @matID, @qty, 'Pending Approval', NOW())";
-
-                                using (MySqlCommand cmd = new MySqlCommand(query, conn, trans))
+                                foreach (DataRow row in cartTable.Rows)
                                 {
+                                    string rcID = batchPrefix + rnd.Next(10, 99).ToString() + seq.ToString("D2");
+                                    if (rcID.Length > 14) rcID = rcID.Substring(0, 14);
+
+                                    // 🌟 每次執行前先 Clear Parameters，再入新數據
+                                    cmd.Parameters.Clear();
                                     cmd.Parameters.AddWithValue("@rcID", rcID);
                                     cmd.Parameters.AddWithValue("@matID", row["MaterialID"]);
                                     cmd.Parameters.AddWithValue("@qty", row["Qty"]);
+
                                     cmd.ExecuteNonQuery();
+                                    seq++;
                                 }
-                                seq++;
                             }
 
                             trans.Commit();

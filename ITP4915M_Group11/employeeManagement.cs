@@ -8,499 +8,192 @@ namespace ITP4915M_Group11
 {
     public partial class EmployeeManagement : Form
     {
-        // ==========================================
-        // 🔒 Database Configuration
-        // ==========================================
-        private readonly string connString = UserSession.ConnString;
+        private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
-        // ==========================================
-        // 🎨 Modern UI Element Variables
-        // ==========================================
         private TextBox txtStaffID, txtName, txtPassword;
         private ComboBox cboRole;
         private DataGridView dgvStaff;
-        private Button btnAddStaff, btnUpdate, btnDelete, btnReset;
 
         public EmployeeManagement()
         {
-            InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                ThemeManager.ApplyTheme(this);
-                InitializePremiumModernUI(); // Initialize Pure English Dynamic UI
-                SetupRoleControls();         // Ingest Role options into ComboBox
-                LoadStaffData();             // Fetch staff list from Database
+                InitializeUI();
+                LoadData();
             }
         }
 
-        #region 🔒 System Security Gatekeeper Enforcement
-        private void EmployeeManagement_Load(object sender, EventArgs e)
+        private void InitializeUI()
         {
-            // 🎯 Check if the user has Manager or Administrator permissions
-            string currentRole = UserSession.LoggedInStaffRole;
-            string currentStaffID = UserSession.LoggedInStaffID;
-
-            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
-                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
-
-            if (!isAuthorized)
-            {
-                MessageBox.Show(
-                    $"[SECURITY ALERT] Access Denied!\n\n" +
-                    $"Logged In Staff ID: {(string.IsNullOrEmpty(currentStaffID) ? "Unknown" : currentStaffID)}\n" +
-                    $"Your Account Role is: \"{(string.IsNullOrEmpty(currentRole) ? "None" : currentRole)}\"\n\n" +
-                    $"Only a Manager or Administrator is authorized to access Employee Management profiles.",
-                    "System Security Guard",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Stop
-                );
-
-                // Gracefully abort and force close the form context before it finishes rendering
-                this.BeginInvoke(new MethodInvoker(this.Close));
-            }
-        }
-        #endregion
-
-        #region 🎨 Dynamic Premium English UI Construction
-        private void InitializePremiumModernUI()
-        {
-            // 1. Clear old control leftovers to prevent overlapping or designer mismatches
             this.Controls.Clear();
-
-            // 2. Main Window Settings
-            this.Text = "Premium Living Furniture - HR & Staff Resource Control Center";
-            this.Size = new Size(940, 750); // Adjusted from 1180 to 940 to remove the sidebar space
-            this.StartPosition = FormStartPosition.CenterScreen;
+            this.Text = "Premium Living - Staff Master Data";
+            this.Size = new Size(1180, 750);
             this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.Font = new Font("Segoe UI", 10F);
 
-            // Wire up the load event handler to trigger security checking routines
-            this.Load += EmployeeManagement_Load;
+            // 只有 Manager 同 Admin 可以管理員工
+            AuthorizationHelper.EnforceRole(this, "Manager", "Administrator");
 
-            // ==============================================================
-            // 🛑 Left Sidebar Navigation Panel code has been completely REMOVED here.
-            // ==============================================================
+            Label lblHeader = new Label { Text = "👔 Staff Master Data Maintenance", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
+            this.Controls.Add(lblHeader);
 
-            // 4. Right Main Workspace
-            Panel pnlMain = new Panel
-            {
-                Location = new Point(0, 0), // Shifted to 0 to align perfectly to the left
-                Size = new Size(900, 750)
-            };
-            this.Controls.Add(pnlMain);
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 500), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            this.Controls.Add(pnlCard);
 
-            Label lblHeader = new Label
-            {
-                Text = "HR & Employee Resource Management Center",
-                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(30, 20),
-                AutoSize = true
-            };
-            pnlMain.Controls.Add(lblHeader);
+            int startY = 20;
+            txtStaffID = CreateInput(pnlCard, ref startY, "Staff ID *:");
+            txtName = CreateInput(pnlCard, ref startY, "Staff Name *:");
 
-            // Go Back button (top-right) - returns to previous page by closing this form
-            Button btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(740, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
-            btnBackHome.FlatAppearance.BorderSize = 0;
-            btnBackHome.Click += (s, e) => {
-                try
-                {
-                    this.Close();
-                }
-                catch
-                {
-                    this.Hide();
-                }
-            };
-            pnlMain.Controls.Add(btnBackHome);
+            // Password Field
+            Label lblPwd = new Label { Text = "Password (leave blank to keep current):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtPassword = new TextBox { Location = new Point(20, startY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, PasswordChar = '●' };
+            pnlCard.Controls.Add(lblPwd); pnlCard.Controls.Add(txtPassword);
+            startY += 65;
 
-            // 5. Input Parameter Card Panel (Left Side Container)
-            Panel pnlCard = new Panel
-            {
-                Location = new Point(30, 85),
-                Size = new Size(420, 620),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
-            pnlMain.Controls.Add(pnlCard);
+            // Role Combo
+            Label lblRole = new Label { Text = "System Role *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboRole = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
+            cboRole.Items.AddRange(new string[] { "Manager", "Administrator", "Sales Representative", "Logistics Driver", "Warehouse Specialist", "Procurement Officer", "System Manager" });
+            pnlCard.Controls.Add(lblRole); pnlCard.Controls.Add(cboRole);
+            startY += 75;
 
-            Label lblCardTitle = new Label
-            {
-                Text = "📋 Staff Profile Parameters",
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(37, 99, 235),
-                Location = new Point(20, 15),
-                AutoSize = true
-            };
-            pnlCard.Controls.Add(lblCardTitle);
+            Button btnAdd = new Button { Text = "➕ Add", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            Button btnUpdate = new Button { Text = "💾 Update", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            Button btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(20, startY + 50), Size = new Size(160, 40), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            Button btnClear = new Button { Text = "🧹 Clear", Location = new Point(195, startY + 50), Size = new Size(160, 40), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
 
-            int startY = 65;
+            btnAdd.Click += BtnAdd_Click; btnUpdate.Click += BtnUpdate_Click; btnDelete.Click += BtnDelete_Click; btnClear.Click += (s, e) => ClearForm();
+            pnlCard.Controls.AddRange(new Control[] { btnAdd, btnUpdate, btnDelete, btnClear });
 
-            // Form Input Layouts
-            txtStaffID = CreateStyledTextBox(pnlCard, ref startY, "Staff ID / System Username *:", false);
-            txtName = CreateStyledTextBox(pnlCard, ref startY, "Full Employee Name *:", false);
-            txtPassword = CreateStyledTextBox(pnlCard, ref startY, "Account Access Password *:", false);
-
-            // Dropdown Role Picker Spec
-            Label lblRole = new Label { Text = "Corporate Authorization Role *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            cboRole = new ComboBox { Location = new Point(20, startY + 22), Width = 375, Font = new Font("Segoe UI", 10.5F), DropDownStyle = ComboBoxStyle.DropDownList };
-            pnlCard.Controls.Add(lblRole);
-            pnlCard.Controls.Add(cboRole);
-            startY += 85;
-
-            // 6. Styled Action CRUD Button Cluster
-            btnAddStaff = new Button
-            {
-                Text = "➕ Add New Employee",
-                Location = new Point(20, startY),
-                Size = new Size(375, 42),
-                BackColor = Color.FromArgb(16, 185, 129), // Emerald Green
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnAddStaff.FlatAppearance.BorderSize = 0;
-            btnAddStaff.Click += btnAddStaff_Click;
-            pnlCard.Controls.Add(btnAddStaff);
-            startY += 52;
-
-            btnUpdate = new Button
-            {
-                Text = "🔄 Update Staff Records",
-                Location = new Point(20, startY),
-                Size = new Size(375, 42),
-                BackColor = Color.FromArgb(245, 158, 11), // Amber Orange
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnUpdate.FlatAppearance.BorderSize = 0;
-            btnUpdate.Click += btnUpdate_Click;
-            pnlCard.Controls.Add(btnUpdate);
-            startY += 52;
-
-            btnDelete = new Button
-            {
-                Text = "🗑️ Terminate & Delete Account",
-                Location = new Point(20, startY),
-                Size = new Size(375, 42),
-                BackColor = Color.FromArgb(239, 68, 68), // Rose Red
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnDelete.FlatAppearance.BorderSize = 0;
-            btnDelete.Click += btnDelete_Click;
-            pnlCard.Controls.Add(btnDelete);
-            startY += 52;
-
-            // ✨ Reset / Clear Button Layout
-            btnReset = new Button
-            {
-                Text = "🧹 Clear / Reset Fields",
-                Location = new Point(20, startY),
-                Size = new Size(375, 42),
-                BackColor = Color.FromArgb(100, 116, 139), // Slate Gray
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnReset.FlatAppearance.BorderSize = 0;
-            btnReset.Click += (s, e) => {
-                dgvStaff.ClearSelection();
-                ClearFields();
-            };
-            pnlCard.Controls.Add(btnReset);
-
-            // 7. Grid View Panel Container (Right Side List View)
-            Label lblGridTitle = new Label
-            {
-                Text = "👥 Corporate Staff Directory Ledger",
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(480, 85),
-                AutoSize = true
-            };
-            pnlMain.Controls.Add(lblGridTitle);
-
-            dgvStaff = new DataGridView
-            {
-                Location = new Point(480, 125),
-                Size = new Size(390, 580),
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                AllowUserToAddRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                RowHeadersVisible = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                GridColor = Color.FromArgb(241, 245, 249)
-            };
-
-            // Modern Grid Specifications Setup
-            dgvStaff.EnableHeadersVisualStyles = false;
+            dgvStaff = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 600), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvStaff.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvStaff.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvStaff.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvStaff.ColumnHeadersHeight = 38;
-            dgvStaff.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            dgvStaff.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
-            dgvStaff.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
-
-            // Row Selection Tracker Linkage
-            dgvStaff.SelectionChanged += dgvStaff_SelectionChanged;
-
-            pnlMain.Controls.Add(dgvStaff);
+            dgvStaff.SelectionChanged += DgvStaff_SelectionChanged;
+            this.Controls.Add(dgvStaff);
         }
 
-        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
+        private TextBox CreateInput(Panel container, ref int y, string label)
         {
-            Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 375, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White };
-            if (readOnly)
-            {
-                txt.ReadOnly = true;
-                txt.BackColor = Color.FromArgb(241, 245, 249);
-            }
-            container.Controls.Add(lbl);
-            container.Controls.Add(txt);
-            topY += 65;
-            return txt;
-        }
-        #endregion
-
-        #region 📦 Core Operational HR Logic Backends
-        private void SetupRoleControls()
-        {
-            cboRole.Items.Clear();
-            cboRole.Items.Add("Manager");
-            cboRole.Items.Add("System Manager");
-            cboRole.Items.Add("Administrator");
-            cboRole.Items.Add("Sales Representative");
-            cboRole.Items.Add("Logistics Driver");
-            cboRole.Items.Add("Warehouse Specialist");
-            cboRole.Items.Add("Procurement Officer");
-            cboRole.Items.Add("Factory Operator");
-            if (cboRole.Items.Count > 0) cboRole.SelectedIndex = 0;
+            Label lbl = new Label { Text = label, Location = new Point(20, y), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(20, y + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            container.Controls.Add(lbl); container.Controls.Add(txt);
+            y += 65; return txt;
         }
 
-        private void LoadStaffData()
+        private void LoadData()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string query = "SELECT StaffID, Name, Password, Role FROM staff";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT StaffID, Name, Role FROM staff", conn))
                     {
-                        DataTable dt = new DataTable();
-                        adapter.Fill(dt);
+                        DataTable dt = new DataTable(); da.Fill(dt);
                         dgvStaff.DataSource = dt;
                     }
-
-                    if (dgvStaff.Columns.Contains("Password"))
-                        dgvStaff.Columns["Password"].Visible = false;
-
-                    if (dgvStaff.Columns.Contains("StaffID")) dgvStaff.Columns["StaffID"].HeaderText = "Staff ID";
-                    if (dgvStaff.Columns.Contains("Name")) dgvStaff.Columns["Name"].HeaderText = "Employee Name";
-                    if (dgvStaff.Columns.Contains("Role")) dgvStaff.Columns["Role"].HeaderText = "Role Title";
-
-                    dgvStaff.ClearSelection();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Failed to load staff data:\n" + ex.Message);
-                }
+                catch (Exception ex) { MessageBox.Show("Error loading data: " + ex.Message); }
             }
         }
 
-        private void dgvStaff_SelectionChanged(object sender, EventArgs e)
+        private void DgvStaff_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvStaff.SelectedRows.Count > 0)
             {
-                DataGridViewRow row = dgvStaff.SelectedRows[0];
-                txtStaffID.Text = row.Cells["StaffID"].Value?.ToString() ?? "";
-                txtName.Text = row.Cells["Name"].Value?.ToString() ?? "";
-                txtPassword.Clear(); // Clear field to indicate password typing for edits
-                cboRole.Text = row.Cells["Role"].Value?.ToString() ?? "";
-
+                DataGridViewRow r = dgvStaff.SelectedRows[0];
+                txtStaffID.Text = r.Cells["StaffID"].Value.ToString();
+                txtName.Text = r.Cells["Name"].Value.ToString();
+                cboRole.Text = r.Cells["Role"].Value.ToString();
+                txtPassword.Clear(); // 安全起見，唔顯示密碼
                 txtStaffID.ReadOnly = true;
-                txtStaffID.BackColor = Color.FromArgb(241, 245, 249);
-            }
-            else
-            {
-                ClearFields();
             }
         }
 
-        private void btnAddStaff_Click(object sender, EventArgs e)
+        private void BtnAdd_Click(object sender, EventArgs e)
         {
-            // 權限檢查：僅 Manager 或 Administrator 可以新增員工
-            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
-            {
-                MessageBox.Show("Access Denied: insufficient privileges to add staff.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
-            {
-                MessageBox.Show("Please fill out all mandatory profile parameters input blocks fields first!", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // 密碼使用 SHA2(256) 雜湊存入，與登入時比對方式一致
-            string query = "INSERT INTO staff (StaffID, Name, Password, Role) VALUES (@id, @name, SHA2(@pass,256), @role)";
-
+            if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text)) { MessageBox.Show("ID, Name, and Password are required!"); return; }
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    // 🌟 使用 SHA2(256) 寫入密碼，完美配合 Login.cs
+                    string sql = "INSERT INTO staff (StaffID, Name, Password, Role) VALUES (@id, @n, SHA2(@pwd, 256), @r)";
+                    using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
-                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@name", txtName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@pass", txtPassword.Text);
-                        cmd.Parameters.AddWithValue("@role", cboRole.Text);
-
-                        int rowsAffected = cmd.ExecuteNonQuery();
-                        if (rowsAffected > 0)
-                        {
-                            MessageBox.Show("Successfully provisioned new personnel access profile accounts record!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            ClearFields();
-                            LoadStaffData();
-                        }
+                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim()); cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@pwd", txtPassword.Text); cmd.Parameters.AddWithValue("@r", cboRole.Text);
+                        cmd.ExecuteNonQuery();
                     }
+                    MessageBox.Show("Staff member added."); LoadData(); ClearForm();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Profile provisioning architecture initialization failed:\n" + ex.Message, "Insertion Aborted", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                catch (Exception ex) { MessageBox.Show(ex.Message); }
             }
         }
 
-        private void btnUpdate_Click(object sender, EventArgs e)
+        private void BtnUpdate_Click(object sender, EventArgs e)
         {
-            // 權限檢查：僅 Manager 或 Administrator 可以更新員工資料
-            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
-            {
-                MessageBox.Show("Access Denied: insufficient privileges to update staff records.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
-            {
-                MessageBox.Show("Please select a registered employee line record ledger entry to manipulate payload updates parameters!", "Validation Missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // 密碼使用 SHA2(256) 雜湊存入，與登入時比對方式一致
-            string query = "UPDATE staff SET Name = @name, Password = SHA2(@pass,256), Role = @role WHERE StaffID = @id";
-
+            if (string.IsNullOrWhiteSpace(txtStaffID.Text)) return;
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    string sql;
+                    if (string.IsNullOrWhiteSpace(txtPassword.Text))
                     {
-                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@name", txtName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@pass", txtPassword.Text);
-                        cmd.Parameters.AddWithValue("@role", cboRole.Text);
-
-                        int rowsAffected = cmd.ExecuteNonQuery();
-                        if (rowsAffected > 0)
-                        {
-                            MessageBox.Show("Employee credentials parameter updated successfully!", "Commit Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            ClearFields();
-                            LoadStaffData();
-                        }
+                        // 如果無打密碼，就只 Update Name 同 Role
+                        sql = "UPDATE staff SET Name=@n, Role=@r WHERE StaffID=@id";
                     }
+                    else
+                    {
+                        // 🌟 如果有打密碼，就連密碼一齊 SHA256 Update
+                        sql = "UPDATE staff SET Name=@n, Password=SHA2(@pwd, 256), Role=@r WHERE StaffID=@id";
+                    }
+
+                    using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim()); cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@r", cboRole.Text);
+                        if (!string.IsNullOrWhiteSpace(txtPassword.Text)) cmd.Parameters.AddWithValue("@pwd", txtPassword.Text);
+                        cmd.ExecuteNonQuery();
+                    }
+                    MessageBox.Show("Staff member updated."); LoadData();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Profile configuration adjustment aborted:\n" + ex.Message, "Transaction Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                catch (Exception ex) { MessageBox.Show(ex.Message); }
             }
         }
 
-        private void btnDelete_Click(object sender, EventArgs e)
+        private void BtnDelete_Click(object sender, EventArgs e)
         {
-            // 權限檢查：僅 Manager 或 Administrator 可以刪除員工
-            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
+            if (string.IsNullOrWhiteSpace(txtStaffID.Text)) return;
+            if (txtStaffID.Text == UserSession.LoggedInStaffID) { MessageBox.Show("You cannot delete yourself!"); return; }
+
+            if (MessageBox.Show("Delete this staff member?", "Confirm", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                MessageBox.Show("Access Denied: insufficient privileges to delete staff records.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtStaffID.Text))
-            {
-                MessageBox.Show("Please isolate a target staff row inside the directory registry ledger list map before staging deletion commands!", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            DialogResult result = MessageBox.Show(
-                $"Are you absolutely certain you want to permanently revoke system privileges and purge profile record for [{txtName.Text}] (ID: {txtStaffID.Text})?\n\nThis security clearance lifecycle execution cannot be reversed!",
-                "Security Warning - Critical Cleansing Command",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning
-            );
-
-            if (result == DialogResult.Yes)
-            {
-                string query = "DELETE FROM staff WHERE StaffID = @id";
-
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
                     try
                     {
                         conn.Open();
-                        using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                        using (MySqlCommand cmd = new MySqlCommand("DELETE FROM staff WHERE StaffID=@id", conn))
                         {
                             cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim());
-
-                            int rowsAffected = cmd.ExecuteNonQuery();
-                            if (rowsAffected > 0)
-                            {
-                                MessageBox.Show("Staff authentication profiles wiped from central records ledger database maps.", "Purge Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                ClearFields();
-                                LoadStaffData();
-                            }
+                            cmd.ExecuteNonQuery();
                         }
+                        LoadData(); ClearForm();
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Structural security lifecycle purge execution failed:\n" + ex.Message, "Purge Refused", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    catch (Exception) { MessageBox.Show("Cannot delete staff. They might be linked to existing orders or records."); }
                 }
             }
         }
 
-        private void ClearFields()
+        private void ClearForm()
         {
-            txtStaffID.Clear();
-            txtName.Clear();
-            txtPassword.Clear();
-
-            if (cboRole.Items.Count > 0)
-                cboRole.SelectedIndex = 0;
-
-            // Unlock Staff ID input box field and revert color schema back to baseline
-            txtStaffID.ReadOnly = false;
-            txtStaffID.BackColor = Color.White;
+            txtStaffID.Clear(); txtName.Clear(); txtPassword.Clear(); cboRole.SelectedIndex = -1;
+            txtStaffID.ReadOnly = false; dgvStaff.ClearSelection();
         }
-        #endregion
     }
 }

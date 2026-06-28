@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -15,13 +16,20 @@ namespace ITP4915M_Group11
         public decimal Price { get; set; }
     }
 
+    public class OrderCustomerItem
+    {
+        public string ID { get; set; }
+        public string Name { get; set; }
+    }
+
     public partial class OrderManagementForm : Form
     {
-        private readonly string connString = UserSession.ConnString;
+        private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private decimal currentUnitPrice = 0;
         private string currentStaffID;
-        private TextBox txtOrderID, txtCustomerID, txtStaffUIID, txtQty, txtUnitPrice;
-        private ComboBox cboProducts;
+
+        private TextBox txtOrderID, txtStaffUIID, txtQty, txtUnitPrice;
+        private ComboBox cboProducts, cboCustomers;
         private CheckBox chkRequireDelivery;
         private DataGridView dgvOrders;
         private Button btnSubmitOrder, btnUpdateOrder, btnClear, btnCreateQuotation;
@@ -31,537 +39,155 @@ namespace ITP4915M_Group11
         private decimal globalOrderTotal = 0;
         private Button btnAddItem, btnRemoveItem;
 
-        public OrderManagementForm() : this("S001") { }
+        public OrderManagementForm() : this(UserSession.LoggedInStaffID ?? "S001") { }
 
         public OrderManagementForm(string loggedInStaffID)
         {
             this.currentStaffID = loggedInStaffID;
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                InitializePremiumModernUI(); // 🛠️ Loaded with strict TableLayoutPanel Grid to prevent ALL overlaps
+                InitializePremiumModernUI();
             }
         }
 
         private void OrderManagementForm_Load(object sender, EventArgs e)
         {
-            this.currentStaffID = UserSession.LoggedInStaffID;
-            if (!CanAccess())
-            {
-                MessageBox.Show("[SECURITY ALERT] Access Denied!\n\nLogged In StaffID: " + currentStaffID + "\nYour Account Role is: \"" + (string.IsNullOrEmpty(UserSession.LoggedInStaffRole) ? "None / Empty" : UserSession.LoggedInStaffRole) + "\"\n\nOnly Manager, Administrator and Sales Representative are authorized to access this module.", "System Security Enforcer", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                this.BeginInvoke(new MethodInvoker(this.Close));
-                return;
-            }
+            this.currentStaffID = UserSession.LoggedInStaffID ?? "S001";
             GenerateOrderID();
+            LoadCustomersToCombo();
             LoadProductsToCombo();
             RefreshOrdersGrid();
         }
 
-        private bool EnsureCanCreateOrder()
-        {
-            if (!AuthorizationHelper.IsInRole(AuthorizationHelper.Roles.Sales, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.Administrator))
-            {
-                MessageBox.Show("Access Denied: insufficient privileges to create orders.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                return false;
-            }
-            return true;
-        }
-
-        private bool CanAccess()
-        {
-            string currentRole = UserSession.LoggedInStaffRole;
-            if (string.IsNullOrWhiteSpace(currentRole)) return false;
-            List<string> allowedRoles = new List<string> { "Manager", "Administrator", "Sales Representative" };
-            return allowedRoles.Any(role => role.Equals(currentRole.Trim(), StringComparison.OrdinalIgnoreCase));
-        }
-
-        #region 🎨 Dynamic Premium English UI Construction (Strict Table Grid)
         private void InitializePremiumModernUI()
         {
             this.Controls.Clear();
-            this.Text = "Premium Living Furniture - Advanced Sales Order Management";
+            this.Text = "Premium Living Furniture - Sales Front-End";
             this.BackColor = Color.FromArgb(241, 245, 249);
             this.FormBorderStyle = FormBorderStyle.None;
             this.Load += OrderManagementForm_Load;
 
-            // 🌟 1. Master Table Layout (Prevents overlapping permanently)
-            TableLayoutPanel mainTable = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-                BackColor = Color.Transparent
-            };
-            mainTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F)); // Header strictly 70px tall
-            mainTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // Content takes exact remaining height
+            TableLayoutPanel mainTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Color.Transparent };
+            mainTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
+            mainTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             this.Controls.Add(mainTable);
 
-            // 🌟 2. Header Panel
             Panel pnlHeader = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
-            Label lblHeader = new Label
-            {
-                Text = "Order Processing Dashboard",
-                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(20, 20),
-                AutoSize = true
-            };
+            Label lblHeader = new Label { Text = "Sales Order Drafting (Front-End)", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(20, 20), AutoSize = true };
             pnlHeader.Controls.Add(lblHeader);
-
-            Label lblStaff = new Label
-            {
-                Text = $"👤 Active Staff ID: {currentStaffID}",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(13, 148, 136),
-                Location = new Point(480, 26),
-                AutoSize = true
-            };
+            Label lblStaff = new Label { Text = $"👤 Sales Rep: {currentStaffID}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(13, 148, 136), Location = new Point(480, 26), AutoSize = true };
             pnlHeader.Controls.Add(lblStaff);
             mainTable.Controls.Add(pnlHeader, 0, 0);
 
-            // 🌟 3. Content Table (Left Inputs + Middle Spacer + Right Grid)
-            TableLayoutPanel contentTable = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 1,
-                Margin = new Padding(20, 0, 20, 20) // Outer bounds padding
-            };
-            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 510F)); // Left Panel rigidly 510px wide
-            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));  // Spacer rigidly 20px wide
-            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));  // Right Grid exactly fills the rest
+            TableLayoutPanel contentTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Margin = new Padding(20, 0, 20, 20) };
+            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 510F));
+            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
+            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             mainTable.Controls.Add(contentTable, 0, 1);
 
-            // 🌟 4. Left Panel: Inputs (With AutoScroll to prevent cutoff)
-            Panel pnlCard = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoScroll = true // Enables scrolling if the laptop screen is too small vertically
-            };
+            Panel pnlCard = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = true };
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(pnlCard, 0, 0);
 
-            // 🌟 5. Right Panel: Title + Grid
-            TableLayoutPanel rightTable = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-                Margin = new Padding(0)
-            };
+            TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0) };
             rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
             rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-
-            Label lblGridTitle = new Label
-            {
-                Text = "📊 Overall Order History",
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                AutoSize = true,
-                Dock = DockStyle.Bottom
-            };
+            Label lblGridTitle = new Label { Text = "📊 Order Status Tracking", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
             rightTable.Controls.Add(lblGridTitle, 0, 0);
 
-            dgvOrders = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                AllowUserToAddRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                RowHeadersVisible = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                GridColor = Color.FromArgb(241, 245, 249)
-            };
-            dgvOrders.EnableHeadersVisualStyles = false;
+            dgvOrders = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvOrders.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvOrders.ColumnHeadersHeight = 38;
             dgvOrders.SelectionChanged += dgvOrders_SelectionChanged;
             rightTable.Controls.Add(dgvOrders, 0, 1);
-
             contentTable.Controls.Add(rightTable, 2, 0);
 
-            // ====================================================
-            // 📝 Populate Left Input Panel (Preserved layout math)
-            // ====================================================
-            Label lblCardTitle = new Label
-            {
-                Text = "📝 Multi-Item Order Builder",
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(37, 99, 235),
-                Location = new Point(20, 15),
-                AutoSize = true
-            };
+            Label lblCardTitle = new Label { Text = "📝 Draft New Customer Order", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };
             pnlCard.Controls.Add(lblCardTitle);
 
             int startY = 50;
             txtOrderID = CreateStyledTextBox(pnlCard, ref startY, "Order ID (Auto):", true, 210);
             startY -= 65;
-            txtCustomerID = CreateStyledTextBox(pnlCard, ref startY, "Customer ID *:", false, 210, 240);
+
+            Label lblCust = new Label { Text = "Select Customer *:", Location = new Point(240, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboCustomers = new ComboBox { Location = new Point(240, startY + 25), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F), BackColor = Color.White };
+            pnlCard.Controls.Add(lblCust); pnlCard.Controls.Add(cboCustomers);
+            startY += 65;
 
             txtStaffUIID = CreateStyledTextBox(pnlCard, ref startY, "Staff ID:", true, 210);
             txtStaffUIID.Text = currentStaffID;
             startY -= 65;
 
-            Label lblCbo = new Label
-            {
-                Text = "Select Product:",
-                Location = new Point(240, startY),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(71, 85, 105)
-            };
-            cboProducts = new ComboBox
-            {
-                Location = new Point(240, startY + 25),
-                Width = 230,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10.5F),
-                BackColor = Color.White
-            };
+            Label lblCbo = new Label { Text = "Select Product:", Location = new Point(240, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboProducts = new ComboBox { Location = new Point(240, startY + 25), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F), BackColor = Color.White };
             cboProducts.SelectedIndexChanged += cboProducts_SelectedIndexChanged;
-            pnlCard.Controls.Add(lblCbo);
-            pnlCard.Controls.Add(cboProducts);
+            pnlCard.Controls.Add(lblCbo); pnlCard.Controls.Add(cboProducts);
             startY += 65;
 
-            txtUnitPrice = CreateStyledTextBox(pnlCard, ref startY, "Unit Price ($):", true, 130);
-            startY -= 65;
-            txtQty = CreateStyledTextBox(pnlCard, ref startY, "Qty:", false, 80, 160);
-            startY -= 65;
+            txtUnitPrice = CreateStyledTextBox(pnlCard, ref startY, "Unit Price ($):", true, 130); startY -= 65;
+            txtQty = CreateStyledTextBox(pnlCard, ref startY, "Qty:", false, 80, 160); startY -= 65;
 
-            btnAddItem = new Button
-            {
-                Text = "➕ Add Item",
-                Location = new Point(255, startY + 23),
-                Size = new Size(100, 32),
-                BackColor = Color.FromArgb(16, 185, 129),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnAddItem.Click += BtnAddItem_Click;
-            pnlCard.Controls.Add(btnAddItem);
+            btnAddItem = new Button { Text = "➕ Add Item", Location = new Point(255, startY + 23), Size = new Size(100, 32), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            btnAddItem.Click += BtnAddItem_Click; pnlCard.Controls.Add(btnAddItem);
 
-            btnRemoveItem = new Button
-            {
-                Text = "❌ Remove",
-                Location = new Point(365, startY + 23),
-                Size = new Size(105, 32),
-                BackColor = Color.FromArgb(239, 68, 68),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnRemoveItem.Click += BtnRemoveItem_Click;
-            pnlCard.Controls.Add(btnRemoveItem);
+            btnRemoveItem = new Button { Text = "❌ Remove", Location = new Point(365, startY + 23), Size = new Size(105, 32), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            btnRemoveItem.Click += BtnRemoveItem_Click; pnlCard.Controls.Add(btnRemoveItem);
             startY += 70;
 
-            Label lblCartGridTitle = new Label
-            {
-                Text = "📦 Staging Cart (Order Line Items)",
-                Location = new Point(20, startY),
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                AutoSize = true
-            };
-            pnlCard.Controls.Add(lblCartGridTitle);
-            startY += 25;
+            Label lblCartGridTitle = new Label { Text = "📦 Order Cart (Requires Approval Later)", Location = new Point(20, startY), Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            pnlCard.Controls.Add(lblCartGridTitle); startY += 25;
 
             cartTable = new DataTable();
-            // 🚀 更新欄位名稱為 ProductID 配合新 SQL 結構
-            cartTable.Columns.Add("ProductID", typeof(string));
-            cartTable.Columns.Add("Product Name", typeof(string));
-            cartTable.Columns.Add("Qty", typeof(int));
-            cartTable.Columns.Add("Unit Price", typeof(decimal));
-            cartTable.Columns.Add("Subtotal", typeof(decimal));
+            cartTable.Columns.Add("ProductID", typeof(string)); cartTable.Columns.Add("Product Name", typeof(string));
+            cartTable.Columns.Add("Qty", typeof(int)); cartTable.Columns.Add("Unit Price", typeof(decimal)); cartTable.Columns.Add("Subtotal", typeof(decimal));
 
-            dgvCart = new DataGridView
-            {
-                Location = new Point(20, startY),
-                Size = new Size(450, 160),
-                DataSource = cartTable,
-                AllowUserToAddRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                BackgroundColor = Color.White,
-                RowHeadersVisible = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-            };
-            dgvCart.EnableHeadersVisualStyles = false;
-            dgvCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
-            dgvCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            pnlCard.Controls.Add(dgvCart);
-            startY += 175;
+            dgvCart = new DataGridView { Location = new Point(20, startY), Size = new Size(450, 160), DataSource = cartTable, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, BackgroundColor = Color.White, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            dgvCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105); dgvCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            pnlCard.Controls.Add(dgvCart); startY += 175;
 
-            lblTotalAmountDisplay = new Label
-            {
-                Text = "Total Bill: $0.00",
-                Location = new Point(20, startY),
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 38, 38),
-                AutoSize = true
-            };
-            pnlCard.Controls.Add(lblTotalAmountDisplay);
-            startY += 40;
+            lblTotalAmountDisplay = new Label { Text = "Total Bill: $0.00", Location = new Point(20, startY), Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), AutoSize = true };
+            pnlCard.Controls.Add(lblTotalAmountDisplay); startY += 40;
 
-            chkRequireDelivery = new CheckBox
-            {
-                Text = "🚚 Require Delivery Service (Logistics)",
-                Location = new Point(20, startY),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(234, 88, 12),
-                Checked = true,
-                Cursor = Cursors.Hand
-            };
-            pnlCard.Controls.Add(chkRequireDelivery);
-            startY += 40;
+            chkRequireDelivery = new CheckBox { Text = "🚚 Require Delivery Service (Logistics)", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), ForeColor = Color.FromArgb(234, 88, 12), Checked = true };
+            pnlCard.Controls.Add(chkRequireDelivery); startY += 40;
 
-            btnSubmitOrder = new Button
-            {
-                Text = "➕ Create Order",
-                Location = new Point(20, startY),
-                Size = new Size(140, 42),
-                BackColor = Color.FromArgb(37, 99, 235),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnSubmitOrder.Click += btnCreateOrder_Click;
-            pnlCard.Controls.Add(btnSubmitOrder);
+            btnSubmitOrder = new Button { Text = "✅ Submit for Approval", Location = new Point(20, startY), Size = new Size(200, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            btnSubmitOrder.Click += btnCreateOrder_Click; pnlCard.Controls.Add(btnSubmitOrder);
 
-            btnUpdateOrder = new Button
-            {
-                Text = "✏️ Update",
-                Location = new Point(170, startY),
-                Size = new Size(140, 42),
-                BackColor = Color.FromArgb(245, 158, 11),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnUpdateOrder.Click += (s, e) => { /* 實作程式碼 */ };
-            pnlCard.Controls.Add(btnUpdateOrder);
+            btnUpdateOrder = new Button { Text = "✏️ Update Draft", Location = new Point(230, startY), Size = new Size(110, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            btnUpdateOrder.Click += btnUpdateOrder_Click; pnlCard.Controls.Add(btnUpdateOrder);
 
-            btnClear = new Button
-            {
-                Text = "🧹 Clear",
-                Location = new Point(320, startY),
-                Size = new Size(150, 42),
-                BackColor = Color.FromArgb(100, 116, 139),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnClear.Click += (s, e) => ClearFields();
-            pnlCard.Controls.Add(btnClear);
+            btnClear = new Button { Text = "🆕 New", Location = new Point(350, startY), Size = new Size(120, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            btnClear.Click += (s, e) => ClearFields(); pnlCard.Controls.Add(btnClear);
 
-            btnCreateQuotation = new Button
-            {
-                Text = "📄 Generate Order Quotation",
-                Location = new Point(20, startY + 50),
-                Size = new Size(450, 42),
-                BackColor = Color.FromArgb(124, 58, 237),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnCreateQuotation.Click += (s, e) => { /* 實作程式碼 */ };
-            pnlCard.Controls.Add(btnCreateQuotation);
+            btnCreateQuotation = new Button { Text = "📄 Export Document to Show Customer", Location = new Point(20, startY + 50), Size = new Size(450, 42), BackColor = Color.FromArgb(124, 58, 237), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold) };
+            btnCreateQuotation.Click += BtnCreateQuotation_Click; pnlCard.Controls.Add(btnCreateQuotation);
         }
 
         private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly, int width, int offsetX = 20)
         {
-            Label lbl = new Label
-            {
-                Text = labelText,
-                Location = new Point(offsetX, topY),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(71, 85, 105)
-            };
-            TextBox txt = new TextBox
-            {
-                Location = new Point(offsetX, topY + 25),
-                Width = width,
-                Font = new Font("Segoe UI", 10.5F),
-                BorderStyle = BorderStyle.FixedSingle,
-                BackColor = Color.White
-            };
-            if (readOnly)
-            {
-                txt.ReadOnly = true;
-                txt.BackColor = Color.FromArgb(241, 245, 249);
-            }
-            container.Controls.Add(lbl);
-            container.Controls.Add(txt);
-            topY += 65;
-            return txt;
-        }
-        #endregion
-
-        #region Operational Logic & Core Engines
-        private void cboProducts_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cboProducts.SelectedItem != null)
-            {
-                ProductItem selectedProduct = (ProductItem)cboProducts.SelectedItem;
-                currentUnitPrice = selectedProduct.Price;
-                txtUnitPrice.Text = currentUnitPrice.ToString("F2");
-            }
+            Label lbl = new Label { Text = labelText, Location = new Point(offsetX, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(offsetX, topY + 25), Width = width, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White };
+            if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
+            container.Controls.Add(lbl); container.Controls.Add(txt); topY += 65; return txt;
         }
 
-        private void BtnAddItem_Click(object sender, EventArgs e)
-        {
-            if (cboProducts.SelectedItem == null)
-            {
-                MessageBox.Show("Please select a product first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            if (!int.TryParse(txtQty.Text.Trim(), out int qty) || qty <= 0)
-            {
-                MessageBox.Show("Please enter a valid positive quantity.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            var selectedProduct = (ProductItem)cboProducts.SelectedItem;
-            string productID = selectedProduct.ID; // 🚀 修正變數名稱
-            string prodName = selectedProduct.Name;
-            decimal price = selectedProduct.Price;
-            decimal subtotal = price * qty;
-            bool itemExists = false;
-            foreach (DataRow row in cartTable.Rows)
-            {
-                if (row["ProductID"].ToString() == productID) // 🚀 修正為 ProductID 欄位
-                {
-                    row["Qty"] = Convert.ToInt32(row["Qty"]) + qty;
-                    row["Subtotal"] = Convert.ToDecimal(row["Qty"]) * price;
-                    itemExists = true;
-                    break;
-                }
-            }
-            if (!itemExists)
-            {
-                cartTable.Rows.Add(productID, prodName, qty, price, subtotal); // 🚀 寫入 ProductID
-            }
-            UpdateGlobalOrderTotal();
-        }
-
-        private void BtnRemoveItem_Click(object sender, EventArgs e)
-        {
-            if (dgvCart.SelectedRows.Count > 0)
-            {
-                foreach (DataGridViewRow row in dgvCart.SelectedRows)
-                {
-                    if (!row.IsNewRow) dgvCart.Rows.Remove(row);
-                }
-                UpdateGlobalOrderTotal();
-            }
-        }
-
-        private void UpdateGlobalOrderTotal()
-        {
-            globalOrderTotal = 0;
-            foreach (DataRow row in cartTable.Rows)
-            {
-                globalOrderTotal += Convert.ToDecimal(row["Subtotal"]);
-            }
-            lblTotalAmountDisplay.Text = $"Total Bill: ${globalOrderTotal:N2}";
-        }
-
-        private void dgvOrders_SelectionChanged(object sender, EventArgs e)
-        {
-            if (dgvOrders.CurrentRow == null || dgvOrders.CurrentRow.Index < 0) return;
-            object cellValue = dgvOrders.CurrentRow.Cells["Order ID"].Value;
-            if (cellValue == null || cellValue == DBNull.Value) return;
-            string selectedOrderID = cellValue.ToString();
-            cartTable.Clear();
-            using (MySqlConnection conn = new MySqlConnection(connString))
-            {
-                try
-                {
-                    conn.Open();
-                    string queryOrder = "SELECT CustomerID, StaffID FROM orders WHERE OrderID = @OrderID";
-                    using (MySqlCommand cmd = new MySqlCommand(queryOrder, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@OrderID", selectedOrderID);
-                        using (MySqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                txtOrderID.Text = selectedOrderID;
-                                txtCustomerID.Text = reader["CustomerID"].ToString();
-                                txtStaffUIID.Text = reader["StaffID"].ToString();
-                            }
-                        }
-                    }
-                    // 🚀 核心 SQL 修正：將 product_part 換成新嘅 product，欄位改做 ProductID 配合
-                    string queryLines = @"SELECT l.ProductID, p.ProductName, l.Quantity, l.UnitPrice FROM order_lineitem l JOIN product p ON l.ProductID = p.ProductID WHERE l.OrderID = @OrderID";
-                    using (MySqlCommand cmdLines = new MySqlCommand(queryLines, conn))
-                    {
-                        cmdLines.Parameters.AddWithValue("@OrderID", selectedOrderID);
-                        using (MySqlDataReader reader = cmdLines.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                string pID = reader["ProductID"].ToString();
-                                string pName = reader["ProductName"].ToString();
-                                int qty = Convert.ToInt32(reader["Quantity"]);
-                                decimal price = Convert.ToDecimal(reader["UnitPrice"]);
-                                decimal subtotal = qty * price;
-                                cartTable.Rows.Add(pID, pName, qty, price, subtotal);
-                            }
-                        }
-                    }
-                    UpdateGlobalOrderTotal();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Failed to load order details:\n" + ex.Message, "DB Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-        }
-
-        private void GenerateOrderID()
+        private void LoadCustomersToCombo()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string currentYear = DateTime.Now.ToString("yyyy");
-                    string prefix = "SO" + currentYear + "-";
-                    string query = "SELECT OrderID FROM orders WHERE OrderID LIKE @Prefix ORDER BY OrderID DESC LIMIT 1";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT CustomerID, Name FROM customer", conn))
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        cmd.Parameters.AddWithValue("@Prefix", prefix + "%");
-                        object result = cmd.ExecuteScalar();
-                        if (result != null && result != DBNull.Value)
-                        {
-                            string seqStr = result.ToString().Replace(prefix, "");
-                            if (int.TryParse(seqStr, out int seq))
-                            {
-                                txtOrderID.Text = prefix + (seq + 1).ToString("D4");
-                                return;
-                            }
-                        }
-                        txtOrderID.Text = prefix + "0001";
+                        List<OrderCustomerItem> list = new List<OrderCustomerItem>();
+                        while (reader.Read()) list.Add(new OrderCustomerItem { ID = reader["CustomerID"].ToString(), Name = $"{reader["CustomerID"]} - {reader["Name"]}" });
+                        cboCustomers.DataSource = list; cboCustomers.DisplayMember = "Name"; cboCustomers.ValueMember = "ID"; cboCustomers.SelectedIndex = -1;
                     }
                 }
-                catch (Exception)
-                {
-                    txtOrderID.Text = "SO" + DateTime.Now.ToString("yyyyMMddHHmm");
-                }
+                catch (Exception) { }
             }
         }
 
@@ -572,133 +198,257 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 🚀 核心 SQL 修正：讀取全新嘅 product 表以及對應嘅 RetailPrice 欄位
-                    string query = "SELECT ProductID, ProductName, RetailPrice FROM product";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT ProductID, ProductName, RetailPrice FROM product", conn))
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        using (MySqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            List<ProductItem> productList = new List<ProductItem>();
-                            while (reader.Read())
-                            {
-                                productList.Add(new ProductItem
-                                {
-                                    ID = reader["ProductID"].ToString(),
-                                    Name = reader["ProductName"].ToString(),
-                                    Price = Convert.ToDecimal(reader["RetailPrice"])
-                                });
-                            }
-                            cboProducts.DataSource = productList;
-                            cboProducts.DisplayMember = "Name";
-                            cboProducts.ValueMember = "ID";
-                        }
+                        List<ProductItem> list = new List<ProductItem>();
+                        while (reader.Read()) list.Add(new ProductItem { ID = reader["ProductID"].ToString(), Name = reader["ProductName"].ToString(), Price = Convert.ToDecimal(reader["RetailPrice"]) });
+                        cboProducts.DataSource = list; cboProducts.DisplayMember = "Name"; cboProducts.ValueMember = "ID"; cboProducts.SelectedIndex = -1;
                     }
-                    cboProducts.SelectedIndex = -1;
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Failed to load products: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                catch (Exception) { }
             }
         }
 
-        private void btnCreateOrder_Click(object sender, EventArgs e)
+        private void cboProducts_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!EnsureCanCreateOrder()) return;
-            if (cartTable.Rows.Count == 0)
+            if (cboProducts.SelectedItem != null) { currentUnitPrice = ((ProductItem)cboProducts.SelectedItem).Price; txtUnitPrice.Text = currentUnitPrice.ToString("F2"); }
+        }
+
+        private void BtnAddItem_Click(object sender, EventArgs e)
+        {
+            if (cboProducts.SelectedItem == null) { MessageBox.Show("Select product."); return; }
+            if (!int.TryParse(txtQty.Text.Trim(), out int qty) || qty <= 0) { MessageBox.Show("Invalid qty."); return; }
+
+            var prod = (ProductItem)cboProducts.SelectedItem;
+            bool exists = false;
+            foreach (DataRow row in cartTable.Rows)
             {
-                MessageBox.Show("Cart is empty!", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                if (row["ProductID"].ToString() == prod.ID) { row["Qty"] = Convert.ToInt32(row["Qty"]) + qty; row["Subtotal"] = Convert.ToDecimal(row["Qty"]) * prod.Price; exists = true; break; }
             }
-            string customerID = txtCustomerID.Text.Trim();
-            string orderID = txtOrderID.Text.Trim();
-            if (string.IsNullOrWhiteSpace(customerID))
-            {
-                MessageBox.Show("Customer ID required!", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            string orderStatus = chkRequireDelivery.Checked ? "Pending Delivery" : "Self Pickup";
+            if (!exists) cartTable.Rows.Add(prod.ID, prod.Name, qty, prod.Price, prod.Price * qty);
+            UpdateGlobalOrderTotal(); txtQty.Clear();
+        }
+
+        private void BtnRemoveItem_Click(object sender, EventArgs e)
+        {
+            if (dgvCart.SelectedRows.Count > 0) { foreach (DataGridViewRow row in dgvCart.SelectedRows) { if (!row.IsNewRow) dgvCart.Rows.Remove(row); } UpdateGlobalOrderTotal(); }
+        }
+
+        private void UpdateGlobalOrderTotal()
+        {
+            globalOrderTotal = 0;
+            foreach (DataRow row in cartTable.Rows) globalOrderTotal += Convert.ToDecimal(row["Subtotal"]);
+            lblTotalAmountDisplay.Text = $"Total Bill: ${globalOrderTotal:N2}";
+        }
+
+        private void dgvOrders_SelectionChanged(object sender, EventArgs e)
+        {
+            if (dgvOrders.CurrentRow == null || dgvOrders.CurrentRow.Index < 0) return;
+            string selectedOrderID = dgvOrders.CurrentRow.Cells["Order ID"].Value.ToString();
+            cartTable.Clear();
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string checkCustSql = "SELECT COUNT(*) FROM customer WHERE CustomerID = @CustomerID";
-                    using (MySqlCommand checkCustCmd = new MySqlCommand(checkCustSql, conn))
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT CustomerID, StaffID, Status FROM orders WHERE OrderID = @OID", conn))
                     {
-                        checkCustCmd.Parameters.AddWithValue("@CustomerID", customerID);
-                        if (Convert.ToInt32(checkCustCmd.ExecuteScalar()) == 0)
+                        cmd.Parameters.AddWithValue("@OID", selectedOrderID);
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
                         {
-                            MessageBox.Show($"Customer ID '{customerID}' not found!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-                    foreach (DataRow row in cartTable.Rows)
-                    {
-                        string pID = row["ProductID"].ToString(); // 🚀 修正為新架構欄位名
-                        int reqQty = Convert.ToInt32(row["Qty"]);
-                        // 🚀 核心 SQL 修正：向新 product 表檢查庫存
-                        string checkStockSql = "SELECT StockLevel FROM product WHERE ProductID = @ProductID";
-                        using (MySqlCommand checkCmd = new MySqlCommand(checkStockSql, conn))
-                        {
-                            checkCmd.Parameters.AddWithValue("@ProductID", pID);
-                            int currentStock = Convert.ToInt32(checkCmd.ExecuteScalar());
-                            if (currentStock < reqQty)
+                            if (reader.Read())
                             {
-                                MessageBox.Show($"Insufficient stock for {row["Product Name"]}! Available: {currentStock}.", "Inventory Alert", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return;
+                                txtOrderID.Text = selectedOrderID; txtStaffUIID.Text = reader["StaffID"].ToString();
+                                string cID = reader["CustomerID"].ToString();
+                                foreach (OrderCustomerItem item in cboCustomers.Items) { if (item.ID == cID) { cboCustomers.SelectedItem = item; break; } }
+
+                                // 🌟 完美修復：只要狀態係送貨相關 (-D, Dispatch, Deliver)，就剔返佢！
+                                string currentStatus = reader["Status"].ToString();
+                                chkRequireDelivery.Checked = currentStatus.Contains("-D") ||
+                                                             currentStatus.Contains("Dispatch") ||
+                                                             currentStatus.Contains("Deliver");
                             }
                         }
                     }
+                    using (MySqlCommand cmdLines = new MySqlCommand("SELECT l.ProductID, p.ProductName, l.Quantity, l.UnitPrice FROM order_lineitem l JOIN product p ON l.ProductID = p.ProductID WHERE l.OrderID = @OID", conn))
+                    {
+                        cmdLines.Parameters.AddWithValue("@OID", selectedOrderID);
+                        using (MySqlDataReader reader = cmdLines.ExecuteReader())
+                        {
+                            while (reader.Read()) cartTable.Rows.Add(reader["ProductID"].ToString(), reader["ProductName"].ToString(), Convert.ToInt32(reader["Quantity"]), Convert.ToDecimal(reader["UnitPrice"]), Convert.ToInt32(reader["Quantity"]) * Convert.ToDecimal(reader["UnitPrice"]));
+                        }
+                    }
+                    UpdateGlobalOrderTotal();
+                }
+                catch (Exception) { }
+            }
+        }
+
+        private void GenerateOrderID()
+        {
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string prefix = "SO" + DateTime.Now.ToString("yyyy") + "-";
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT OrderID FROM orders WHERE OrderID LIKE @Prefix ORDER BY OrderID DESC LIMIT 1", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Prefix", prefix + "%");
+                        object res = cmd.ExecuteScalar();
+                        if (res != null && res != DBNull.Value)
+                        {
+                            if (int.TryParse(res.ToString().Replace(prefix, ""), out int seq)) { txtOrderID.Text = prefix + (seq + 1).ToString("D4"); return; }
+                        }
+                        txtOrderID.Text = prefix + "0001";
+                    }
+                }
+                catch (Exception) { txtOrderID.Text = "SO" + DateTime.Now.ToString("yyyyMMddHHmm"); }
+            }
+        }
+
+        private void btnCreateOrder_Click(object sender, EventArgs e)
+        {
+            if (cboCustomers.SelectedItem == null || cartTable.Rows.Count == 0) { MessageBox.Show("Customer/Cart cannot be empty."); return; }
+            string orderID = txtOrderID.Text.Trim();
+
+            string orderStatus = chkRequireDelivery.Checked ? "Awaiting Approval-D" : "Awaiting Approval-P";
+
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    using (MySqlCommand checkCmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE OrderID = @OID", conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@OID", orderID);
+                        if (Convert.ToInt32(checkCmd.ExecuteScalar()) > 0) { MessageBox.Show("Order exists. Click Update."); return; }
+                    }
+
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
                         {
-                            string insertOrderSql = "INSERT INTO orders (OrderID, CustomerID, StaffID, TotalAmount, Status, OrderDate) VALUES (@OID, @CID, @SID, @Total, @Status, NOW())";
-                            using (MySqlCommand cmdOrder = new MySqlCommand(insertOrderSql, conn, trans))
+                            using (MySqlCommand cmdOrder = new MySqlCommand("INSERT INTO orders (OrderID, CustomerID, StaffID, TotalAmount, Status, OrderDate) VALUES (@OID, @CID, @SID, @Total, @Status, NOW())", conn, trans))
                             {
                                 cmdOrder.Parameters.AddWithValue("@OID", orderID);
-                                cmdOrder.Parameters.AddWithValue("@CID", customerID);
+                                cmdOrder.Parameters.AddWithValue("@CID", ((OrderCustomerItem)cboCustomers.SelectedItem).ID);
                                 cmdOrder.Parameters.AddWithValue("@SID", currentStaffID);
                                 cmdOrder.Parameters.AddWithValue("@Total", globalOrderTotal);
                                 cmdOrder.Parameters.AddWithValue("@Status", orderStatus);
                                 cmdOrder.ExecuteNonQuery();
                             }
-                            // 🚀 核心 SQL 修正：將訂單細項嘅 PartID 換成新嘅 ProductID；扣減庫存亦同步更新到 product 表
-                            string insertLineSql = "INSERT INTO order_lineitem (OrderID, ProductID, Quantity, UnitPrice) VALUES (@OID, @ProductID, @Qty, @Price)";
-                            string updateStockSql = "UPDATE product SET StockLevel = StockLevel - @Qty WHERE ProductID = @ProductID";
-                            foreach (DataRow row in cartTable.Rows)
+
+                            using (MySqlCommand cmdLine = new MySqlCommand("INSERT INTO order_lineitem (OrderID, ProductID, Quantity, UnitPrice) VALUES (@OID, @ProductID, @Qty, @Price)", conn, trans))
                             {
-                                using (MySqlCommand cmdLine = new MySqlCommand(insertLineSql, conn, trans))
+                                foreach (DataRow row in cartTable.Rows)
                                 {
+                                    cmdLine.Parameters.Clear();
                                     cmdLine.Parameters.AddWithValue("@OID", orderID);
                                     cmdLine.Parameters.AddWithValue("@ProductID", row["ProductID"].ToString());
                                     cmdLine.Parameters.AddWithValue("@Qty", Convert.ToInt32(row["Qty"]));
                                     cmdLine.Parameters.AddWithValue("@Price", Convert.ToDecimal(row["Unit Price"]));
                                     cmdLine.ExecuteNonQuery();
                                 }
-                                using (MySqlCommand cmdStock = new MySqlCommand(updateStockSql, conn, trans))
-                                {
-                                    cmdStock.Parameters.AddWithValue("@Qty", Convert.ToInt32(row["Qty"]));
-                                    cmdStock.Parameters.AddWithValue("@ProductID", row["ProductID"].ToString());
-                                    cmdStock.ExecuteNonQuery();
-                                }
                             }
                             trans.Commit();
-                            MessageBox.Show($"Order [{orderID}] created successfully with {cartTable.Rows.Count} items!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            ClearFields();
-                            RefreshOrdersGrid();
+                            MessageBox.Show($"Order drafted and sent for Approval!", "Success");
+                            ClearFields(); RefreshOrdersGrid();
                         }
-                        catch (Exception ex)
-                        {
-                            trans.Rollback();
-                            throw ex;
-                        }
+                        catch (Exception ex) { trans.Rollback(); throw ex; }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+            }
+        }
+
+        private void btnUpdateOrder_Click(object sender, EventArgs e)
+        {
+            string orderID = txtOrderID.Text.Trim();
+            if (string.IsNullOrEmpty(orderID) || cartTable.Rows.Count == 0 || cboCustomers.SelectedItem == null) return;
+
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
                 {
-                    MessageBox.Show("Failed to create order:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    conn.Open();
+
+                    string currentStatus = "";
+                    using (MySqlCommand statusCmd = new MySqlCommand("SELECT Status FROM orders WHERE OrderID = @OID", conn))
+                    {
+                        statusCmd.Parameters.AddWithValue("@OID", orderID);
+                        var res = statusCmd.ExecuteScalar();
+                        if (res == null) { MessageBox.Show("This is a NEW order ID. Click 'Create Order'.", "Invalid", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                        currentStatus = res.ToString();
+                    }
+
+                    if (!currentStatus.StartsWith("Awaiting Approval") && currentStatus != "Rejected")
+                    {
+                        MessageBox.Show("🔒 This order has already been Approved or Processed!\n\nYou cannot modify a locked order. If the customer wants to add more items, please click 'New' and create an additional order.", "Order Locked", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                        return;
+                    }
+
+                    string orderStatus = chkRequireDelivery.Checked ? "Awaiting Approval-D" : "Awaiting Approval-P";
+
+                    using (MySqlTransaction trans = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            using (MySqlCommand cmdDel = new MySqlCommand("DELETE FROM order_lineitem WHERE OrderID = @OID", conn, trans))
+                            {
+                                cmdDel.Parameters.AddWithValue("@OID", orderID); cmdDel.ExecuteNonQuery();
+                            }
+
+                            using (MySqlCommand cmdLine = new MySqlCommand("INSERT INTO order_lineitem (OrderID, ProductID, Quantity, UnitPrice) VALUES (@OID, @ProductID, @Qty, @Price)", conn, trans))
+                            {
+                                foreach (DataRow row in cartTable.Rows)
+                                {
+                                    cmdLine.Parameters.Clear(); cmdLine.Parameters.AddWithValue("@OID", orderID);
+                                    cmdLine.Parameters.AddWithValue("@ProductID", row["ProductID"].ToString());
+                                    cmdLine.Parameters.AddWithValue("@Qty", Convert.ToInt32(row["Qty"]));
+                                    cmdLine.Parameters.AddWithValue("@Price", Convert.ToDecimal(row["Unit Price"]));
+                                    cmdLine.ExecuteNonQuery();
+                                }
+                            }
+
+                            using (MySqlCommand cmdOrder = new MySqlCommand("UPDATE orders SET CustomerID=@CID, TotalAmount=@Total, Status=@Status WHERE OrderID=@OID", conn, trans))
+                            {
+                                cmdOrder.Parameters.AddWithValue("@CID", ((OrderCustomerItem)cboCustomers.SelectedItem).ID);
+                                cmdOrder.Parameters.AddWithValue("@Total", globalOrderTotal);
+                                cmdOrder.Parameters.AddWithValue("@Status", orderStatus);
+                                cmdOrder.Parameters.AddWithValue("@OID", orderID);
+                                cmdOrder.ExecuteNonQuery();
+                            }
+                            trans.Commit(); MessageBox.Show($"Order Updated!"); ClearFields(); RefreshOrdersGrid();
+                        }
+                        catch (Exception ex) { trans.Rollback(); throw ex; }
+                    }
+                }
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+            }
+        }
+
+        private void BtnCreateQuotation_Click(object sender, EventArgs e)
+        {
+            if (cartTable.Rows.Count == 0) return;
+            using (SaveFileDialog sfd = new SaveFileDialog { Filter = "HTML Web Document (*.html)|*.html", FileName = $"Order_{txtOrderID.Text}.html" })
+            {
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        string html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'><title>Order Document - {txtOrderID.Text}</title>
+                            <style>body {{ font-family: 'Segoe UI', Arial; margin: 40px; background: #fff; }} .container {{ max-width: 800px; margin: 0 auto; }} h1 {{ color: #1e3a8a; }} .items-table {{ width: 100%; border-collapse: collapse; margin-top: 30px; }} .items-table th {{ background: #f1f5f9; padding: 10px; text-align: left; }} .items-table td {{ padding: 10px; border-bottom: 1px solid #ddd; }} </style></head><body>
+                            <div class='container'><h1>PREMIUM LIVING</h1><h3>ORDER DOCUMENT</h3><p><b>Order Ref:</b> {txtOrderID.Text}<br><b>Customer:</b> {(cboCustomers.SelectedItem != null ? cboCustomers.Text : "")}<br><b>Date:</b> {DateTime.Now.ToString("yyyy-MM-dd")}</p>
+                            <table class='items-table'><tr><th>Product Name</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr>";
+                        foreach (DataRow row in cartTable.Rows) html += $"<tr><td>{row["Product Name"]}</td><td>{row["Qty"]}</td><td>${row["Unit Price"]}</td><td>${row["Subtotal"]}</td></tr>";
+                        html += $@"</table><h2 style='text-align:right; color:#dc2626;'>Grand Total: ${globalOrderTotal:N2}</h2>
+                            <div style='margin-top:100px; display:flex; justify-content:space-between;'><div style='width:40%; border-top:2px solid #000; padding-top:10px;'>Customer Signature</div><div style='width:40%; border-top:2px solid #000; padding-top:10px;'>Company Representative</div></div></div></body></html>";
+                        File.WriteAllText(sfd.FileName, html, System.Text.Encoding.UTF8);
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
+                    }
+                    catch (Exception ex) { MessageBox.Show("Export error: " + ex.Message); }
                 }
             }
         }
@@ -710,30 +460,22 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer ID', TotalAmount AS 'Total Bill', Status FROM orders ORDER BY OrderDate DESC";
-                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
+                    using (MySqlDataAdapter adapter = new MySqlDataAdapter("SELECT OrderID AS 'Order ID', CustomerID AS 'Customer ID', TotalAmount AS 'Total Bill', Status FROM orders ORDER BY OrderDate DESC", conn))
                     {
-                        DataTable dt = new DataTable();
-                        adapter.Fill(dt);
-                        dgvOrders.DataSource = dt;
+                        DataTable dt = new DataTable(); adapter.Fill(dt); dgvOrders.DataSource = dt;
                     }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Failed to refresh logs: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                catch (Exception) { }
             }
         }
 
         private void ClearFields()
         {
-            txtCustomerID.Clear();
-            txtQty.Clear();
-            cartTable.Clear();
-            UpdateGlobalOrderTotal();
-            GenerateOrderID();
+            dgvOrders.ClearSelection();
+            if (cboCustomers.Items.Count > 0) cboCustomers.SelectedIndex = -1;
             if (cboProducts.Items.Count > 0) cboProducts.SelectedIndex = -1;
+            txtQty.Clear(); txtUnitPrice.Clear(); cartTable.Clear();
+            UpdateGlobalOrderTotal(); GenerateOrderID();
         }
-        #endregion
     }
 }

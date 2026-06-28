@@ -34,6 +34,7 @@ namespace ITP4915M_Group11
             this.ClientSize = new System.Drawing.Size(904, 511);
             this.Name = "GoodsReceivedForm";
             this.Text = "Goods Received";
+            this.Load += new System.EventHandler(this.GoodsReceivedForm_Load_1);
             this.ResumeLayout(false);
 
         }

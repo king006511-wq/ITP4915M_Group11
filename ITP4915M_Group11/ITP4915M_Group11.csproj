@@ -160,6 +160,9 @@
     <Compile Include="RawMaterialRequestForm.Designer.cs">
       <DependentUpon>RawMaterialRequestForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="SalesQuotationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="ThemeManager.cs" />
     <Compile Include="UserSession.cs" />
     <Compile Include="ViewOrders.cs">
@@ -210,6 +213,9 @@
     </Compile>
     <EmbeddedResource Include="RawMaterialRequestForm.resx">
       <DependentUpon>RawMaterialRequestForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SalesQuotationForm.resx">
+      <DependentUpon>SalesQuotationForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="ViewOrders.resx">
       <DependentUpon>ViewOrders.cs</DependentUpon>

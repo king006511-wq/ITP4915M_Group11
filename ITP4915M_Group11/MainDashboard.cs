@@ -92,22 +92,28 @@ namespace ITP4915M_Group11
 
             // ==== 核心業務模組 ====
             if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") ||
+                AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") || // 🌟 加入報價單權限檢查
                 AuthorizationHelper.HasMenuPermission("SALES_ORDER") ||
                 AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") ||
                 AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") ||
                 AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE") ||
-                AuthorizationHelper.HasMenuPermission("PRODUCT_MANUFACTURING")) // 🌟 這裡加入了生產表單的權限檢查
+                AuthorizationHelper.HasMenuPermission("PRODUCT_MANUFACTURING"))
             {
                 AddNavHeader("💼 Core Modules");
                 AddNavButton("👥 Customer Mgmt", typeof(CustomerManagement), "FORM", "CUSTOMER_MGMT");
+
+                // 🌟 加入 Sales Quotation 報價單按鈕 (放喺 Sales Order 上面最順理成章)
+                AddNavButton("📄 Sales Quotation", typeof(SalesQuotationForm), "FORM", "SALES_QUOTATION");
+
                 AddNavButton("🛒 Sales Order Mgmt", typeof(OrderManagementForm), "FORM", "SALES_ORDER");
                 AddNavButton("🚚 Delivery Logistics", typeof(LogisticsForm), "FORM", "DELIVERY_LOGISTICS");
                 AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM", "GOODS_RECEIVED");
                 AddNavButton("🛋️ Product Maintenance", typeof(ProductManagement), "FORM", "PRODUCT_MAINTENANCE");
-
-                // 🌟 這裡完整加上了 Product Manufacturing 頁面的按鈕
                 AddNavButton("🛠️ Product Manufacturing", typeof(ProductManufacturingForm), "FORM", "PRODUCT_MANUFACTURING");
             }
+
+            // ==== 內部營運控制 ====
+            // ... (下面維持不變)
 
             // ==== 內部營運控制 ====
             if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") ||

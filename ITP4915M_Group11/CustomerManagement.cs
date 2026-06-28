@@ -8,368 +8,189 @@ namespace ITP4915M_Group11
 {
     public partial class CustomerManagement : Form
     {
-        // ==========================================
-        // 🔒 資料庫配置
-        // ==========================================
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
-
-        // ==========================================
-        // 🎨 現代化多彩 UI 元件變數
-        // ==========================================
+        
         private TextBox txtCustomerID, txtName, txtPhone, txtAddress, txtSearch;
         private ComboBox cboType;
-        private DataGridView dgvCustomer;
-        private Button btnAdd, btnUpdate, btnDelete, btnReset;
+        private DataGridView dgvCustomers;
 
         public CustomerManagement()
         {
-            InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                ThemeManager.ApplyTheme(this);
-                InitializePerfectMatchUI();
-                SetupTypeComboBox();
-                LoadCustomerData();
-                GenerateNextCustomerID();
+                InitializeUI();
+                LoadData();
             }
         }
 
-        #region 🎨 絕對座標佈局 (修正空白與資料顯示)
-        private void InitializePerfectMatchUI()
+        private void InitializeUI()
         {
             this.Controls.Clear();
+            this.Text = "Premium Living - Customer Master Data";
+            this.Size = new Size(1180, 750);
             this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.None;
-            this.Size = new Size(1180, 800);
+            this.Font = new Font("Segoe UI", 10F);
 
-            // =========================================================
-            // 🛡️ 核心修復 1：消除中間多餘空白 (將 X 座標由 260 改為 20)
-            // =========================================================
-            Panel pnlMain = new Panel
-            {
-                Location = new Point(20, 0),  // ⬅️ 移去左邊
-                Size = new Size(1120, 750)    // ⬅️ 擴大整個面板寬度
-            };
-            this.Controls.Add(pnlMain);
+            AuthorizationHelper.EnforceRole(this, "Manager", "Administrator", "Sales Representative", "Sales");
 
-            // =========================================================
-            // 【中間】資料輸入面板 (Inputting Data)
-            // =========================================================
-            Panel pnlCard = new Panel
-            {
-                Location = new Point(20, 50),
-                Size = new Size(380, 650),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
-            pnlMain.Controls.Add(pnlCard);
+            Label lblHeader = new Label { Text = "👥 Customer Master Data Maintenance", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
+            this.Controls.Add(lblHeader);
 
-            Label lblCardTitle = new Label { Text = "📝 Client Profile Entry", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 15), AutoSize = true };
-            pnlCard.Controls.Add(lblCardTitle);
+            // Left Input Panel
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 600), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            this.Controls.Add(pnlCard);
 
-            int startY = 60;
-            txtCustomerID = CreateStyledTextBox(pnlCard, ref startY, "Customer ID (Auto):", true);
-            txtName = CreateStyledTextBox(pnlCard, ref startY, "Client Full Name *:", false);
-
-            Label lblType = new Label { Text = "Account Type *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            cboType = new ComboBox { Location = new Point(20, startY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), DropDownStyle = ComboBoxStyle.DropDownList };
+            int startY = 20;
+            txtCustomerID = CreateInput(pnlCard, ref startY, "Customer ID *:");
+            txtName = CreateInput(pnlCard, ref startY, "Customer Name *:");
+            
+            Label lblType = new Label { Text = "Customer Type:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboType = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
+            cboType.Items.AddRange(new string[] { "B2B", "B2C" });
             pnlCard.Controls.Add(lblType); pnlCard.Controls.Add(cboType);
             startY += 65;
 
-            txtPhone = CreateStyledTextBox(pnlCard, ref startY, "Contact Phone *:", false);
+            txtPhone = CreateInput(pnlCard, ref startY, "Phone Number:");
+            txtAddress = CreateInput(pnlCard, ref startY, "Delivery Address:");
 
-            Label lblAddr = new Label { Text = "Billing / Delivery Address:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtAddress = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 75, Multiline = true, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
-            pnlCard.Controls.Add(lblAddr); pnlCard.Controls.Add(txtAddress);
-            startY += 110;
+            Button btnAdd = new Button { Text = "➕ Add", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            Button btnUpdate = new Button { Text = "💾 Update", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            Button btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(20, startY + 50), Size = new Size(160, 40), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            Button btnClear = new Button { Text = "🧹 Clear", Location = new Point(195, startY + 50), Size = new Size(160, 40), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            
+            btnAdd.Click += BtnAdd_Click; btnUpdate.Click += BtnUpdate_Click; btnDelete.Click += BtnDelete_Click; btnClear.Click += (s, e) => ClearForm();
+            pnlCard.Controls.AddRange(new Control[] { btnAdd, btnUpdate, btnDelete, btnClear });
 
-            btnAdd = new Button { Text = "➕ Add Client", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnUpdate = new Button { Text = "💾 Update", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(59, 130, 246), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // Right Grid Panel
+            txtSearch = new TextBox { Location = new Point(440, 85), Width = 300, Font = new Font("Segoe UI", 11F), Text = "Search by ID or Name..." };
+            txtSearch.GotFocus += (s, e) => { if (txtSearch.Text == "Search by ID or Name...") txtSearch.Text = ""; };
+            txtSearch.TextChanged += TxtSearch_TextChanged;
+            this.Controls.Add(txtSearch);
 
-            startY += 50;
-            btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnReset = new Button { Text = "🔄 Reset", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-
-            btnAdd.FlatAppearance.BorderSize = 0; btnUpdate.FlatAppearance.BorderSize = 0; btnDelete.FlatAppearance.BorderSize = 0; btnReset.FlatAppearance.BorderSize = 0;
-            btnAdd.Click += btnAdd_Click; btnUpdate.Click += btnUpdate_Click; btnDelete.Click += btnDelete_Click; btnReset.Click += (s, e) => ClearWorkspace();
-
-            pnlCard.Controls.Add(btnAdd); pnlCard.Controls.Add(btnUpdate); pnlCard.Controls.Add(btnDelete); pnlCard.Controls.Add(btnReset);
-
-            // =========================================================
-            // 【右側】數據表格與搜尋 (Displaying Data)
-            // =========================================================
-            Label lblGridTitle = new Label { Text = "📂 Customer Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(430, 50), AutoSize = true };
-            pnlMain.Controls.Add(lblGridTitle);
-
-            txtSearch = new TextBox { Location = new Point(850, 50), Size = new Size(240, 25), Font = new Font("Segoe UI", 10F) }; // 向右靠
-            txtSearch.Text = "Search Name / Phone...";
-            txtSearch.ForeColor = Color.Gray;
-            txtSearch.GotFocus += (s, e) => { if (txtSearch.Text == "Search Name / Phone...") { txtSearch.Text = ""; txtSearch.ForeColor = Color.Black; } };
-            txtSearch.LostFocus += (s, e) => { if (string.IsNullOrWhiteSpace(txtSearch.Text)) { txtSearch.Text = "Search Name / Phone..."; txtSearch.ForeColor = Color.Gray; } };
-            txtSearch.TextChanged += txtSearch_TextChanged;
-            pnlMain.Controls.Add(txtSearch);
-
-            // 數據網格
-            dgvCustomer = new DataGridView
-            {
-                Location = new Point(430, 90),
-                Size = new Size(660, 610), // ⬅️ 擴闊表格，用盡右側空間
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                AllowUserToAddRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                RowHeadersVisible = false,
-                EnableHeadersVisualStyles = false,
-
-                // 🛡️ 核心修復 2：強制資料欄自動填滿表格寬度，解決資料截斷問題
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
-            };
-
-            // 允許文字自動換行
-            dgvCustomer.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-
-            dgvCustomer.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(79, 70, 229);
-            dgvCustomer.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvCustomer.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvCustomer.ColumnHeadersHeight = 38;
-            dgvCustomer.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            dgvCustomer.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
-
-            dgvCustomer.CellClick += dgvCustomer_CellClick;
-            pnlMain.Controls.Add(dgvCustomer);
+            dgvCustomers = new DataGridView { Location = new Point(440, 125), Size = new Size(700, 560), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            dgvCustomers.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
+            dgvCustomers.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvCustomers.SelectionChanged += DgvCustomers_SelectionChanged;
+            this.Controls.Add(dgvCustomers);
         }
 
-        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
+        private TextBox CreateInput(Panel container, ref int y, string label)
         {
-            Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
-            if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
+            Label lbl = new Label { Text = label, Location = new Point(20, y), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(20, y + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             container.Controls.Add(lbl); container.Controls.Add(txt);
-            topY += 65;
-            return txt;
+            y += 65; return txt;
         }
 
-        private void SetupTypeComboBox()
+        private void LoadData()
         {
-            cboType.Items.Clear();
-            cboType.Items.Add("B2B (Corporate)");
-            cboType.Items.Add("B2C (Retail)");
-            if (cboType.Items.Count > 0) cboType.SelectedIndex = 0;
-        }
-        #endregion
-
-        #region 💾 資料庫核心商業邏輯
-        private void LoadCustomerData(string filter = "")
-        {
-            try
-            {
-                using (MySqlConnection conn = new MySqlConnection(connString))
-                {
-                    conn.Open();
-                    string query = "SELECT CustomerID, Name, Type, Phone, Address FROM customer WHERE 1=1";
-                    if (!string.IsNullOrEmpty(filter) && filter != "Search Name / Phone...")
-                    {
-                        query += " AND (CustomerID LIKE @filter OR Name LIKE @filter OR Phone LIKE @filter)";
-                    }
-
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    {
-                        if (!string.IsNullOrEmpty(filter) && filter != "Search Name / Phone...")
-                            cmd.Parameters.AddWithValue("@filter", "%" + filter + "%");
-
-                        using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
-                        {
-                            DataTable dt = new DataTable();
-                            adapter.Fill(dt);
-                            dgvCustomer.DataSource = dt;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Failed to load customer list:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void GenerateNextCustomerID()
-        {
-            try
-            {
-                using (MySqlConnection conn = new MySqlConnection(connString))
-                {
-                    conn.Open();
-                    string query = "SELECT CustomerID FROM customer ORDER BY CustomerID DESC LIMIT 1";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    {
-                        object result = cmd.ExecuteScalar();
-                        if (result != null)
-                        {
-                            string lastID = result.ToString();
-                            if (lastID.StartsWith("C") && int.TryParse(lastID.Substring(1), out int num))
-                            {
-                                txtCustomerID.Text = "C" + (num + 1).ToString("D3");
-                                return;
-                            }
-                        }
-                        txtCustomerID.Text = "C001";
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                txtCustomerID.Text = "C001";
-            }
-        }
-
-        private void btnAdd_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(txtName.Text.Trim()) || string.IsNullOrEmpty(txtPhone.Text.Trim()))
-            {
-                MessageBox.Show("Mandatory validation fault:\nClient Name and Phone fields cannot be blank.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            try
-            {
-                using (MySqlConnection conn = new MySqlConnection(connString))
-                {
-                    conn.Open();
-                    string query = "INSERT INTO customer (CustomerID, Name, Type, Phone, Address) VALUES (@id, @name, @type, @phone, @address)";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@id", txtCustomerID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@name", txtName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@type", cboType.Text);
-                        cmd.Parameters.AddWithValue("@phone", txtPhone.Text.Trim());
-                        cmd.Parameters.AddWithValue("@address", txtAddress.Text.Trim());
-
-                        cmd.ExecuteNonQuery();
-                        MessageBox.Show("New client organization synchronized successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        ClearWorkspace();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Transaction execution aborted:\n" + ex.Message, "Execution Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnUpdate_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(txtName.Text.Trim()))
-            {
-                MessageBox.Show("Client Name is required for core updates.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            try
-            {
-                using (MySqlConnection conn = new MySqlConnection(connString))
-                {
-                    conn.Open();
-                    string query = "UPDATE customer SET Name = @name, Type = @type, Phone = @phone, Address = @address WHERE CustomerID = @id";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@id", txtCustomerID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@name", txtName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@type", cboType.Text);
-                        cmd.Parameters.AddWithValue("@phone", txtPhone.Text.Trim());
-                        cmd.Parameters.AddWithValue("@address", txtAddress.Text.Trim());
-
-                        int rows = cmd.ExecuteNonQuery();
-                        if (rows > 0)
-                        {
-                            MessageBox.Show("Client profile alterations updated globally.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            ClearWorkspace();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Update execution rejected:\n" + ex.Message, "Execution Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnDelete_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(txtCustomerID.Text)) return;
-
-            DialogResult confirm = MessageBox.Show($"Are you sure you want to permanently delete client {txtCustomerID.Text}?\nThis may violate data links if they have active orders.", "Critical Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            if (confirm == DialogResult.Yes)
+            using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
-                    using (MySqlConnection conn = new MySqlConnection(connString))
+                    conn.Open();
+                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT CustomerID, Name, Type, Phone, Address FROM customer", conn))
+                    {
+                        DataTable dt = new DataTable(); da.Fill(dt);
+                        dgvCustomers.DataSource = dt;
+                    }
+                }
+                catch (Exception ex) { MessageBox.Show("Error loading data: " + ex.Message); }
+            }
+        }
+
+        private void DgvCustomers_SelectionChanged(object sender, EventArgs e)
+        {
+            if (dgvCustomers.SelectedRows.Count > 0)
+            {
+                DataGridViewRow r = dgvCustomers.SelectedRows[0];
+                txtCustomerID.Text = r.Cells["CustomerID"].Value.ToString();
+                txtName.Text = r.Cells["Name"].Value.ToString();
+                cboType.Text = r.Cells["Type"].Value.ToString();
+                txtPhone.Text = r.Cells["Phone"].Value.ToString();
+                txtAddress.Text = r.Cells["Address"].Value.ToString();
+                txtCustomerID.ReadOnly = true;
+            }
+        }
+
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvCustomers.DataSource is DataTable dt && txtSearch.Text != "Search by ID or Name...")
+            {
+                string kw = txtSearch.Text.Trim().Replace("'", "''");
+                dt.DefaultView.RowFilter = $"CustomerID LIKE '%{kw}%' OR Name LIKE '%{kw}%'";
+            }
+        }
+
+        private void BtnAdd_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtCustomerID.Text) || string.IsNullOrWhiteSpace(txtName.Text)) { MessageBox.Show("ID and Name are required!"); return; }
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string sql = "INSERT INTO customer (CustomerID, Name, Type, Phone, Address) VALUES (@id, @n, @t, @p, @a)";
+                    using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", txtCustomerID.Text.Trim()); cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@t", cboType.Text); cmd.Parameters.AddWithValue("@p", txtPhone.Text.Trim()); cmd.Parameters.AddWithValue("@a", txtAddress.Text.Trim());
+                        cmd.ExecuteNonQuery();
+                    }
+                    MessageBox.Show("Customer added."); LoadData(); ClearForm();
+                }
+                catch (Exception ex) { MessageBox.Show(ex.Message); }
+            }
+        }
+
+        private void BtnUpdate_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtCustomerID.Text)) return;
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string sql = "UPDATE customer SET Name=@n, Type=@t, Phone=@p, Address=@a WHERE CustomerID=@id";
+                    using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", txtCustomerID.Text.Trim()); cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@t", cboType.Text); cmd.Parameters.AddWithValue("@p", txtPhone.Text.Trim()); cmd.Parameters.AddWithValue("@a", txtAddress.Text.Trim());
+                        cmd.ExecuteNonQuery();
+                    }
+                    MessageBox.Show("Customer updated."); LoadData();
+                }
+                catch (Exception ex) { MessageBox.Show(ex.Message); }
+            }
+        }
+
+        private void BtnDelete_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtCustomerID.Text)) return;
+            if (MessageBox.Show("Delete Customer?", "Confirm", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                using (MySqlConnection conn = new MySqlConnection(connString))
+                {
+                    try
                     {
                         conn.Open();
-                        string query = "DELETE FROM customer WHERE CustomerID = @id";
-                        using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                        using (MySqlCommand cmd = new MySqlCommand("DELETE FROM customer WHERE CustomerID=@id", conn))
                         {
                             cmd.Parameters.AddWithValue("@id", txtCustomerID.Text.Trim());
                             cmd.ExecuteNonQuery();
-                            MessageBox.Show("Client master records purged from the database maps.", "Purge Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            ClearWorkspace();
                         }
+                        LoadData(); ClearForm();
                     }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Purge refused due to relational integrity constraint (Active orders exist).\nDetails: " + ex.Message, "Integrity Check Blocked", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    catch (Exception ex) { MessageBox.Show("Cannot delete customer. They might have active orders."); }
                 }
             }
         }
 
-        private void dgvCustomer_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void ClearForm()
         {
-            if (e.RowIndex >= 0)
-            {
-                DataGridViewRow row = dgvCustomer.Rows[e.RowIndex];
-                txtCustomerID.Text = row.Cells["CustomerID"].Value?.ToString();
-                txtName.Text = row.Cells["Name"].Value?.ToString();
-
-                string typeVal = row.Cells["Type"].Value?.ToString();
-                if (cboType.Items.Contains(typeVal)) cboType.SelectedItem = typeVal;
-
-                txtPhone.Text = row.Cells["Phone"].Value?.ToString();
-                txtAddress.Text = row.Cells["Address"].Value?.ToString();
-
-                // 編輯模式下，鎖定 Add 按鈕並轉為灰色
-                btnAdd.Enabled = false;
-                btnAdd.BackColor = Color.FromArgb(203, 213, 225);
-            }
+            txtCustomerID.Clear(); txtName.Clear(); txtPhone.Clear(); txtAddress.Clear(); cboType.SelectedIndex = -1;
+            txtCustomerID.ReadOnly = false; dgvCustomers.ClearSelection();
         }
-
-        private void txtSearch_TextChanged(object sender, EventArgs e)
-        {
-            if (txtSearch.Text != "Search Name / Phone...")
-            {
-                LoadCustomerData(txtSearch.Text.Trim());
-            }
-        }
-
-        private void ClearWorkspace()
-        {
-            txtName.Clear();
-            txtPhone.Clear();
-            txtAddress.Clear();
-            txtSearch.Clear();
-            if (cboType.Items.Count > 0) cboType.SelectedIndex = 0;
-
-            // 恢復 Add 按鈕為翠綠色
-            btnAdd.Enabled = true;
-            btnAdd.BackColor = Color.FromArgb(16, 185, 129);
-
-            LoadCustomerData();
-            GenerateNextCustomerID();
-        }
-        #endregion
     }
 }

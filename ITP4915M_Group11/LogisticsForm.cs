@@ -2,8 +2,8 @@
 using System;
 using System.Data;
 using System.Drawing;
-using System.Windows.Forms;
 using System.IO;
+using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
@@ -28,10 +28,8 @@ namespace ITP4915M_Group11
         {
             this.currentStaffID = string.IsNullOrEmpty(UserSession.LoggedInStaffID) ? "S001" : UserSession.LoggedInStaffID;
 
-            InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                ThemeManager.ApplyTheme(this);
                 InitializePremiumModernUI();
                 LoadDeliveryStaff();
                 RefreshPendingOrdersGrid();
@@ -87,6 +85,8 @@ namespace ITP4915M_Group11
                 AutoScroll = true,
                 Padding = new Padding(20)
             };
+            // 補回 BorderStyle 事件令白卡片有邊框
+            pnlInputs.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlInputs.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(pnlInputs, 0, 0);
 
             dgvPendingOrders = new DataGridView
@@ -150,7 +150,6 @@ namespace ITP4915M_Group11
             btnUpdateStatus.Click += btnUpdateStatus_Click;
             currentY += 45;
 
-            // 🌟 核心按鈕：開啟現代化預覽視窗
             btnGenerateNote = new Button { Text = "✨ Generate Note & Reply Slip", Location = new Point(15, currentY), Size = new Size(300, 40), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(79, 70, 229), Cursor = Cursors.Hand };
             btnGenerateNote.FlatAppearance.BorderSize = 0;
             btnGenerateNote.Click += btnGenerateNote_Click;
@@ -177,11 +176,6 @@ namespace ITP4915M_Group11
             cboDeliveryStaff.Items.Add("Outsource - SF Express");
         }
 
-        private void LogisticsForm_Load(object sender, EventArgs e)
-        {
-
-        }
-
         private void RefreshPendingOrdersGrid()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -189,7 +183,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status != 'Delivery Completed' ORDER BY OrderDate DESC";
+                    // 🌟 絕對隔離邏輯：只顯示等待出車 (Ready for Dispatch) 同送緊貨 (Dispatched) 嘅訂單
+                    string query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status IN ('Ready for Dispatch', 'Dispatched') ORDER BY OrderDate DESC";
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
@@ -209,16 +204,40 @@ namespace ITP4915M_Group11
                 txtOrderID.Text = row.Cells["Order ID"].Value?.ToString() ?? "";
                 txtCustomerID.Text = row.Cells["Customer"].Value?.ToString() ?? "";
                 txtCurrentStatus.Text = row.Cells["Status"].Value?.ToString() ?? "";
-                txtDeliveryAddress.Text = "Standard Registered Address (Please verify with client)";
+
+                // 嘗試從 Customer 拎地址 (如果 DB 入面有)
+                try
+                {
+                    using (MySqlConnection conn = new MySqlConnection(connString))
+                    {
+                        conn.Open();
+                        using (MySqlCommand cmd = new MySqlCommand("SELECT Address FROM customer WHERE CustomerID=@CID", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@CID", txtCustomerID.Text);
+                            var addr = cmd.ExecuteScalar();
+                            txtDeliveryAddress.Text = (addr != null && addr != DBNull.Value) ? addr.ToString() : "Standard Registered Address (Please verify with client)";
+                        }
+                    }
+                }
+                catch { txtDeliveryAddress.Text = "Standard Registered Address (Please verify with client)"; }
             }
         }
 
         private void btnAssignDelivery_Click(object sender, EventArgs e)
         {
             string orderID = txtOrderID.Text.Trim();
+            string address = txtDeliveryAddress.Text.Trim();
+
             if (string.IsNullOrEmpty(orderID) || cboDeliveryStaff.SelectedIndex == -1)
             {
                 MessageBox.Show("Please select an Order and assign a Delivery Team first.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 🌟 防呆：如果已經出咗車，唔畀再派車
+            if (txtCurrentStatus.Text == "Dispatched")
+            {
+                MessageBox.Show("This order has already been dispatched!", "Action Denied", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -227,14 +246,38 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string updateSql = "UPDATE orders SET Status = 'Dispatched' WHERE OrderID = @OrderID";
-                    using (MySqlCommand cmd = new MySqlCommand(updateSql, conn))
+                    using (MySqlTransaction trans = conn.BeginTransaction())
                     {
-                        cmd.Parameters.AddWithValue("@OrderID", orderID);
-                        cmd.ExecuteNonQuery();
-                        MessageBox.Show($"Order [{orderID}] has been successfully dispatched.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        ClearLogisticsFields();
-                        RefreshPendingOrdersGrid();
+                        try
+                        {
+                            string updateSql = "UPDATE orders SET Status = 'Dispatched' WHERE OrderID = @OrderID";
+                            using (MySqlCommand cmd = new MySqlCommand(updateSql, conn, trans))
+                            {
+                                cmd.Parameters.AddWithValue("@OrderID", orderID);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            string dnID = "DN-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
+                            string insertDnSql = "INSERT INTO delivery_note (DeliveryNoteID, OrderID, DeliveryDate, DeliveryAddress) VALUES (@dnID, @oID, @dDate, @addr)";
+                            using (MySqlCommand cmd = new MySqlCommand(insertDnSql, conn, trans))
+                            {
+                                cmd.Parameters.AddWithValue("@dnID", dnID);
+                                cmd.Parameters.AddWithValue("@oID", orderID);
+                                cmd.Parameters.AddWithValue("@dDate", dtpScheduleDate.Value);
+                                cmd.Parameters.AddWithValue("@addr", address);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            trans.Commit();
+                            MessageBox.Show($"Order [{orderID}] has been successfully dispatched!\nDelivery Note: {dnID}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            ClearLogisticsFields();
+                            RefreshPendingOrdersGrid();
+                        }
+                        catch (Exception ex)
+                        {
+                            trans.Rollback();
+                            MessageBox.Show("Dispatch failed (Database Error): " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
@@ -245,6 +288,13 @@ namespace ITP4915M_Group11
         {
             string orderID = txtOrderID.Text.Trim();
             if (string.IsNullOrEmpty(orderID)) return;
+
+            // 🌟 防呆：必須係送緊貨嘅單先可以轉做完成
+            if (txtCurrentStatus.Text != "Dispatched")
+            {
+                MessageBox.Show("Only 'Dispatched' orders can be marked as Delivery Completed.", "Action Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
@@ -282,7 +332,6 @@ namespace ITP4915M_Group11
             string customerID = txtCustomerID.Text.Trim();
             string address = txtDeliveryAddress.Text.Trim();
 
-            // 1. 創建模擬現代單據外觀的視窗容器
             Form previewForm = new Form
             {
                 Text = "Premium Invoice & Slip Hub",
@@ -302,7 +351,6 @@ namespace ITP4915M_Group11
             };
             previewForm.Controls.Add(scrollContainer);
 
-            // 2. 🌟 砌出電子紙張卡片
             Panel docSheet = new Panel
             {
                 Width = 540,
@@ -355,7 +403,6 @@ namespace ITP4915M_Group11
                 sigY += 60;
             }
 
-            // 3. 🌟 底部功能操作面板 (Action Controls Bar)
             Panel pnlActionDock = new Panel
             {
                 Size = new Size(620, 80),
@@ -395,12 +442,10 @@ namespace ITP4915M_Group11
             };
             btnCancel.FlatAppearance.BorderSize = 0;
 
-            // 🛠️ 徹底修復：使用 HTML 匯出，讓使用者可以透過瀏覽器完美轉存為真 PDF
             btnExport.Click += (src, args) =>
             {
                 using (SaveFileDialog sfd = new SaveFileDialog())
                 {
-                    // 改用 HTML 濾鏡，避免副檔名與內容格式衝突導致無法開啟
                     sfd.Filter = "Web Document for Printing (*.html)|*.html|Standard Text File (*.txt)|*.txt";
                     sfd.FileName = $"DeliveryManifest_{orderID}";
                     sfd.Title = "Choose System Directory Location to Save File";
@@ -411,7 +456,6 @@ namespace ITP4915M_Group11
                         {
                             string fileContent = "";
 
-                            // 如果使用者選擇匯出 HTML
                             if (sfd.FileName.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
                             {
                                 fileContent = $@"<!DOCTYPE html>
@@ -462,7 +506,6 @@ namespace ITP4915M_Group11
                             }
                             else
                             {
-                                // 選擇匯出純文字檔
                                 fileContent = $@"PREMIUM LIVING FURNITURE
 ----------------------------------------------------
 DELIVERY NOTE DATA SUMMARY
@@ -482,11 +525,9 @@ Customer Sign: ___________________________
 Date Signed:   ___________________________";
                             }
 
-                            // 寫入檔案
                             File.WriteAllText(sfd.FileName, fileContent, System.Text.Encoding.UTF8);
                             MessageBox.Show($"File successfully pipeline-routed and stored at:\n{sfd.FileName}", "System Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            // 自動打開檔案 (HTML 會用預設瀏覽器打開，然後可以按 Ctrl+P 直接印成完美 PDF)
                             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
                             previewForm.Close();
                         }

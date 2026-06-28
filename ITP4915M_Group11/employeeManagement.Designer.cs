@@ -37,7 +37,6 @@ namespace ITP4915M_Group11
             this.ClientSize = new System.Drawing.Size(1356, 766);
             this.Name = "EmployeeManagement";
             this.Text = "EmployeeManagement";
-            this.Load += new System.EventHandler(this.EmployeeManagement_Load);
             this.ResumeLayout(false);
 
         }

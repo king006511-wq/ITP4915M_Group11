@@ -27,6 +27,7 @@
             this.Name = "CustomerManagement";
             this.Text = "Customer Management";
             this.ResumeLayout(false);
+
         }
 
         #endregion

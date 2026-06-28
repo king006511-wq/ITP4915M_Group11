@@ -74,14 +74,15 @@ namespace ITP4915M_Group11
         private static readonly Dictionary<string, List<UserRoleEnum>> MenuPermissions = new Dictionary<string, List<UserRoleEnum>>
         {
             { "CUSTOMER_MGMT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative } },
+            
+            // 🌟 新增：Sales Quotation (報價單) 權限，允許 Manager, Admin, Sales 存取
+            { "SALES_QUOTATION", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative } },
+
             { "SALES_ORDER", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative } },
             { "DELIVERY_LOGISTICS", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.LogisticsDriver, UserRoleEnum.WarehouseSpecialist } },
             { "GOODS_RECEIVED", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist } },
             { "PRODUCT_MAINTENANCE", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist } },
-            
-            // 🌟 成功註冊生產表單權限，允許 Manager, Admin, 倉庫專員存取
             { "PRODUCT_MANUFACTURING", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist } },
-
             { "MATERIAL_REQUESTS", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist, UserRoleEnum.ProcurementOfficer } },
             { "PROCUREMENT_CONTROL", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.ProcurementOfficer } },
             { "HR_STAFF_MGMT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator } },
