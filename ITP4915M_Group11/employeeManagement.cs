@@ -2,6 +2,8 @@ using MySql.Data.MySqlClient;
 using System;
 using System.Data;
 using System.Drawing;
+using System.Net;
+using System.Net.Mail;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
@@ -10,7 +12,7 @@ namespace ITP4915M_Group11
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
-        private TextBox txtStaffID, txtName, txtPassword;
+        private TextBox txtStaffID, txtName, txtEmail;
         private ComboBox cboRole;
         private DataGridView dgvStaff;
 
@@ -44,12 +46,7 @@ namespace ITP4915M_Group11
             int startY = 20;
             txtStaffID = CreateInput(pnlCard, ref startY, "Staff ID *:");
             txtName = CreateInput(pnlCard, ref startY, "Staff Name *:");
-
-            // Password Field
-            Label lblPwd = new Label { Text = "Password (leave blank to keep current):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtPassword = new TextBox { Location = new Point(20, startY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, PasswordChar = '●' };
-            pnlCard.Controls.Add(lblPwd); pnlCard.Controls.Add(txtPassword);
-            startY += 65;
+            txtEmail = CreateInput(pnlCard, ref startY, "Staff Email (Gmail) *:");
 
             // Role Combo
             Label lblRole = new Label { Text = "System Role *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
@@ -88,7 +85,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT StaffID, Name, Role FROM staff", conn))
+                    // 加入 Email 顯示
+                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT StaffID, Name, Email, Role FROM staff", conn))
                     {
                         DataTable dt = new DataTable(); da.Fill(dt);
                         dgvStaff.DataSource = dt;
@@ -105,31 +103,57 @@ namespace ITP4915M_Group11
                 DataGridViewRow r = dgvStaff.SelectedRows[0];
                 txtStaffID.Text = r.Cells["StaffID"].Value.ToString();
                 txtName.Text = r.Cells["Name"].Value.ToString();
+                // 讀取 Email
+                txtEmail.Text = r.Cells["Email"].Value != DBNull.Value ? r.Cells["Email"].Value.ToString() : "";
                 cboRole.Text = r.Cells["Role"].Value.ToString();
-                txtPassword.Clear(); // 安全起見，唔顯示密碼
                 txtStaffID.ReadOnly = true;
             }
         }
 
         private void BtnAdd_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtPassword.Text)) { MessageBox.Show("ID, Name, and Password are required!"); return; }
+            if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || string.IsNullOrWhiteSpace(txtEmail.Text) || cboRole.SelectedIndex == -1)
+            {
+                MessageBox.Show("ID, Name, Email, and Role are required!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 🌟 隨機生成 6 位數字密碼
+            Random rnd = new Random();
+            string tempPassword = rnd.Next(100000, 999999).ToString();
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    // 🌟 使用 SHA2(256) 寫入密碼，完美配合 Login.cs
-                    string sql = "INSERT INTO staff (StaffID, Name, Password, Role) VALUES (@id, @n, SHA2(@pwd, 256), @r)";
+                    // 寫入 DB 並將密碼進行 SHA256 加密，加入 Email
+                    string sql = "INSERT INTO staff (StaffID, Name, Email, Password, Role) VALUES (@id, @n, @email, SHA2(@pwd, 256), @r)";
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
-                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim()); cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@pwd", txtPassword.Text); cmd.Parameters.AddWithValue("@r", cboRole.Text);
+                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim());
+                        cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@email", txtEmail.Text.Trim());
+                        cmd.Parameters.AddWithValue("@pwd", tempPassword);
+                        cmd.Parameters.AddWithValue("@r", cboRole.Text);
                         cmd.ExecuteNonQuery();
                     }
-                    MessageBox.Show("Staff member added."); LoadData(); ClearForm();
+
+                    // 寄出 Email 通知員工
+                    bool emailSent = SendWelcomeEmail(txtEmail.Text.Trim(), txtStaffID.Text.Trim(), txtName.Text.Trim(), tempPassword);
+
+                    if (emailSent)
+                    {
+                        MessageBox.Show($"Staff member added successfully!\n\nA system generated password has been sent to {txtEmail.Text}.", "Account Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Staff added, but failed to send email. Their temporary password is: {tempPassword}", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+
+                    LoadData(); ClearForm();
                 }
-                catch (Exception ex) { MessageBox.Show(ex.Message); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
         }
 
@@ -141,28 +165,20 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string sql;
-                    if (string.IsNullOrWhiteSpace(txtPassword.Text))
-                    {
-                        // 如果無打密碼，就只 Update Name 同 Role
-                        sql = "UPDATE staff SET Name=@n, Role=@r WHERE StaffID=@id";
-                    }
-                    else
-                    {
-                        // 🌟 如果有打密碼，就連密碼一齊 SHA256 Update
-                        sql = "UPDATE staff SET Name=@n, Password=SHA2(@pwd, 256), Role=@r WHERE StaffID=@id";
-                    }
+                    // 🌟 杜絕修改密碼，只能修改 Name, Email, Role
+                    string sql = "UPDATE staff SET Name=@n, Email=@email, Role=@r WHERE StaffID=@id";
 
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
-                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim()); cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim());
+                        cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@email", txtEmail.Text.Trim());
                         cmd.Parameters.AddWithValue("@r", cboRole.Text);
-                        if (!string.IsNullOrWhiteSpace(txtPassword.Text)) cmd.Parameters.AddWithValue("@pwd", txtPassword.Text);
                         cmd.ExecuteNonQuery();
                     }
-                    MessageBox.Show("Staff member updated."); LoadData();
+                    MessageBox.Show("Staff information updated successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information); LoadData();
                 }
-                catch (Exception ex) { MessageBox.Show(ex.Message); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
         }
 
@@ -171,7 +187,7 @@ namespace ITP4915M_Group11
             if (string.IsNullOrWhiteSpace(txtStaffID.Text)) return;
             if (txtStaffID.Text == UserSession.LoggedInStaffID) { MessageBox.Show("You cannot delete yourself!"); return; }
 
-            if (MessageBox.Show("Delete this staff member?", "Confirm", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            if (MessageBox.Show("Delete this staff member?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
@@ -192,8 +208,58 @@ namespace ITP4915M_Group11
 
         private void ClearForm()
         {
-            txtStaffID.Clear(); txtName.Clear(); txtPassword.Clear(); cboRole.SelectedIndex = -1;
+            txtStaffID.Clear(); txtName.Clear(); txtEmail.Clear(); cboRole.SelectedIndex = -1;
             txtStaffID.ReadOnly = false; dgvStaff.ClearSelection();
+        }
+
+        // ====================================================================
+        // 📧 透過 Gmail SMTP 發送歡迎信 (請設定你的真實帳號與應用程式密碼)
+        // ====================================================================
+        private bool SendWelcomeEmail(string toEmail, string staffId, string staffName, string tempPwd)
+        {
+            try
+            {
+                // 請將下面嘅 Email 同 App Password 換做你申請咗嘅資料
+                string fromEmail = "your_company_erp@gmail.com";
+                string appPassword = "abcd efgh ijkl mnop"; // Gmail 應用程式密碼 (16位字母)
+
+                MailMessage mail = new MailMessage();
+                mail.From = new MailAddress(fromEmail, "Premium Living ERP Admin");
+                mail.To.Add(toEmail);
+                mail.Subject = "Welcome to Premium Living! Your ERP Account Details";
+
+                mail.Body = $@"
+Hello {staffName},
+
+Welcome to the Premium Living team! 
+
+Your ERP system account has been successfully created.
+Please find your login details below:
+
+Staff ID: {staffId}
+Temporary Password: {tempPwd}
+
+⚠️ SECURITY NOTICE:
+Please log in to the system as soon as possible and change your password via the Home Dashboard.
+
+Best Regards,
+HR & IT Administration
+Premium Living
+                ";
+
+                using (SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587))
+                {
+                    smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
+                    smtp.EnableSsl = true;
+                    smtp.Send(mail);
+                }
+                return true;
+            }
+            catch (Exception)
+            {
+                // 如果 SMTP 設定未搞掂，Catch 住個 error 確保系統唔會彈 app
+                return false;
+            }
         }
     }
 }

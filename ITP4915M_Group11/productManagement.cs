@@ -8,7 +8,6 @@ namespace ITP4915M_Group11
 {
     public partial class ProductManagement : Form
     {
-        // 變數名稱更新：對應全新 Product 表
         private TextBox txtProductID;
         private TextBox txtProductName;
         private TextBox txtDescription;
@@ -16,7 +15,7 @@ namespace ITP4915M_Group11
         private TextBox txtRetailPrice;
         private DataGridView dgvProductCatalog;
 
-        // 🔒 Centralized Database Connection String (UNTOUCHED)
+        // 🔒 Centralized Database Connection String
         private readonly string connectionString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         public ProductManagement()
@@ -33,7 +32,6 @@ namespace ITP4915M_Group11
         #region 🔒 System Security Gatekeeper Enforcement
         private void ProductManagement_Load(object sender, EventArgs e)
         {
-            // 🎯 Check if the user has Manager or Administrator permissions
             string currentRole = UserSession.LoggedInStaffRole;
             string currentStaffID = UserSession.LoggedInStaffID;
 
@@ -128,16 +126,24 @@ namespace ITP4915M_Group11
             btnAdd.Click += btnAdd_Click;
             btnUpdate.Click += btnUpdate_Click;
             btnDelete.Click += btnDelete_Click;
-            btnClear.Click += (s, e) => ClearFields();
 
-            // 4. Data Grid Component (拉闊填滿右側剩餘空白)
+            // 🌟 修正：Clear 掣會清空輸入欄位，但如果要手動清空 Search，一齊做埋
+            btnClear.Click += (s, e) => {
+                txtDescription.Clear();
+                ClearFields();
+            };
+
+            // 4. Data Grid Component
             Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(440, 85), AutoSize = true };
             pnlMain.Controls.Add(lblGridTitle);
 
+            Label lblWarningLegend = new Label { Text = "🚨 Alert: Rows highlighted in RED indicate Low Stock (Below 20 units)", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), Location = new Point(440, 115), AutoSize = true };
+            pnlMain.Controls.Add(lblWarningLegend);
+
             dgvProductCatalog = new DataGridView
             {
-                Location = new Point(440, 125),
-                Size = new Size(700, 560), // 🚀 將表格寬度從 430 加闊至 700 填滿畫面
+                Location = new Point(440, 145),
+                Size = new Size(700, 540),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
@@ -156,6 +162,8 @@ namespace ITP4915M_Group11
             dgvProductCatalog.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
 
             dgvProductCatalog.SelectionChanged += dgvProductCatalog_SelectionChanged;
+            dgvProductCatalog.CellFormatting += dgvProductCatalog_CellFormatting;
+
             pnlMain.Controls.Add(dgvProductCatalog);
         }
 
@@ -170,7 +178,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 📦 Business Management Logic Functions (已更新至全新 product 表)
+        #region 📦 Business Management Logic Functions
         private void LoadDatabaseData()
         {
             try
@@ -178,7 +186,6 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    // 🚀 從全新的 product 表讀取資料
                     string query = "SELECT ProductID AS 'Product ID', ProductName AS 'Name', StockLevel AS 'Stock', RetailPrice AS 'Price HKD' FROM product";
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
@@ -194,6 +201,27 @@ namespace ITP4915M_Group11
                 errorDt.Columns.Add("System Status");
                 errorDt.Rows.Add("Database Error: " + ex.Message);
                 dgvProductCatalog.DataSource = errorDt;
+            }
+        }
+
+        private void dgvProductCatalog_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && dgvProductCatalog.Columns.Contains("Stock"))
+            {
+                var stockCell = dgvProductCatalog.Rows[e.RowIndex].Cells["Stock"];
+                if (stockCell.Value != null && int.TryParse(stockCell.Value.ToString(), out int stockQty))
+                {
+                    if (stockQty < 20)
+                    {
+                        e.CellStyle.BackColor = Color.FromArgb(254, 226, 226);
+                        e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
+
+                        if (dgvProductCatalog.Columns[e.ColumnIndex].Name == "Stock")
+                        {
+                            e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                        }
+                    }
+                }
             }
         }
 
@@ -243,7 +271,6 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    // 🚀 寫入全新的 product 表
                     string query = "INSERT INTO product (ProductID, ProductName, StockLevel, RetailPrice) VALUES (@id, @name, @stock, @price)";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
@@ -273,7 +300,6 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    // 🚀 更新全新的 product 表
                     string query = "UPDATE product SET ProductName=@name, StockLevel=@stock, RetailPrice=@price WHERE ProductID=@id";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
@@ -310,7 +336,6 @@ namespace ITP4915M_Group11
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    // 🚀 從全新的 product 表刪除
                     string query = "DELETE FROM product WHERE ProductID=@id";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
@@ -334,7 +359,7 @@ namespace ITP4915M_Group11
             txtProductName.Clear();
             txtStockLevel.Clear();
             txtRetailPrice.Clear();
-            txtDescription.Clear();
+            // 🌟 核心修正：抽走 txtDescription.Clear(); 防止打字時無限清空
             txtProductID.ReadOnly = false;
             txtProductID.BackColor = Color.White;
             dgvProductCatalog.ClearSelection();

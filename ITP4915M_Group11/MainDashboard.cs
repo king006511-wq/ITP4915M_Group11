@@ -1,5 +1,7 @@
-﻿using System;
+﻿using MySql.Data.MySqlClient;
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -7,6 +9,8 @@ namespace ITP4915M_Group11
 {
     public partial class MainDashboard : Form
     {
+        private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+
         // ==========================================
         // 🔒 全域容器架構變數
         // ==========================================
@@ -30,19 +34,17 @@ namespace ITP4915M_Group11
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Enterprise ERP Dashboard";
 
-            // 全螢幕啟動
             this.Size = new Size(1300, 850);
             this.WindowState = FormWindowState.Maximized;
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(243, 244, 246); // 現代背景灰 Slate 50
+            this.BackColor = Color.FromArgb(243, 244, 246);
             this.FormBorderStyle = FormBorderStyle.Sizable;
 
-            // 1. 現代深色導覽列
             pnlLeftNav = new Panel
             {
                 Dock = DockStyle.Left,
                 Width = 260,
-                BackColor = Color.FromArgb(15, 23, 42), // Slate 900
+                BackColor = Color.FromArgb(15, 23, 42),
                 Padding = new Padding(0, 20, 0, 0)
             };
 
@@ -69,7 +71,6 @@ namespace ITP4915M_Group11
             };
             pnlLeftNav.Controls.Add(flpNavMenu);
 
-            // 2. 右側動態內容區
             pnlContent = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -81,18 +82,16 @@ namespace ITP4915M_Group11
             this.Controls.Add(pnlLeftNav);
 
             SetupNavigationMenu();
-            ShowHomeDashboard();
+            ShowHomeDashboard(); // 預設顯示戰情室
         }
 
         private void SetupNavigationMenu()
         {
-            // ==== 系統與戰情室 ====
             AddNavHeader("📊 System Dashboards");
             AddNavButton("🏠 Home Dashboard", null, "HOME", "HOME");
 
-            // ==== 核心業務模組 ====
             if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") ||
-                AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") || // 🌟 加入報價單權限檢查
+                AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") ||
                 AuthorizationHelper.HasMenuPermission("SALES_ORDER") ||
                 AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") ||
                 AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") ||
@@ -101,10 +100,7 @@ namespace ITP4915M_Group11
             {
                 AddNavHeader("💼 Core Modules");
                 AddNavButton("👥 Customer Mgmt", typeof(CustomerManagement), "FORM", "CUSTOMER_MGMT");
-
-                // 🌟 加入 Sales Quotation 報價單按鈕 (放喺 Sales Order 上面最順理成章)
                 AddNavButton("📄 Sales Quotation", typeof(SalesQuotationForm), "FORM", "SALES_QUOTATION");
-
                 AddNavButton("🛒 Sales Order Mgmt", typeof(OrderManagementForm), "FORM", "SALES_ORDER");
                 AddNavButton("🚚 Delivery Logistics", typeof(LogisticsForm), "FORM", "DELIVERY_LOGISTICS");
                 AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM", "GOODS_RECEIVED");
@@ -112,10 +108,6 @@ namespace ITP4915M_Group11
                 AddNavButton("🛠️ Product Manufacturing", typeof(ProductManufacturingForm), "FORM", "PRODUCT_MANUFACTURING");
             }
 
-            // ==== 內部營運控制 ====
-            // ... (下面維持不變)
-
-            // ==== 內部營運控制 ====
             if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") ||
                 AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") ||
                 AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") ||
@@ -128,8 +120,7 @@ namespace ITP4915M_Group11
                 AddNavButton("📞 Customer Support", typeof(AfterServiceForm), "FORM", "CUSTOMER_SUPPORT");
             }
 
-            // ==== 系統操作 ====
-            AddNavHeader(""); // 分隔用空白列
+            AddNavHeader("");
             AddNavButton("🚪 Logout System", null, "LOGOUT", "LOGOUT");
         }
 
@@ -140,7 +131,6 @@ namespace ITP4915M_Group11
                 flpNavMenu.Controls.Add(new Panel { Size = new Size(220, 20), BackColor = Color.Transparent });
                 return;
             }
-
             Label lblHeader = new Label
             {
                 Text = text,
@@ -155,11 +145,7 @@ namespace ITP4915M_Group11
 
         private void AddNavButton(string text, Type formType, string actionType, string menuId = "")
         {
-            // 如果是表單按鈕且沒有權限，則直接返回不添加
-            if (actionType == "FORM" && !AuthorizationHelper.HasMenuPermission(menuId))
-            {
-                return;
-            }
+            if (actionType == "FORM" && !AuthorizationHelper.HasMenuPermission(menuId)) return;
 
             Button btn = new Button
             {
@@ -173,9 +159,8 @@ namespace ITP4915M_Group11
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(5, 2, 5, 2),
-                Tag = menuId  // 儲存菜單 ID 供參考
+                Tag = menuId
             };
-
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 41, 59);
 
@@ -185,40 +170,196 @@ namespace ITP4915M_Group11
                 else if (actionType == "LOGOUT") this.Close();
                 else LoadModule(formType);
             };
-
             flpNavMenu.Controls.Add(btn);
         }
         #endregion
 
-        #region 🏠 Home Dashboard
+        #region 🏠 Enterprise Home Dashboard (Analytics & Self-Service)
         private void ShowHomeDashboard()
         {
             if (activeForm != null) { activeForm.Close(); activeForm = null; }
             pnlContent.Controls.Clear();
 
-            Label lblTitle = new Label { Text = "Welcome back, Operator ✨", Font = new Font("Segoe UI Black", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(40, 30), AutoSize = true };
-            Label lblSubTitle = new Label { Text = "Premium Living Enterprise ERP Control System.", Font = new Font("Segoe UI", 11F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(43, 75), AutoSize = true };
+            string staffID = UserSession.LoggedInStaffID ?? "Guest";
+            string role = UserSession.LoggedInStaffRole ?? "Unknown Role";
+
+            // 1. Header Section
+            Label lblTitle = new Label { Text = $"Welcome back, {staffID} ✨", Font = new Font("Segoe UI Black", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(40, 30), AutoSize = true };
+            Label lblSubTitle = new Label { Text = $"Role: {role} | Premium Living Enterprise Control Center", Font = new Font("Segoe UI", 11F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(43, 75), AutoSize = true };
             pnlContent.Controls.Add(lblTitle); pnlContent.Controls.Add(lblSubTitle);
 
+            // 🌟 專屬的自理密碼按鈕
+            Button btnChangePwd = new Button { Text = "🔑 Change My Password", Location = new Point(pnlContent.Width - 300, 40), Size = new Size(220, 42), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnChangePwd.FlatAppearance.BorderSize = 0;
+            btnChangePwd.Click += BtnChangeMyPwd_Click;
+            pnlContent.Controls.Add(btnChangePwd);
+
+            // Fetch Real Data from DB
+            string todayOrders = "0", pendingApprove = "0", pendingDispatch = "0", lowStock = "0";
+            DataTable dtRecentOrders = new DataTable();
+            DataTable dtLowStock = new DataTable();
+
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE DATE(OrderDate) = CURDATE()", conn)) todayOrders = cmd.ExecuteScalar()?.ToString() ?? "0";
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status LIKE 'Awaiting Approval%'", conn)) pendingApprove = cmd.ExecuteScalar()?.ToString() ?? "0";
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status = 'Ready for Dispatch'", conn)) pendingDispatch = cmd.ExecuteScalar()?.ToString() ?? "0";
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM product WHERE StockLevel <= 10", conn)) lowStock = cmd.ExecuteScalar()?.ToString() ?? "0";
+
+                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT OrderID AS 'Order Ref', CustomerID AS 'Customer', TotalAmount AS 'Amount', Status FROM orders ORDER BY OrderDate DESC LIMIT 8", conn)) da.Fill(dtRecentOrders);
+                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT ProductID AS 'Product ID', ProductName AS 'Item Name', StockLevel AS 'Stock Left' FROM product WHERE StockLevel <= 10 ORDER BY StockLevel ASC LIMIT 8", conn)) da.Fill(dtLowStock);
+                }
+                catch (Exception) { /* Fallback to empty if DB not ready */ }
+            }
+
+            // 2. Stat Cards Section
             FlowLayoutPanel flpStats = new FlowLayoutPanel { Location = new Point(40, 120), Size = new Size(pnlContent.Width - 80, 130), FlowDirection = FlowDirection.LeftToRight, WrapContents = true, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             pnlContent.Controls.Add(flpStats);
 
-            flpStats.Controls.Add(CreateStatCard("TODAY'S ORDERS", "24", "+12%", Color.FromArgb(14, 165, 233)));
-            flpStats.Controls.Add(CreateStatCard("PENDING DISPATCH", "12", "-2", Color.FromArgb(245, 158, 11)));
-            flpStats.Controls.Add(CreateStatCard("ACTIVE TICKETS", "5", "Action Req.", Color.FromArgb(239, 68, 68)));
-            flpStats.Controls.Add(CreateStatCard("MONTHLY REVENUE", "$142.5K", "+8.4%", Color.FromArgb(16, 185, 129)));
+            flpStats.Controls.Add(CreateStatCard("TODAY'S ORDERS", todayOrders, "Active", Color.FromArgb(14, 165, 233)));
+            flpStats.Controls.Add(CreateStatCard("PENDING APPROVAL", pendingApprove, "Requires Action", Color.FromArgb(245, 158, 11)));
+            flpStats.Controls.Add(CreateStatCard("READY FOR DISPATCH", pendingDispatch, "Logistics Queue", Color.FromArgb(139, 92, 246)));
+            flpStats.Controls.Add(CreateStatCard("LOW STOCK ALERTS", lowStock, "Procurement Needed", Color.FromArgb(239, 68, 68)));
+
+            // 3. Analytics Grids Section (Side by Side)
+            TableLayoutPanel tlpGrids = new TableLayoutPanel { Location = new Point(40, 270), Size = new Size(pnlContent.Width - 80, 450), ColumnCount = 2, RowCount = 1, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
+            tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
+            tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
+            pnlContent.Controls.Add(tlpGrids);
+
+            tlpGrids.Controls.Add(CreateGridPanel("📈 Recent Sales Activity", dtRecentOrders, Color.FromArgb(37, 99, 235)), 0, 0);
+            tlpGrids.Controls.Add(CreateGridPanel("⚠️ Low Stock Warning", dtLowStock, Color.FromArgb(220, 38, 38)), 1, 0);
         }
 
-        private Panel CreateStatCard(string title, string value, string trend, Color themeColor)
+        private Panel CreateStatCard(string title, string value, string subtitle, Color themeColor)
         {
-            Panel card = new Panel { Size = new Size(220, 110), BackColor = Color.White, Margin = new Padding(0, 0, 20, 20) };
+            Panel card = new Panel { Size = new Size(250, 110), BackColor = Color.White, Margin = new Padding(0, 0, 20, 20) };
             card.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, card.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             Panel topBar = new Panel { Dock = DockStyle.Top, Height = 4, BackColor = themeColor };
             Label lblTitle = new Label { Text = title, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, 15), AutoSize = true };
-            Label lblValue = new Label { Text = value, Font = new Font("Segoe UI Black", 24F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(12, 35), AutoSize = true };
-            Label lblTrend = new Label { Text = trend, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = themeColor, Location = new Point(15, 80), AutoSize = true };
-            card.Controls.Add(topBar); card.Controls.Add(lblTitle); card.Controls.Add(lblValue); card.Controls.Add(lblTrend);
+            Label lblValue = new Label { Text = value, Font = new Font("Segoe UI Black", 26F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(12, 32), AutoSize = true };
+            Label lblSub = new Label { Text = subtitle, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = themeColor, Location = new Point(15, 82), AutoSize = true };
+
+            card.Controls.Add(topBar); card.Controls.Add(lblTitle); card.Controls.Add(lblValue); card.Controls.Add(lblSub);
             return card;
+        }
+
+        private Panel CreateGridPanel(string title, DataTable data, Color headerColor)
+        {
+            Panel pnl = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Margin = new Padding(0, 0, 20, 0) };
+            pnl.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnl.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+
+            Label lblTitle = new Label { Text = title, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(15, 15), AutoSize = true };
+            pnl.Controls.Add(lblTitle);
+
+            DataGridView dgv = new DataGridView
+            {
+                Location = new Point(15, 55),
+                Size = new Size(pnl.Width - 30, pnl.Height - 70),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                DataSource = data,
+                AllowUserToAddRows = false,
+                ReadOnly = true,
+                RowHeadersVisible = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                GridColor = Color.FromArgb(241, 245, 249)
+            };
+            dgv.EnableHeadersVisualStyles = false;
+            dgv.ColumnHeadersDefaultCellStyle.BackColor = headerColor;
+            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            dgv.ColumnHeadersHeight = 35;
+            pnl.Controls.Add(dgv);
+
+            return pnl;
+        }
+
+        // ====================================================================
+        // 🌟 自家密碼更改對話框 (強逼驗證舊密碼)
+        // ====================================================================
+        private void BtnChangeMyPwd_Click(object sender, EventArgs e)
+        {
+            string loggedInID = UserSession.LoggedInStaffID ?? "S001";
+
+            Form pwdForm = new Form
+            {
+                Text = "Account Security",
+                Size = new Size(400, 380),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.White
+            };
+
+            Label lblTitle = new Label { Text = $"Update Password for {loggedInID}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(20, 20), AutoSize = true };
+            pwdForm.Controls.Add(lblTitle);
+
+            Label lblOld = new Label { Text = "Current Password:", Location = new Point(20, 70), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            TextBox txtOld = new TextBox { Location = new Point(20, 95), Width = 340, PasswordChar = '●', Font = new Font("Segoe UI", 10.5F) };
+            pwdForm.Controls.Add(lblOld); pwdForm.Controls.Add(txtOld);
+
+            Label lblNew = new Label { Text = "New Password:", Location = new Point(20, 140), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            TextBox txtNew = new TextBox { Location = new Point(20, 165), Width = 340, PasswordChar = '●', Font = new Font("Segoe UI", 10.5F) };
+            pwdForm.Controls.Add(lblNew); pwdForm.Controls.Add(txtNew);
+
+            Label lblConfirm = new Label { Text = "Confirm New Password:", Location = new Point(20, 210), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            TextBox txtConfirm = new TextBox { Location = new Point(20, 235), Width = 340, PasswordChar = '●', Font = new Font("Segoe UI", 10.5F) };
+            pwdForm.Controls.Add(lblConfirm); pwdForm.Controls.Add(txtConfirm);
+
+            Button btnSubmit = new Button { Text = "Update Password", Location = new Point(20, 285), Size = new Size(340, 40), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnSubmit.FlatAppearance.BorderSize = 0;
+            pwdForm.Controls.Add(btnSubmit);
+
+            btnSubmit.Click += (s, args) =>
+            {
+                if (string.IsNullOrWhiteSpace(txtOld.Text) || string.IsNullOrWhiteSpace(txtNew.Text) || string.IsNullOrWhiteSpace(txtConfirm.Text))
+                {
+                    MessageBox.Show("Please fill in all password fields.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); return;
+                }
+                if (txtNew.Text != txtConfirm.Text)
+                {
+                    MessageBox.Show("New passwords do not match!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); return;
+                }
+
+                using (MySqlConnection conn = new MySqlConnection(connString))
+                {
+                    try
+                    {
+                        conn.Open();
+                        // 1. 驗證舊密碼是否正確
+                        using (MySqlCommand checkCmd = new MySqlCommand("SELECT COUNT(*) FROM staff WHERE StaffID = @id AND Password = SHA2(@oldPwd, 256)", conn))
+                        {
+                            checkCmd.Parameters.AddWithValue("@id", loggedInID);
+                            checkCmd.Parameters.AddWithValue("@oldPwd", txtOld.Text);
+                            if (Convert.ToInt32(checkCmd.ExecuteScalar()) == 0)
+                            {
+                                MessageBox.Show("Incorrect Current Password. Access Denied.", "Security Alert", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+                        }
+
+                        // 2. 更新為新密碼
+                        using (MySqlCommand updateCmd = new MySqlCommand("UPDATE staff SET Password = SHA2(@newPwd, 256) WHERE StaffID = @id", conn))
+                        {
+                            updateCmd.Parameters.AddWithValue("@id", loggedInID);
+                            updateCmd.Parameters.AddWithValue("@newPwd", txtNew.Text);
+                            updateCmd.ExecuteNonQuery();
+                        }
+
+                        MessageBox.Show("Your password has been changed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        pwdForm.Close();
+                    }
+                    catch (Exception ex) { MessageBox.Show("Database error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }
+            };
+            pwdForm.ShowDialog();
         }
         #endregion
 
@@ -234,13 +375,10 @@ namespace ITP4915M_Group11
                 Form targetForm = (Form)Activator.CreateInstance(formType);
                 targetForm.TopLevel = false;
                 targetForm.FormBorderStyle = FormBorderStyle.None;
-
-                // 佈局設定
                 targetForm.Dock = DockStyle.None;
                 targetForm.Location = new Point(0, 0);
                 targetForm.BackColor = Color.White;
 
-                // 安全範圍限制：畫面大就跟著放大，畫面小就守住底線
                 targetForm.Size = new Size(
                     Math.Max(pnlContent.Width, 1150),
                     Math.Max(pnlContent.Height, 800)
@@ -249,7 +387,6 @@ namespace ITP4915M_Group11
                 pnlContent.Controls.Clear();
                 pnlContent.Controls.Add(targetForm);
 
-                // 🌟 神奇攔截點：在這裡強制從外面幫子表單做整形，唔使改子表單 code
                 GlobalOptimizeChildForm(targetForm);
 
                 targetForm.Show();
@@ -261,33 +398,21 @@ namespace ITP4915M_Group11
             }
         }
 
-        /// <summary>
-        /// 🛠️ 遞迴掃描子表單所有控制項，強制優化 DataGridView 顯示並隱藏舊版返回按鈕
-        /// </summary>
         private void GlobalOptimizeChildForm(Control parent)
         {
             foreach (Control ctrl in parent.Controls)
             {
-                // 1. 解決 DataGridView 擠在左邊留白的問題
                 if (ctrl is DataGridView dgv)
                 {
-                    // 強制欄位等比例拉伸填滿表格內部空白
                     dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-
-                    // 強制表格本身跟著外框放大縮小
                     dgv.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-
                     dgv.BackgroundColor = Color.White;
                     dgv.BorderStyle = BorderStyle.None;
                 }
-
-                // 2. 隱藏多餘的 Go Back / 箭頭 返回按鈕
                 if (ctrl is Button btn && (btn.Text.Contains("Go Back") || btn.Text.Contains("Back Home") || btn.Text.Contains("⬅")))
                 {
                     btn.Visible = false;
                 }
-
-                // 3. 繼續往內層尋找
                 if (ctrl.HasChildren)
                 {
                     GlobalOptimizeChildForm(ctrl);
@@ -295,10 +420,5 @@ namespace ITP4915M_Group11
             }
         }
         #endregion
-
-        private void MainDashboard_Load(object sender, EventArgs e)
-        {
-
-        }
     }
 }

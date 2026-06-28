@@ -23,7 +23,8 @@ namespace ITP4915M_Group11
 
         private TextBox txtRequestID, txtUnitPrice, txtQty;
         private ComboBox cboMaterials;
-        private DataGridView dgvHistory, dgvCart;
+        // 🌟 新增 dgvDetails 顯示子物料
+        private DataGridView dgvHistory, dgvDetails, dgvCart;
         private Button btnAddItem, btnRemoveItem, btnSubmitRequest, btnClear;
         private Label lblTotalAmountDisplay;
         private DataTable cartTable;
@@ -79,11 +80,14 @@ namespace ITP4915M_Group11
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(pnlCard, 0, 0);
 
-            // --- Right Table (History) ---
-            TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0) };
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            Label lblGridTitle = new Label { Text = "📊 Recent Request History", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
+            // 🌟 核心升級：Right Table 分為上下兩部分 (History + Details)
+            TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = new Padding(0) };
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F)); // Header 1
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));  // Grid 1
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F)); // Header 2
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));  // Grid 2
+
+            Label lblGridTitle = new Label { Text = "📊 Request Headers (One-To-Many)", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
             rightTable.Controls.Add(lblGridTitle, 0, 0);
 
             dgvHistory = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, GridColor = Color.FromArgb(241, 245, 249) };
@@ -91,12 +95,22 @@ namespace ITP4915M_Group11
             dgvHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvHistory.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvHistory.ColumnHeadersHeight = 38;
-
-            // 🌟 加入狀態顏色轉換事件
+            dgvHistory.ColumnHeadersHeight = 35;
             dgvHistory.CellFormatting += dgvHistory_CellFormatting;
-
+            dgvHistory.SelectionChanged += DgvHistory_SelectionChanged; // 聯動事件
             rightTable.Controls.Add(dgvHistory, 0, 1);
+
+            Label lblDetailsTitle = new Label { Text = "🔍 Request Line Items", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
+            rightTable.Controls.Add(lblDetailsTitle, 0, 2);
+
+            dgvDetails = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, GridColor = Color.FromArgb(241, 245, 249) };
+            dgvDetails.EnableHeadersVisualStyles = false;
+            dgvDetails.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105); // 灰藍色區分
+            dgvDetails.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvDetails.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvDetails.ColumnHeadersHeight = 35;
+            rightTable.Controls.Add(dgvDetails, 0, 3);
+
             contentTable.Controls.Add(rightTable, 2, 0);
 
             // --- Builder Fields ---
@@ -104,7 +118,7 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(lblCardTitle);
 
             int startY = 50;
-            txtRequestID = CreateStyledTextBox(pnlCard, ref startY, "Batch ID (Auto):", true, 450, 20);
+            txtRequestID = CreateStyledTextBox(pnlCard, ref startY, "Request ID (Auto):", true, 450, 20);
 
             Label lblMat = new Label { Text = "Select Material *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboMaterials = new ComboBox { Location = new Point(20, startY + 25), Width = 450, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F), BackColor = Color.White };
@@ -171,7 +185,6 @@ namespace ITP4915M_Group11
             return txt;
         }
 
-        // 🌟 給予 Request 歷史清單狀態顏色
         private void dgvHistory_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
             if (dgvHistory.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
@@ -304,7 +317,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 🚀 Submit Transaction
+        #region 🚀 Submit Transaction (One-To-Many)
         private void BtnSubmitRequest_Click(object sender, EventArgs e)
         {
             if (cartTable.Rows.Count == 0)
@@ -322,13 +335,9 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            string batchPrefix = "R" + DateTime.Now.ToString("yyMMdd");
-                            int seq = 1;
+                            // 🌟 核心修改：只使用 1 個 ID 貫穿整個購物車 (One-To-Many)
+                            string requestID = txtRequestID.Text.Trim();
 
-                            // 🌟 修正 1: 將 Random 移出迴圈外，保證產生真正嘅隨機數
-                            Random rnd = new Random();
-
-                            // 🌟 修正 2: 將 SQL Query 同 SqlCommand 宣告移出迴圈外提升效能
                             string query = @"INSERT INTO reorder_card 
                                              (ReOrderCardID, MaterialID, RequestedQty, Status, TriggerDate) 
                                              VALUES (@rcID, @matID, @qty, 'Pending Approval', NOW())";
@@ -337,22 +346,16 @@ namespace ITP4915M_Group11
                             {
                                 foreach (DataRow row in cartTable.Rows)
                                 {
-                                    string rcID = batchPrefix + rnd.Next(10, 99).ToString() + seq.ToString("D2");
-                                    if (rcID.Length > 14) rcID = rcID.Substring(0, 14);
-
-                                    // 🌟 每次執行前先 Clear Parameters，再入新數據
                                     cmd.Parameters.Clear();
-                                    cmd.Parameters.AddWithValue("@rcID", rcID);
+                                    cmd.Parameters.AddWithValue("@rcID", requestID);
                                     cmd.Parameters.AddWithValue("@matID", row["MaterialID"]);
                                     cmd.Parameters.AddWithValue("@qty", row["Qty"]);
-
                                     cmd.ExecuteNonQuery();
-                                    seq++;
                                 }
                             }
 
                             trans.Commit();
-                            MessageBox.Show($"Successfully submitted {cartTable.Rows.Count} material requests to Procurement for approval!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show($"Successfully submitted {cartTable.Rows.Count} material items under Request [{requestID}]!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                             ClearFields();
                             RefreshHistoryGrid();
@@ -372,7 +375,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 🔄 Refresh & Clear
+        #region 🔄 Refresh & Master-Detail Sync
         private void RefreshHistoryGrid()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -380,8 +383,16 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = @"SELECT ReOrderCardID AS 'Request ID', MaterialID AS 'Material', RequestedQty AS 'Qty', Status, TriggerDate AS 'Date' 
-                                     FROM reorder_card ORDER BY TriggerDate DESC LIMIT 20";
+                    // 🌟 核心修改：利用 GROUP BY 將同一個 RequestID 打包成一行顯示
+                    string query = @"SELECT ReOrderCardID AS 'Request ID', 
+                                            COUNT(MaterialID) AS 'Items Included', 
+                                            SUM(RequestedQty) AS 'Total Qty', 
+                                            Status, 
+                                            MAX(TriggerDate) AS 'Date' 
+                                     FROM reorder_card 
+                                     GROUP BY ReOrderCardID, Status 
+                                     ORDER BY Date DESC LIMIT 20";
+
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
@@ -393,9 +404,46 @@ namespace ITP4915M_Group11
             }
         }
 
+        // 🌟 核心修改：當點擊 Header 時，自動從資料庫拉取對應嘅 Line Items 顯示喺下半部
+        private void DgvHistory_SelectionChanged(object sender, EventArgs e)
+        {
+            if (dgvHistory.SelectedRows.Count > 0)
+            {
+                string reqID = dgvHistory.SelectedRows[0].Cells["Request ID"].Value.ToString();
+                using (MySqlConnection conn = new MySqlConnection(connString))
+                {
+                    try
+                    {
+                        conn.Open();
+                        string query = @"SELECT r.MaterialID AS 'Material ID', m.MaterialName AS 'Material Name', r.RequestedQty AS 'Qty' 
+                                         FROM reorder_card r 
+                                         JOIN raw_material m ON r.MaterialID = m.MaterialID 
+                                         WHERE r.ReOrderCardID = @id";
+
+                        using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@id", reqID);
+                            using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                            {
+                                DataTable dt = new DataTable();
+                                adapter.Fill(dt);
+                                dgvDetails.DataSource = dt;
+                            }
+                        }
+                    }
+                    catch (Exception) { dgvDetails.DataSource = null; }
+                }
+            }
+            else
+            {
+                dgvDetails.DataSource = null;
+            }
+        }
+
         private void GenerateRequestBatchID()
         {
-            txtRequestID.Text = "BATCH-" + DateTime.Now.ToString("yyMMddHHmm");
+            // 🌟 產生極具識別度嘅唯一 Request ID
+            txtRequestID.Text = "REQ-" + DateTime.Now.ToString("yyyyMMddHHmmss");
         }
 
         private void ClearFields()
@@ -406,6 +454,7 @@ namespace ITP4915M_Group11
             txtQty.Clear();
             txtUnitPrice.Clear();
             GenerateRequestBatchID();
+            dgvHistory.ClearSelection();
         }
         #endregion
     }
