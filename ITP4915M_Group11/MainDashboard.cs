@@ -40,6 +40,7 @@ namespace ITP4915M_Group11
             this.BackColor = Color.FromArgb(243, 244, 246);
             this.FormBorderStyle = FormBorderStyle.Sizable;
 
+            // 左側導航欄
             pnlLeftNav = new Panel
             {
                 Dock = DockStyle.Left,
@@ -48,6 +49,7 @@ namespace ITP4915M_Group11
                 Padding = new Padding(0, 20, 0, 0)
             };
 
+            // 企業商標 Logo
             Label lblLogo = new Label
             {
                 Text = "PREMIUM\nLIVING",
@@ -61,6 +63,7 @@ namespace ITP4915M_Group11
             };
             pnlLeftNav.Controls.Add(lblLogo);
 
+            // 導航按鈕流式佈局容器
             flpNavMenu = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -71,6 +74,7 @@ namespace ITP4915M_Group11
             };
             pnlLeftNav.Controls.Add(flpNavMenu);
 
+            // 右側主內容容器
             pnlContent = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -78,11 +82,14 @@ namespace ITP4915M_Group11
                 AutoScroll = true
             };
 
+            // 監聽容器縮放事件，確保內嵌子表單動態 RWD 適應尺寸
+            pnlContent.Resize += PnlContent_Resize;
+
             this.Controls.Add(pnlContent);
             this.Controls.Add(pnlLeftNav);
 
             SetupNavigationMenu();
-            ShowHomeDashboard(); // 預設顯示戰情室
+            ShowHomeDashboard(); // 預設顯示主戰情室
         }
 
         private void SetupNavigationMenu()
@@ -90,12 +97,14 @@ namespace ITP4915M_Group11
             AddNavHeader("📊 System Dashboards");
             AddNavButton("🏠 Home Dashboard", null, "HOME", "HOME");
 
+            // 🌟 權限控管組合：判斷是否顯示核心業務模組
             if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") ||
                 AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") ||
                 AuthorizationHelper.HasMenuPermission("SALES_ORDER") ||
                 AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") ||
                 AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") ||
                 AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE") ||
+                AuthorizationHelper.HasMenuPermission("PRODUCT_CREATION_BOM") ||
                 AuthorizationHelper.HasMenuPermission("PRODUCT_MANUFACTURING"))
             {
                 AddNavHeader("💼 Core Modules");
@@ -105,17 +114,26 @@ namespace ITP4915M_Group11
                 AddNavButton("🚚 Delivery Logistics", typeof(LogisticsForm), "FORM", "DELIVERY_LOGISTICS");
                 AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM", "GOODS_RECEIVED");
                 AddNavButton("🛋️ Product Maintenance", typeof(ProductManagement), "FORM", "PRODUCT_MAINTENANCE");
+
+                // 新產品研發與 BOM 模組
+                AddNavButton("✨ New Product R&D", typeof(ProductCreationBOMForm), "FORM", "PRODUCT_CREATION_BOM");
                 AddNavButton("🛠️ Product Manufacturing", typeof(ProductManufacturingForm), "FORM", "PRODUCT_MANUFACTURING");
             }
 
+            // 🌟 修正：加入 SUPPLIER_MATERIAL_CREATION 到內部營運權限檢查組入面
             if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") ||
                 AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") ||
+                AuthorizationHelper.HasMenuPermission("SUPPLIER_MATERIAL_CREATION") || // 👈 加咗呢行判斷
                 AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") ||
                 AuthorizationHelper.HasMenuPermission("CUSTOMER_SUPPORT"))
             {
                 AddNavHeader("⚙️ Internal Ops");
                 AddNavButton("🏭 Material Requests", typeof(RawMaterialRequestForm), "FORM", "MATERIAL_REQUESTS");
                 AddNavButton("📈 Procurement Control", typeof(ProcurementForm), "FORM", "PROCUREMENT_CONTROL");
+
+                // 🌟 新增：真正將「供應商與物料建立」按鈕放落選單到！
+                AddNavButton("🤝 Supplier & Material", typeof(SupplierAndMaterialCreationForm), "FORM", "SUPPLIER_MATERIAL_CREATION");
+
                 AddNavButton("👔 HR / Staff Mgmt", typeof(EmployeeManagement), "FORM", "HR_STAFF_MGMT");
                 AddNavButton("📞 Customer Support", typeof(AfterServiceForm), "FORM", "CUSTOMER_SUPPORT");
             }
@@ -183,18 +201,17 @@ namespace ITP4915M_Group11
             string staffID = UserSession.LoggedInStaffID ?? "Guest";
             string role = UserSession.LoggedInStaffRole ?? "Unknown Role";
 
-            // 1. Header Section
+            // 1. Header 歡迎區區塊
             Label lblTitle = new Label { Text = $"Welcome back, {staffID} ✨", Font = new Font("Segoe UI Black", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(40, 30), AutoSize = true };
             Label lblSubTitle = new Label { Text = $"Role: {role} | Premium Living Enterprise Control Center", Font = new Font("Segoe UI", 11F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(43, 75), AutoSize = true };
             pnlContent.Controls.Add(lblTitle); pnlContent.Controls.Add(lblSubTitle);
 
-            // 🌟 專屬的自理密碼按鈕
+            // 自主變更密碼按鈕
             Button btnChangePwd = new Button { Text = "🔑 Change My Password", Location = new Point(pnlContent.Width - 300, 40), Size = new Size(220, 42), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand, Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnChangePwd.FlatAppearance.BorderSize = 0;
             btnChangePwd.Click += BtnChangeMyPwd_Click;
             pnlContent.Controls.Add(btnChangePwd);
 
-            // Fetch Real Data from DB
             string todayOrders = "0", pendingApprove = "0", pendingDispatch = "0", lowStock = "0";
             DataTable dtRecentOrders = new DataTable();
             DataTable dtLowStock = new DataTable();
@@ -212,10 +229,10 @@ namespace ITP4915M_Group11
                     using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT OrderID AS 'Order Ref', CustomerID AS 'Customer', TotalAmount AS 'Amount', Status FROM orders ORDER BY OrderDate DESC LIMIT 8", conn)) da.Fill(dtRecentOrders);
                     using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT ProductID AS 'Product ID', ProductName AS 'Item Name', StockLevel AS 'Stock Left' FROM product WHERE StockLevel <= 10 ORDER BY StockLevel ASC LIMIT 8", conn)) da.Fill(dtLowStock);
                 }
-                catch (Exception) { /* Fallback to empty if DB not ready */ }
+                catch (Exception) { }
             }
 
-            // 2. Stat Cards Section
+            // 2. 數據統計卡片區塊
             FlowLayoutPanel flpStats = new FlowLayoutPanel { Location = new Point(40, 120), Size = new Size(pnlContent.Width - 80, 130), FlowDirection = FlowDirection.LeftToRight, WrapContents = true, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             pnlContent.Controls.Add(flpStats);
 
@@ -224,7 +241,7 @@ namespace ITP4915M_Group11
             flpStats.Controls.Add(CreateStatCard("READY FOR DISPATCH", pendingDispatch, "Logistics Queue", Color.FromArgb(139, 92, 246)));
             flpStats.Controls.Add(CreateStatCard("LOW STOCK ALERTS", lowStock, "Procurement Needed", Color.FromArgb(239, 68, 68)));
 
-            // 3. Analytics Grids Section (Side by Side)
+            // 3. 戰情分析網格
             TableLayoutPanel tlpGrids = new TableLayoutPanel { Location = new Point(40, 270), Size = new Size(pnlContent.Width - 80, 450), ColumnCount = 2, RowCount = 1, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
             tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
             tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
@@ -280,9 +297,6 @@ namespace ITP4915M_Group11
             return pnl;
         }
 
-        // ====================================================================
-        // 🌟 自家密碼更改對話框 (強逼驗證舊密碼)
-        // ====================================================================
         private void BtnChangeMyPwd_Click(object sender, EventArgs e)
         {
             string loggedInID = UserSession.LoggedInStaffID ?? "S001";
@@ -333,7 +347,6 @@ namespace ITP4915M_Group11
                     try
                     {
                         conn.Open();
-                        // 1. 驗證舊密碼是否正確
                         using (MySqlCommand checkCmd = new MySqlCommand("SELECT COUNT(*) FROM staff WHERE StaffID = @id AND Password = SHA2(@oldPwd, 256)", conn))
                         {
                             checkCmd.Parameters.AddWithValue("@id", loggedInID);
@@ -345,7 +358,6 @@ namespace ITP4915M_Group11
                             }
                         }
 
-                        // 2. 更新為新密碼
                         using (MySqlCommand updateCmd = new MySqlCommand("UPDATE staff SET Password = SHA2(@newPwd, 256) WHERE StaffID = @id", conn))
                         {
                             updateCmd.Parameters.AddWithValue("@id", loggedInID);
@@ -373,6 +385,15 @@ namespace ITP4915M_Group11
                 if (activeForm != null) { activeForm.Close(); activeForm.Dispose(); }
 
                 Form targetForm = (Form)Activator.CreateInstance(formType);
+
+                if (targetForm is ProductCreationBOMForm bomForm)
+                {
+                    bomForm.OnNavigationBack = () =>
+                    {
+                        LoadModule(typeof(ProductManagement));
+                    };
+                }
+
                 targetForm.TopLevel = false;
                 targetForm.FormBorderStyle = FormBorderStyle.None;
                 targetForm.Dock = DockStyle.None;
@@ -398,6 +419,17 @@ namespace ITP4915M_Group11
             }
         }
 
+        private void PnlContent_Resize(object sender, EventArgs e)
+        {
+            if (activeForm != null)
+            {
+                activeForm.Size = new Size(
+                    Math.Max(pnlContent.Width, 1150),
+                    Math.Max(pnlContent.Height, 800)
+                );
+            }
+        }
+
         private void GlobalOptimizeChildForm(Control parent)
         {
             foreach (Control ctrl in parent.Controls)
@@ -420,5 +452,9 @@ namespace ITP4915M_Group11
             }
         }
         #endregion
+
+        private void MainDashboard_Load(object sender, EventArgs e)
+        {
+        }
     }
 }

@@ -31,8 +31,9 @@ namespace ITP4915M_Group11
         private TextBox txtOrderID, txtStaffUIID, txtQty, txtUnitPrice;
         private ComboBox cboProducts, cboCustomers;
         private CheckBox chkRequireDelivery;
+        private DateTimePicker dtpDeliveryDate; // 🌟 新增：送貨日期選擇器
         private DataGridView dgvOrders;
-        private Button btnSubmitOrder, btnUpdateOrder, btnClear, btnCreateQuotation;
+        private Button btnSubmitOrder, btnUpdateOrder, btnClear, btnCreateQuotation, btnCompletePickup; // 🌟 新增：自取完成按鈕
         private DataTable cartTable;
         private DataGridView dgvCart;
         private Label lblTotalAmountDisplay;
@@ -148,19 +149,32 @@ namespace ITP4915M_Group11
             lblTotalAmountDisplay = new Label { Text = "Total Bill: $0.00", Location = new Point(20, startY), Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), AutoSize = true };
             pnlCard.Controls.Add(lblTotalAmountDisplay); startY += 40;
 
+            // 🌟 加入送貨選項與日期選擇器
             chkRequireDelivery = new CheckBox { Text = "🚚 Require Delivery Service (Logistics)", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), ForeColor = Color.FromArgb(234, 88, 12), Checked = true };
-            pnlCard.Controls.Add(chkRequireDelivery); startY += 40;
+            pnlCard.Controls.Add(chkRequireDelivery); startY += 30;
 
-            btnSubmitOrder = new Button { Text = "✅ Submit for Approval", Location = new Point(20, startY), Size = new Size(200, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            // 💡 MinDate 設定為 3 日後，防止選擇過去及未來2日內的時間
+            dtpDeliveryDate = new DateTimePicker { Location = new Point(45, startY), Width = 250, Font = new Font("Segoe UI", 10F), Format = DateTimePickerFormat.Long, MinDate = DateTime.Now.AddDays(3) };
+            pnlCard.Controls.Add(dtpDeliveryDate); startY += 40;
+
+            chkRequireDelivery.CheckedChanged += (s, e) => { dtpDeliveryDate.Visible = chkRequireDelivery.Checked; };
+
+            // 🌟 重新排版底部按鈕
+            btnSubmitOrder = new Button { Text = "✅ Submit", Location = new Point(20, startY), Size = new Size(110, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
             btnSubmitOrder.Click += btnCreateOrder_Click; pnlCard.Controls.Add(btnSubmitOrder);
 
-            btnUpdateOrder = new Button { Text = "✏️ Update Draft", Location = new Point(230, startY), Size = new Size(110, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            btnUpdateOrder = new Button { Text = "✏️ Update", Location = new Point(140, startY), Size = new Size(100, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
             btnUpdateOrder.Click += btnUpdateOrder_Click; pnlCard.Controls.Add(btnUpdateOrder);
 
-            btnClear = new Button { Text = "🆕 New", Location = new Point(350, startY), Size = new Size(120, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
-            btnClear.Click += (s, e) => ClearFields(); pnlCard.Controls.Add(btnClear);
+            // 🌟 加入「自取完成」按鈕
+            btnCompletePickup = new Button { Text = "🛍️ Pickup Done", Location = new Point(250, startY), Size = new Size(130, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            btnCompletePickup.Click += btnCompletePickup_Click; pnlCard.Controls.Add(btnCompletePickup);
 
-            btnCreateQuotation = new Button { Text = "📄 Export Document to Show Customer", Location = new Point(20, startY + 50), Size = new Size(450, 42), BackColor = Color.FromArgb(124, 58, 237), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold) };
+            btnClear = new Button { Text = "🆕 New", Location = new Point(390, startY), Size = new Size(80, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            btnClear.Click += (s, e) => ClearFields(); pnlCard.Controls.Add(btnClear);
+            startY += 55;
+
+            btnCreateQuotation = new Button { Text = "📄 Export Document to Show Customer", Location = new Point(20, startY), Size = new Size(450, 42), BackColor = Color.FromArgb(124, 58, 237), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold) };
             btnCreateQuotation.Click += BtnCreateQuotation_Click; pnlCard.Controls.Add(btnCreateQuotation);
         }
 
@@ -252,7 +266,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT CustomerID, StaffID, Status FROM orders WHERE OrderID = @OID", conn))
+                    // 🌟 加入 DeliveryDate 的選取
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT CustomerID, StaffID, Status, DeliveryDate FROM orders WHERE OrderID = @OID", conn))
                     {
                         cmd.Parameters.AddWithValue("@OID", selectedOrderID);
                         using (MySqlDataReader reader = cmd.ExecuteReader())
@@ -263,11 +278,21 @@ namespace ITP4915M_Group11
                                 string cID = reader["CustomerID"].ToString();
                                 foreach (OrderCustomerItem item in cboCustomers.Items) { if (item.ID == cID) { cboCustomers.SelectedItem = item; break; } }
 
-                                // 🌟 完美修復：只要狀態係送貨相關 (-D, Dispatch, Deliver)，就剔返佢！
                                 string currentStatus = reader["Status"].ToString();
                                 chkRequireDelivery.Checked = currentStatus.Contains("-D") ||
                                                              currentStatus.Contains("Dispatch") ||
                                                              currentStatus.Contains("Deliver");
+
+                                // 讀取送貨日期 (如有)
+                                try
+                                {
+                                    if (reader["DeliveryDate"] != DBNull.Value)
+                                    {
+                                        DateTime delDate = Convert.ToDateTime(reader["DeliveryDate"]);
+                                        if (delDate >= dtpDeliveryDate.MinDate) dtpDeliveryDate.Value = delDate;
+                                    }
+                                }
+                                catch { /* 若資料庫尚未加入欄位則略過 */ }
                             }
                         }
                     }
@@ -330,13 +355,15 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            using (MySqlCommand cmdOrder = new MySqlCommand("INSERT INTO orders (OrderID, CustomerID, StaffID, TotalAmount, Status, OrderDate) VALUES (@OID, @CID, @SID, @Total, @Status, NOW())", conn, trans))
+                            // 🌟 寫入資料時包含 DeliveryDate
+                            using (MySqlCommand cmdOrder = new MySqlCommand("INSERT INTO orders (OrderID, CustomerID, StaffID, TotalAmount, Status, OrderDate, DeliveryDate) VALUES (@OID, @CID, @SID, @Total, @Status, NOW(), @DelDate)", conn, trans))
                             {
                                 cmdOrder.Parameters.AddWithValue("@OID", orderID);
                                 cmdOrder.Parameters.AddWithValue("@CID", ((OrderCustomerItem)cboCustomers.SelectedItem).ID);
                                 cmdOrder.Parameters.AddWithValue("@SID", currentStaffID);
                                 cmdOrder.Parameters.AddWithValue("@Total", globalOrderTotal);
                                 cmdOrder.Parameters.AddWithValue("@Status", orderStatus);
+                                cmdOrder.Parameters.AddWithValue("@DelDate", chkRequireDelivery.Checked ? (object)dtpDeliveryDate.Value.Date : DBNull.Value);
                                 cmdOrder.ExecuteNonQuery();
                             }
 
@@ -383,9 +410,10 @@ namespace ITP4915M_Group11
                         currentStatus = res.ToString();
                     }
 
+                    // 🌟 修正：鎖定已經完成自取或派送嘅單，唔畀再改
                     if (!currentStatus.StartsWith("Awaiting Approval") && currentStatus != "Rejected")
                     {
-                        MessageBox.Show("🔒 This order has already been Approved or Processed!\n\nYou cannot modify a locked order. If the customer wants to add more items, please click 'New' and create an additional order.", "Order Locked", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                        MessageBox.Show("🔒 This order has already been Approved, Processed, or Completed!\n\nYou cannot modify a locked order. If the customer wants to add more items, please click 'New' and create an additional order.", "Order Locked", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                         return;
                     }
 
@@ -412,11 +440,12 @@ namespace ITP4915M_Group11
                                 }
                             }
 
-                            using (MySqlCommand cmdOrder = new MySqlCommand("UPDATE orders SET CustomerID=@CID, TotalAmount=@Total, Status=@Status WHERE OrderID=@OID", conn, trans))
+                            using (MySqlCommand cmdOrder = new MySqlCommand("UPDATE orders SET CustomerID=@CID, TotalAmount=@Total, Status=@Status, DeliveryDate=@DelDate WHERE OrderID=@OID", conn, trans))
                             {
                                 cmdOrder.Parameters.AddWithValue("@CID", ((OrderCustomerItem)cboCustomers.SelectedItem).ID);
                                 cmdOrder.Parameters.AddWithValue("@Total", globalOrderTotal);
                                 cmdOrder.Parameters.AddWithValue("@Status", orderStatus);
+                                cmdOrder.Parameters.AddWithValue("@DelDate", chkRequireDelivery.Checked ? (object)dtpDeliveryDate.Value.Date : DBNull.Value);
                                 cmdOrder.Parameters.AddWithValue("@OID", orderID);
                                 cmdOrder.ExecuteNonQuery();
                             }
@@ -426,6 +455,40 @@ namespace ITP4915M_Group11
                     }
                 }
                 catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+            }
+        }
+
+        // 🌟 新增：完成自取訂單按鈕處理邏輯
+        private void btnCompletePickup_Click(object sender, EventArgs e)
+        {
+            string orderID = txtOrderID.Text.Trim();
+            if (string.IsNullOrEmpty(orderID) || cartTable.Rows.Count == 0) return;
+
+            if (chkRequireDelivery.Checked)
+            {
+                MessageBox.Show("This is a Delivery order. It cannot be marked as Pickup Completed here (hand over to Logistics).", "Invalid Action", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DialogResult res = MessageBox.Show($"Is the customer currently picking up the items?\n\nAre you sure you want to mark order [{orderID}] as 'Pickup Completed'?", "Confirm Completion", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (res == DialogResult.Yes)
+            {
+                using (MySqlConnection conn = new MySqlConnection(connString))
+                {
+                    try
+                    {
+                        conn.Open();
+                        using (MySqlCommand cmd = new MySqlCommand("UPDATE orders SET Status = 'Pickup Completed' WHERE OrderID = @OID", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@OID", orderID);
+                            cmd.ExecuteNonQuery();
+                        }
+                        MessageBox.Show("Order successfully marked as Pickup Completed! 🛍️", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ClearFields();
+                        RefreshOrdersGrid();
+                    }
+                    catch (Exception ex) { MessageBox.Show("Error updating order status: " + ex.Message); }
+                }
             }
         }
 
@@ -475,6 +538,11 @@ namespace ITP4915M_Group11
             if (cboCustomers.Items.Count > 0) cboCustomers.SelectedIndex = -1;
             if (cboProducts.Items.Count > 0) cboProducts.SelectedIndex = -1;
             txtQty.Clear(); txtUnitPrice.Clear(); cartTable.Clear();
+
+            // 重置日期選擇器與選項
+            chkRequireDelivery.Checked = true;
+            dtpDeliveryDate.Value = dtpDeliveryDate.MinDate;
+
             UpdateGlobalOrderTotal(); GenerateOrderID();
         }
     }

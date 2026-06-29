@@ -249,15 +249,16 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
+                    // 🌟 修正：將最後一行的 ASC 改為 DESC，等最新嘅申請排最前
                     string query = @"
-                        SELECT r.ReOrderCardID AS 'Request ID', 
-                               COUNT(r.MaterialID) AS 'Total Items', 
-                               SUM(r.RequestedQty) AS 'Total Qty', 
-                               MAX(r.TriggerDate) AS 'Submitted Date'
-                        FROM reorder_card r
-                        WHERE r.Status = 'Pending Approval'
-                        GROUP BY r.ReOrderCardID
-                        ORDER BY MAX(r.TriggerDate) ASC";
+                SELECT r.ReOrderCardID AS 'Request ID', 
+                       COUNT(r.MaterialID) AS 'Total Items', 
+                       SUM(r.RequestedQty) AS 'Total Qty', 
+                       MAX(r.TriggerDate) AS 'Submitted Date'
+                FROM reorder_card r
+                WHERE r.Status = 'Pending Approval'
+                GROUP BY r.ReOrderCardID
+                ORDER BY MAX(r.TriggerDate) DESC"; // <-- 呢度由 ASC 改成 DESC
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {

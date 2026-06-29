@@ -189,6 +189,24 @@ namespace ITP4915M_Group11
             }
         }
 
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+            // 
+            // SalesQuotationForm
+            // 
+            this.ClientSize = new System.Drawing.Size(278, 244);
+            this.Name = "SalesQuotationForm";
+            this.Load += new System.EventHandler(this.SalesQuotationForm_Load);
+            this.ResumeLayout(false);
+
+        }
+
+        private void SalesQuotationForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
         private void BtnReject_Click(object sender, EventArgs e)
         {
             if (dgvPendingOrders.SelectedRows.Count == 0) return;

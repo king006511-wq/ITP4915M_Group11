@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
@@ -24,7 +25,6 @@ namespace ITP4915M_Group11
         private Button btnSubmit, btnClear, btnVerifyOrder;
         private Label lblOrderSummary;
 
-        // 核心容器
         private Panel pnlLeftCard;
         private Label lblGridTitle, lblItemsTitle;
 
@@ -36,7 +36,7 @@ namespace ITP4915M_Group11
                 ThemeManager.ApplyTheme(this);
                 InitializeEnterpriseHelpdeskUI();
                 SetupDropdowns();
-                EnsureComplaintTableExists();
+                EnsureComplaintTableExists(); // 🌟 會自動幫 Database 加防呆標籤
                 GenerateNewTicketID();
                 LoadComplaints();
 
@@ -55,9 +55,6 @@ namespace ITP4915M_Group11
             this.TopLevel = false;
             this.Dock = DockStyle.Fill;
 
-            // =========================================================
-            // 【左側】Helpdesk Ticket 操作卡片
-            // =========================================================
             pnlLeftCard = new Panel
             {
                 BackColor = Color.White,
@@ -75,7 +72,6 @@ namespace ITP4915M_Group11
 
             txtComplaintID = CreateStyledTextBox(pnlLeftCard, ref startY, "Ticket ID (Auto):", true, inputWidth);
 
-            // 🌟 訂單驗證區 (Order Verification)
             Label lblOrder = new Label { Text = "Related Order ID *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             txtOrderID = new TextBox { Location = new Point(20, startY + 22), Width = 230, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             btnVerifyOrder = new Button { Text = "🔍 Lookup", Location = new Point(260, startY + 21), Size = new Size(90, 28), BackColor = Color.FromArgb(14, 165, 233), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Cursor = Cursors.Hand };
@@ -84,7 +80,7 @@ namespace ITP4915M_Group11
             pnlLeftCard.Controls.Add(lblOrder); pnlLeftCard.Controls.Add(txtOrderID); pnlLeftCard.Controls.Add(btnVerifyOrder);
             startY += 65;
 
-            txtCustomerID = CreateStyledTextBox(pnlLeftCard, ref startY, "Verified Customer ID:", true, inputWidth); // 驗證後自動填寫，防止亂打
+            txtCustomerID = CreateStyledTextBox(pnlLeftCard, ref startY, "Verified Customer ID:", true, inputWidth);
 
             Label lblReqType = new Label { Text = "Support Request Type *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboRequestType = new ComboBox { Location = new Point(20, startY + 22), Width = inputWidth, Font = new Font("Segoe UI", 10.5F), DropDownStyle = ComboBoxStyle.DropDownList };
@@ -114,9 +110,6 @@ namespace ITP4915M_Group11
             btnSubmit.Click += btnSubmitComplaint_Click; btnClear.Click += (s, e) => ClearFields();
             pnlLeftCard.Controls.Add(btnSubmit); pnlLeftCard.Controls.Add(btnClear);
 
-            // =========================================================
-            // 【右側】Master-Detail 雙表格設計 (Tickets + Order Context)
-            // =========================================================
             lblGridTitle = new Label { Text = "📂 Support Tickets Center", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(lblGridTitle);
 
@@ -132,7 +125,6 @@ namespace ITP4915M_Group11
             dgvComplaints.CellFormatting += DgvComplaints_CellFormatting;
             this.Controls.Add(dgvComplaints);
 
-            // 🌟 訂單內容子表格 (Order Context)
             lblItemsTitle = new Label { Text = "🛍️ Purchased Items Context (Select a ticket to view)", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(lblItemsTitle);
 
@@ -185,8 +177,8 @@ namespace ITP4915M_Group11
                 txtSearchHistory.Location = new Point(this.Width - txtSearchHistory.Width - 25, 22);
 
                 int availableHeight = this.Height - 110;
-                int topGridHeight = (int)(availableHeight * 0.55); // 55% 給 Tickets
-                int botGridHeight = availableHeight - topGridHeight; // 45% 給 Items
+                int topGridHeight = (int)(availableHeight * 0.55);
+                int botGridHeight = availableHeight - topGridHeight;
 
                 dgvComplaints.Location = new Point(rightStartX, 60);
                 dgvComplaints.Size = new Size(rightWidth, topGridHeight);
@@ -227,7 +219,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 💾 企業級智能商業邏輯
+        #region 💾 企業級庫存回滾邏輯
         private void SetupDropdowns()
         {
             cboRequestType.Items.Clear();
@@ -242,7 +234,6 @@ namespace ITP4915M_Group11
             txtComplaintID.Text = "TKT-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
         }
 
-        // 🌟 訂單智能驗證：輸入 Order ID，自動去 DB 搵 CustomerID 出嚟，確保單號真實存在！
         private void BtnVerifyOrder_Click(object sender, EventArgs e)
         {
             string searchOID = txtOrderID.Text.Trim();
@@ -263,11 +254,11 @@ namespace ITP4915M_Group11
                             {
                                 txtCustomerID.Text = reader["CustomerID"].ToString();
                                 MessageBox.Show($"Order Verified!\nCustomer ID: {txtCustomerID.Text}\nOrder Total: ${Convert.ToDecimal(reader["TotalAmount"]):N2}", "Order Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                LoadOrderContextItems(searchOID); // 即刻顯示買咗咩
+                                LoadOrderContextItems(searchOID);
                             }
                             else
                             {
-                                MessageBox.Show("Order ID not found in the system. Please verify with the customer.", "Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                MessageBox.Show("Order ID not found in the system.", "Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 txtCustomerID.Clear();
                                 dgvOrderItems.DataSource = null;
                             }
@@ -278,7 +269,6 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🌟 載入該訂單嘅商品明細 (Order Context)
         private void LoadOrderContextItems(string orderId)
         {
             if (string.IsNullOrWhiteSpace(orderId)) { dgvOrderItems.DataSource = null; lblOrderSummary.Text = "Total Amount Paid: $0.00"; return; }
@@ -288,14 +278,12 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 1. 獲取訂單總額
                     MySqlCommand cmdSum = new MySqlCommand("SELECT TotalAmount FROM orders WHERE OrderID = @OID", conn);
                     cmdSum.Parameters.AddWithValue("@OID", orderId);
                     object totalObj = cmdSum.ExecuteScalar();
                     if (totalObj != null && totalObj != DBNull.Value) lblOrderSummary.Text = $"Total Amount Paid: ${Convert.ToDecimal(totalObj):N2}";
 
-                    // 2. 獲取購買明細
-                    string query = @"SELECT p.ProductName AS 'Product Name', 
+                    string query = @"SELECT p.ProductID AS 'Product ID', p.ProductName AS 'Product Name', 
                                             l.Quantity AS 'Qty', 
                                             l.UnitPrice AS 'Unit Price ($)', 
                                             (l.Quantity * l.UnitPrice) AS 'Subtotal ($)' 
@@ -336,6 +324,9 @@ namespace ITP4915M_Group11
                     try { new MySqlCommand("ALTER TABLE `complaint` ADD COLUMN `RequestType` varchar(50) DEFAULT 'General Complaint';", conn).ExecuteNonQuery(); } catch { }
                     try { new MySqlCommand("ALTER TABLE `complaint` ADD COLUMN `Description` text;", conn).ExecuteNonQuery(); } catch { }
                     try { new MySqlCommand("ALTER TABLE `complaint` ADD COLUMN `RefundAmount` decimal(10,2) DEFAULT 0.00;", conn).ExecuteNonQuery(); } catch { }
+
+                    // 🌟 極重要：加入庫存還原防呆標籤，防止手殘連撳兩次退兩次貨
+                    try { new MySqlCommand("ALTER TABLE `complaint` ADD COLUMN `IsStockReturned` TINYINT(1) DEFAULT 0;", conn).ExecuteNonQuery(); } catch { }
                 }
                 catch (Exception) { }
             }
@@ -366,25 +357,20 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🌟 狀態視覺化 (Status Color Coding)
         private void DgvComplaints_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
             if (dgvComplaints.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
             {
                 string status = e.Value.ToString();
-                if (status.Contains("Pending"))
+                if (status.Contains("Pending") || status.Contains("In Progress"))
                 {
-                    e.CellStyle.ForeColor = Color.FromArgb(234, 88, 12); // Orange
+                    e.CellStyle.ForeColor = Color.FromArgb(234, 88, 12);
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
                 }
                 else if (status == "Resolved" || status == "Refunded")
                 {
-                    e.CellStyle.ForeColor = Color.FromArgb(16, 185, 129); // Green
+                    e.CellStyle.ForeColor = Color.FromArgb(16, 185, 129);
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
-                }
-                else if (status == "Closed")
-                {
-                    e.CellStyle.ForeColor = Color.Gray;
                 }
             }
         }
@@ -417,21 +403,25 @@ namespace ITP4915M_Group11
                 string status = row.Cells["Status"].Value?.ToString();
                 if (cboStatus.Items.Contains(status)) cboStatus.Text = status;
 
-                // 自動載入該 Ticket 對應嘅訂單明細
                 LoadOrderContextItems(txtOrderID.Text.Trim());
             }
         }
 
+        // 🌟 核心：包含庫存回滾 (Inventory Rollback) 功能嘅儲存方法
         private void btnSubmitComplaint_Click(object sender, EventArgs e)
         {
+            string ticketID = txtComplaintID.Text.Trim();
             string customerID = txtCustomerID.Text.Trim();
             string orderID = txtOrderID.Text.Trim();
+            string reqType = cboRequestType.Text;
+            string status = cboStatus.Text;
+
             string cleanAmt = txtRefundAmount.Text.Replace("$", "").Trim();
             decimal.TryParse(cleanAmt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal refundAmt);
 
-            if (string.IsNullOrWhiteSpace(customerID) || string.IsNullOrWhiteSpace(cboStatus.Text) || string.IsNullOrWhiteSpace(cboRequestType.Text))
+            if (string.IsNullOrWhiteSpace(customerID) || string.IsNullOrWhiteSpace(status) || string.IsNullOrWhiteSpace(reqType))
             {
-                MessageBox.Show("Please complete the required fields (Customer ID, Request Type, Status). Tip: Use the 'Lookup' button to fetch Customer ID automatically from Order ID.", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please complete the required fields (Customer ID, Request Type, Status).", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -440,25 +430,92 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string sql = @"INSERT INTO complaint (ComplaintID, CustomerID, OrderID, RequestType, Description, RefundAmount, Date, Status) 
-                                   VALUES (@CID, @CustID, @OID, @ReqType, @Desc, @RefundAmt, NOW(), @Status)
-                                   ON DUPLICATE KEY UPDATE Status = @Status, OrderID = @OID, RequestType = @ReqType, Description = @Desc, RefundAmount = @RefundAmt;";
 
-                    using (MySqlCommand cmd = new MySqlCommand(sql, conn))
+                    // 1. 檢查 DB 入面呢張 Ticket 退咗貨未
+                    bool isStockAlreadyReturned = false;
+                    using (MySqlCommand checkCmd = new MySqlCommand("SELECT IsStockReturned FROM complaint WHERE ComplaintID = @CID", conn))
                     {
-                        cmd.Parameters.AddWithValue("@CID", txtComplaintID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@CustID", customerID);
-                        cmd.Parameters.AddWithValue("@OID", string.IsNullOrWhiteSpace(orderID) ? (object)DBNull.Value : orderID);
-                        cmd.Parameters.AddWithValue("@ReqType", cboRequestType.Text);
-                        cmd.Parameters.AddWithValue("@Desc", txtDetails.Text.Trim());
-                        cmd.Parameters.AddWithValue("@RefundAmt", refundAmt);
-                        cmd.Parameters.AddWithValue("@Status", cboStatus.Text);
-                        cmd.ExecuteNonQuery();
+                        checkCmd.Parameters.AddWithValue("@CID", ticketID);
+                        object res = checkCmd.ExecuteScalar();
+                        if (res != null && res != DBNull.Value) isStockAlreadyReturned = Convert.ToBoolean(res);
                     }
 
-                    MessageBox.Show("Support Ticket has been successfully saved!", "Transaction Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    ClearFields();
-                    LoadComplaints();
+                    // 2. 判斷需唔需要執行「庫存回滾」
+                    bool shouldReturnStock = false;
+                    if (!isStockAlreadyReturned && reqType == "Return & Refund" && (status == "Refunded" || status == "Resolved") && !string.IsNullOrWhiteSpace(orderID))
+                    {
+                        shouldReturnStock = true;
+                    }
+
+                    // 3. 啟動資料庫交易 (Transaction)，確保更新 Ticket 同退回庫存一齊成功/失敗
+                    using (MySqlTransaction trans = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            // 🌟 執行庫存還原邏輯
+                            if (shouldReturnStock)
+                            {
+                                string fetchItemsSql = "SELECT ProductID, Quantity FROM order_lineitem WHERE OrderID = @OID";
+                                using (MySqlCommand fetchCmd = new MySqlCommand(fetchItemsSql, conn, trans))
+                                {
+                                    fetchCmd.Parameters.AddWithValue("@OID", orderID);
+                                    using (MySqlDataReader reader = fetchCmd.ExecuteReader())
+                                    {
+                                        List<Tuple<string, int>> itemsToReturn = new List<Tuple<string, int>>();
+                                        while (reader.Read())
+                                        {
+                                            itemsToReturn.Add(new Tuple<string, int>(reader["ProductID"].ToString(), Convert.ToInt32(reader["Quantity"])));
+                                        }
+                                        reader.Close();
+
+                                        // 將買咗嘅數量加返入去 product.StockLevel
+                                        foreach (var item in itemsToReturn)
+                                        {
+                                            using (MySqlCommand updateStockCmd = new MySqlCommand("UPDATE product SET StockLevel = StockLevel + @qty WHERE ProductID = @pid", conn, trans))
+                                            {
+                                                updateStockCmd.Parameters.AddWithValue("@qty", item.Item2);
+                                                updateStockCmd.Parameters.AddWithValue("@pid", item.Item1);
+                                                updateStockCmd.ExecuteNonQuery();
+                                            }
+                                        }
+                                    }
+                                }
+                                isStockAlreadyReturned = true; // 鎖死防呆標籤
+                            }
+
+                            // 儲存 Ticket
+                            string sql = @"INSERT INTO complaint (ComplaintID, CustomerID, OrderID, RequestType, Description, RefundAmount, Date, Status, IsStockReturned) 
+                                           VALUES (@CID, @CustID, @OID, @ReqType, @Desc, @RefundAmt, NOW(), @Status, @IsReturned)
+                                           ON DUPLICATE KEY UPDATE Status = @Status, OrderID = @OID, RequestType = @ReqType, Description = @Desc, RefundAmount = @RefundAmt, IsStockReturned = @IsReturned;";
+
+                            using (MySqlCommand cmd = new MySqlCommand(sql, conn, trans))
+                            {
+                                cmd.Parameters.AddWithValue("@CID", ticketID);
+                                cmd.Parameters.AddWithValue("@CustID", customerID);
+                                cmd.Parameters.AddWithValue("@OID", string.IsNullOrWhiteSpace(orderID) ? (object)DBNull.Value : orderID);
+                                cmd.Parameters.AddWithValue("@ReqType", reqType);
+                                cmd.Parameters.AddWithValue("@Desc", txtDetails.Text.Trim());
+                                cmd.Parameters.AddWithValue("@RefundAmt", refundAmt);
+                                cmd.Parameters.AddWithValue("@Status", status);
+                                cmd.Parameters.AddWithValue("@IsReturned", isStockAlreadyReturned ? 1 : 0);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            trans.Commit();
+
+                            string msg = "Support Ticket has been successfully saved!";
+                            if (shouldReturnStock) msg += "\n\n📦 System Alert: Inventory rollback successful. Returned items have been added back to stock.";
+                            MessageBox.Show(msg, "Transaction Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            ClearFields();
+                            LoadComplaints();
+                        }
+                        catch (Exception ex)
+                        {
+                            trans.Rollback();
+                            throw ex;
+                        }
+                    }
                 }
                 catch (Exception ex) { MessageBox.Show("Failed to save the ticket:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }

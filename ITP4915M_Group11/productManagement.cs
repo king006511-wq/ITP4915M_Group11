@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data;
 using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using MySql.Data.MySqlClient;
 
@@ -58,7 +60,7 @@ namespace ITP4915M_Group11
             bool canEdit = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
             foreach (Control c in this.Controls)
             {
-                if (c is Button b && (b.Text.Contains("Add") || b.Text.Contains("Update") || b.Text.Contains("Delete")))
+                if (c is Button b && (b.Text.Contains("Update") || b.Text.Contains("Delete") || b.Text.Contains("Upload")))
                 {
                     b.Enabled = canEdit;
                     b.BackColor = canEdit ? b.BackColor : Color.LightGray;
@@ -72,7 +74,7 @@ namespace ITP4915M_Group11
         {
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Product Maintenance & Catalog Control";
-            this.Size = new Size(1180, 750);
+            this.Size = new Size(1180, 780); // 稍微加高少少容納新掣
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
@@ -94,7 +96,7 @@ namespace ITP4915M_Group11
             pnlMain.Controls.Add(btnBackHome);
 
             // Input Details Dashboard Card
-            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 600), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 630), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlCard);
 
@@ -114,26 +116,29 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(txtDescription);
             startY += 105;
 
-            // Action Buttons
-            Button btnAdd = new Button { Text = "➕ Add", Location = new Point(20, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            Button btnUpdate = new Button { Text = "💾 Update", Location = new Point(195, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            Button btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(20, startY + 50), Size = new Size(160, 42), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            Button btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(195, startY + 50), Size = new Size(160, 42), BackColor = Color.FromArgb(71, 85, 105), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // ✨ 重新排版掣位，加入 Upload Photo 掣
+            Button btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(20, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(139, 92, 246), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(195, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
 
-            foreach (var b in new Button[] { btnAdd, btnUpdate, btnDelete, btnClear }) b.FlatAppearance.BorderSize = 0;
-            pnlCard.Controls.AddRange(new Control[] { btnAdd, btnUpdate, btnDelete, btnClear });
+            Button btnUpdate = new Button { Text = "💾 Update", Location = new Point(20, startY + 50), Size = new Size(160, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(195, startY + 50), Size = new Size(160, 42), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
 
-            btnAdd.Click += btnAdd_Click;
+            Button btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(20, startY + 100), Size = new Size(335, 42), BackColor = Color.FromArgb(71, 85, 105), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            foreach (var b in new Button[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear }) b.FlatAppearance.BorderSize = 0;
+            pnlCard.Controls.AddRange(new Control[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear });
+
+            btnViewPhoto.Click += btnViewPhoto_Click;
+            btnUploadPhoto.Click += btnUploadPhoto_Click;
             btnUpdate.Click += btnUpdate_Click;
             btnDelete.Click += btnDelete_Click;
 
-            // 🌟 修正：Clear 掣會清空輸入欄位，但如果要手動清空 Search，一齊做埋
             btnClear.Click += (s, e) => {
                 txtDescription.Clear();
                 ClearFields();
             };
 
-            // 4. Data Grid Component
+            // Data Grid Component
             Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(440, 85), AutoSize = true };
             pnlMain.Controls.Add(lblGridTitle);
 
@@ -143,7 +148,7 @@ namespace ITP4915M_Group11
             dgvProductCatalog = new DataGridView
             {
                 Location = new Point(440, 145),
-                Size = new Size(700, 540),
+                Size = new Size(700, 570),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
@@ -259,33 +264,128 @@ namespace ITP4915M_Group11
             }
         }
 
-        private void btnAdd_Click(object sender, EventArgs e)
+        // ✨ 參考 PHP 邏輯：手動揀相 -> 自動搬運去 Folder + 自動改名 + 刪舊相
+        private void btnUploadPhoto_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtProductID.Text) || string.IsNullOrWhiteSpace(txtProductName.Text))
+            if (string.IsNullOrWhiteSpace(txtProductID.Text))
             {
-                MessageBox.Show("Please fill in Product ID and Product Name fields!", "Missing Required Fields", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select a product first to assign a photo to it.", "No Product Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            try
+
+            string productID = txtProductID.Text.Trim();
+            string targetFolder = Path.Combine(Application.StartupPath, "ProductImages");
+
+            // 確保目標資料夾存在
+            if (!Directory.Exists(targetFolder))
             {
-                using (MySqlConnection conn = new MySqlConnection(connectionString))
+                Directory.CreateDirectory(targetFolder);
+            }
+
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Title = $"Select Image for {productID}";
+                ofd.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.webp;*.bmp";
+
+                if (ofd.ShowDialog() == DialogResult.OK)
                 {
-                    conn.Open();
-                    string query = "INSERT INTO product (ProductID, ProductName, StockLevel, RetailPrice) VALUES (@id, @name, @stock, @price)";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    try
                     {
-                        cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@name", txtProductName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@stock", string.IsNullOrEmpty(txtStockLevel.Text) ? 0 : Convert.ToInt32(txtStockLevel.Text.Trim()));
-                        cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtRetailPrice.Text) ? 0 : Convert.ToDecimal(txtRetailPrice.Text.Trim()));
-                        cmd.ExecuteNonQuery();
+                        // 1. 搵出目標資料夾入面，所有同呢個 Product ID 撞名嘅舊相，然後刪除 (對應 PHP 嘅 glob + unlink)
+                        string[] oldFiles = Directory.GetFiles(targetFolder, $"{productID}.*");
+                        foreach (string oldFile in oldFiles)
+                        {
+                            File.Delete(oldFile);
+                        }
+
+                        // 2. 將 User 揀嘅新相，複製去目標資料夾，並自動改名做 ProductID
+                        string extension = Path.GetExtension(ofd.FileName); // 拎返原本副檔名 (例如 .jpg)
+                        string newFilePath = Path.Combine(targetFolder, $"{productID}{extension}");
+
+                        File.Copy(ofd.FileName, newFilePath);
+
+                        MessageBox.Show($"Success! The image has been automatically saved and renamed to {productID}{extension}.", "Upload Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    MessageBox.Show("Product was added successfully!", "Transaction Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    LoadDatabaseData();
-                    ClearFields();
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error processing the image:\n" + ex.Message, "Upload Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Database Failure: \n" + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        }
+
+        // ✨ View Photo 功能更新：對應 PHP 嘅 glob，自動 Scan 任何副檔名嘅相
+        private void btnViewPhoto_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtProductID.Text))
+            {
+                MessageBox.Show("Please select a product from the catalog to view its photo.", "No Product Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string productID = txtProductID.Text.Trim();
+            string productName = txtProductName.Text.Trim();
+            string folderPath = Path.Combine(Application.StartupPath, "ProductImages");
+
+            using (Form photoForm = new Form())
+            {
+                photoForm.Text = $"Product Photo - {productName} ({productID})";
+                photoForm.Size = new Size(500, 550);
+                photoForm.StartPosition = FormStartPosition.CenterParent;
+                photoForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                photoForm.MaximizeBox = false;
+                photoForm.MinimizeBox = false;
+                photoForm.BackColor = Color.White;
+
+                PictureBox pb = new PictureBox
+                {
+                    Dock = DockStyle.Fill,
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    BackColor = Color.FromArgb(249, 250, 251)
+                };
+
+                bool isImageLoaded = false;
+
+                if (Directory.Exists(folderPath))
+                {
+                    // 參考 PHP glob：喺 Folder 度搵任何開頭係 ProductID 嘅檔案，唔理佢係 jpg 定 png
+                    string[] matchingFiles = Directory.GetFiles(folderPath, $"{productID}.*");
+
+                    if (matchingFiles.Length > 0)
+                    {
+                        try
+                        {
+                            // Load 第一張搵到嘅相
+                            byte[] bytes = File.ReadAllBytes(matchingFiles[0]);
+                            using (MemoryStream ms = new MemoryStream(bytes))
+                            {
+                                pb.Image = Image.FromStream(ms);
+                                isImageLoaded = true;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Error loading image file:\n" + ex.Message, "Image Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+
+                if (!isImageLoaded)
+                {
+                    Label lblNoImage = new Label
+                    {
+                        Text = $"🚫 No Photo Assigned\n\nPlease click 'Upload Photo' to add an image for this product.",
+                        Dock = DockStyle.Fill,
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                        ForeColor = Color.FromArgb(100, 116, 139)
+                    };
+                    pb.Controls.Add(lblNoImage);
+                }
+
+                photoForm.Controls.Add(pb);
+                photoForm.ShowDialog();
+            }
         }
 
         private void btnUpdate_Click(object sender, EventArgs e)
@@ -343,6 +443,14 @@ namespace ITP4915M_Group11
                         int dynamicRows = cmd.ExecuteNonQuery();
                         if (dynamicRows > 0)
                         {
+                            // ✨ 同步刪除埋張相 (對應 PHP 嘅 unlink)
+                            string targetFolder = Path.Combine(Application.StartupPath, "ProductImages");
+                            if (Directory.Exists(targetFolder))
+                            {
+                                string[] oldFiles = Directory.GetFiles(targetFolder, $"{txtProductID.Text.Trim()}.*");
+                                foreach (string oldFile in oldFiles) File.Delete(oldFile);
+                            }
+
                             MessageBox.Show("Product was dropped successfully!", "Record Deleted", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             LoadDatabaseData();
                             ClearFields();
@@ -359,7 +467,6 @@ namespace ITP4915M_Group11
             txtProductName.Clear();
             txtStockLevel.Clear();
             txtRetailPrice.Clear();
-            // 🌟 核心修正：抽走 txtDescription.Clear(); 防止打字時無限清空
             txtProductID.ReadOnly = false;
             txtProductID.BackColor = Color.White;
             dgvProductCatalog.ClearSelection();
