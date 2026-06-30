@@ -10,7 +10,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🔒 Database Configuration
         // ==========================================
-        private readonly string connString = UserSession.ConnString;
+        private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         // ==========================================
         // 🎨 Modern UI Element Variables
@@ -20,7 +20,7 @@ namespace ITP4915M_Group11
 
         public Login()
         {
-            InitializeComponent();
+            InitializeComponent();      // ⬅️ 這會正確呼叫 Login.Designer.cs 裡的方法
             InitializePremiumSplitUI(); // ⬅️ 一鍵動態渲染現代化雙色登入介面
         }
 
@@ -110,16 +110,6 @@ namespace ITP4915M_Group11
                 }
             };
         }
-
-        private void Login_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Login_Load_1(object sender, EventArgs e)
-        {
-
-        }
         #endregion
 
         // ==========================================
@@ -143,8 +133,8 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
 
-                    // 使用 SHA2(256) 比對已雜湊的密碼（與 premium_living_db.sql 的 INSERT 配合）
-                    string loginQuery = "SELECT StaffID, Name, Role FROM staff WHERE StaffID = @user AND Password = SHA2(@pass,256)";
+                    // 🌟 完美優化：加上 Department 欄位一併抽出
+                    string loginQuery = "SELECT StaffID, Name, Role, Department FROM staff WHERE StaffID = @user AND Password = SHA2(@pass,256)";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
                     {
@@ -158,14 +148,14 @@ namespace ITP4915M_Group11
                                 // 💾 將真實數據寫入全域變數 Session 中
                                 UserSession.LoggedInStaffID = reader["StaffID"].ToString();
                                 UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
-                                // Trim role to normalize spacing (ensure consistent comparisons)
                                 UserSession.LoggedInStaffRole = reader["Role"] != DBNull.Value ? reader["Role"].ToString().Trim() : "";
+
+                                // 🌟 完美優化：直接從 Database 讀取最新嘅所屬部門
+                                UserSession.LoggedInDepartment = reader["Department"] != DBNull.Value ? reader["Department"].ToString().Trim() : "General";
+
                                 UserSession.LoginTime = DateTime.Now;
 
-                                // 部門暫時給予預設值，避免其他地方報錯
-                                UserSession.LoggedInDepartment = "General";
-
-                                MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName} ({UserSession.LoggedInStaffRole}).", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName}\nRole: {UserSession.LoggedInStaffRole}\nDepartment: {UserSession.LoggedInDepartment}", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                                 // 跳轉至主控制面板
                                 MainDashboard dashboard = new MainDashboard();

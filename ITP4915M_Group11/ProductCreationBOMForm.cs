@@ -441,7 +441,9 @@ namespace ITP4915M_Group11
                 MessageBox.Show("Please select a valid raw material component.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            if (!decimal.TryParse(txtMaterialQty.Text.Trim(), out decimal qtyRequired) || qtyRequired <= 0)
+
+            // 🌟 優化：加上語系安全解析
+            if (!decimal.TryParse(txtMaterialQty.Text.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal qtyRequired) || qtyRequired <= 0)
             {
                 MessageBox.Show("Please specify a logical required quantity (greater than 0).", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -498,7 +500,8 @@ namespace ITP4915M_Group11
                 return;
             }
 
-            if (!decimal.TryParse(priceStr, out decimal retailPrice) || retailPrice < 0)
+            // 🌟 優化：加入 InvariantCulture 確保小數點解析安全
+            if (!decimal.TryParse(priceStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal retailPrice) || retailPrice < 0)
             {
                 MessageBox.Show("Retail Price must be a valid non-negative number.", "Data Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -551,14 +554,22 @@ namespace ITP4915M_Group11
                                 }
                             }
 
+                            // 🌟 核心優化：將 Command 宣告移出 Loop 外，重複利用 Parameter
                             string insertBOMSql = "INSERT INTO bill_of_materials (ProductID, MaterialID, QuantityRequired) VALUES (@pID, @mID, @qty)";
-                            foreach (DataRow row in dtBOMCart.Rows)
+                            using (MySqlCommand cmdBOM = new MySqlCommand(insertBOMSql, conn, trans))
                             {
-                                using (MySqlCommand cmdBOM = new MySqlCommand(insertBOMSql, conn, trans))
+                                // 先建立好參數結構（指定資料型態）
+                                cmdBOM.Parameters.Add("@pID", MySqlDbType.VarChar);
+                                cmdBOM.Parameters.Add("@mID", MySqlDbType.VarChar);
+                                cmdBOM.Parameters.Add("@qty", MySqlDbType.Decimal);
+
+                                foreach (DataRow row in dtBOMCart.Rows)
                                 {
-                                    cmdBOM.Parameters.AddWithValue("@pID", targetProductID);
-                                    cmdBOM.Parameters.AddWithValue("@mID", row["Material ID"].ToString());
-                                    cmdBOM.Parameters.AddWithValue("@qty", Convert.ToDecimal(row["Qty Required"]));
+                                    // 在 Loop 內單純更換數值，大幅減少記憶體開銷與提升執行速度
+                                    cmdBOM.Parameters["@pID"].Value = targetProductID;
+                                    cmdBOM.Parameters["@mID"].Value = row["Material ID"].ToString();
+                                    cmdBOM.Parameters["@qty"].Value = Convert.ToDecimal(row["Qty Required"]);
+
                                     cmdBOM.ExecuteNonQuery();
                                 }
                             }

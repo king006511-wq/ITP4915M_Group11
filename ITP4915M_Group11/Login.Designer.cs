@@ -38,7 +38,6 @@ namespace ITP4915M_Group11
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Login";
             this.Text = "Login";
-            this.Load += new System.EventHandler(this.Login_Load_1);
             this.ResumeLayout(false);
 
         }

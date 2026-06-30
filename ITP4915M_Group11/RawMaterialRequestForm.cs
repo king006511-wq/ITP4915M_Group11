@@ -16,6 +16,9 @@ namespace ITP4915M_Group11
 
     public partial class RawMaterialRequestForm : Form
     {
+        // ==========================================
+        // 🔒 Database Configuration & Configuration
+        // ==========================================
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private string currentStaffID;
         private decimal currentUnitCost = 0;
@@ -23,11 +26,13 @@ namespace ITP4915M_Group11
 
         private TextBox txtRequestID, txtUnitPrice, txtQty;
         private ComboBox cboMaterials;
-        // 🌟 新增 dgvDetails 顯示子物料
         private DataGridView dgvHistory, dgvDetails, dgvCart;
         private Button btnAddItem, btnRemoveItem, btnSubmitRequest, btnClear;
         private Label lblTotalAmountDisplay;
         private DataTable cartTable;
+
+        // 🌟 新增：用於搜尋的 TextBox
+        private TextBox txtSearchReq;
 
         public RawMaterialRequestForm() : this(UserSession.LoggedInStaffID ?? "S001") { }
 
@@ -37,6 +42,7 @@ namespace ITP4915M_Group11
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 InitializePremiumModernUI();
+                EnforceSecurityGatekeeper(); // 🛡️ 執行安全權限檢查
             }
         }
 
@@ -46,6 +52,33 @@ namespace ITP4915M_Group11
             LoadMaterialsToCombo();
             RefreshHistoryGrid();
         }
+
+        #region 🔒 System Security Gatekeeper Enforcement
+        private void EnforceSecurityGatekeeper()
+        {
+            string currentRole = UserSession.LoggedInStaffRole;
+
+            // 限制只有倉儲、工廠管理員、或高級經理可以發起原材料 Reorder 申請
+            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
+                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Warehouse", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Factory", StringComparison.OrdinalIgnoreCase));
+
+            if (!isAuthorized)
+            {
+                MessageBox.Show(
+                    $"[SECURITY ALERT] Access Denied!\n\n" +
+                    $"Your account role \"{(string.IsNullOrEmpty(currentRole) ? "Guest" : currentRole)}\" is not authorized to create Material Reorder Cards.",
+                    "System Security Guard",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Stop
+                );
+
+                this.Shown += (s, e) => this.Close();
+            }
+        }
+        #endregion
 
         #region 🎨 Premium Modern UI Setup
         private void InitializePremiumModernUI()
@@ -80,15 +113,24 @@ namespace ITP4915M_Group11
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(pnlCard, 0, 0);
 
-            // 🌟 核心升級：Right Table 分為上下兩部分 (History + Details)
+            // Right Table Master-Detail
             TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = new Padding(0) };
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F)); // Header 1
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));  // Grid 1
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F)); // Header 2
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));  // Grid 2
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F)); // 將 Header 稍微加高容納 Search Box
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
 
-            Label lblGridTitle = new Label { Text = "📊 Request Headers (One-To-Many)", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
-            rightTable.Controls.Add(lblGridTitle, 0, 0);
+            // 🌟 修改：右側上半部 Header (加入 Search Box)
+            Panel pnlHistoryHeader = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
+            Label lblGridTitle = new Label { Text = "📊 Request Headers", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Location = new Point(0, 12) };
+            pnlHistoryHeader.Controls.Add(lblGridTitle);
+
+            Label lblSearch = new Label { Text = "🔍 Search:", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), AutoSize = true, Location = new Point(220, 15) };
+            txtSearchReq = new TextBox { Location = new Point(300, 12), Width = 180, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
+            txtSearchReq.TextChanged += TxtSearchReq_TextChanged; // 綁定搜尋事件
+            pnlHistoryHeader.Controls.Add(lblSearch);
+            pnlHistoryHeader.Controls.Add(txtSearchReq);
+            rightTable.Controls.Add(pnlHistoryHeader, 0, 0);
 
             dgvHistory = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, GridColor = Color.FromArgb(241, 245, 249) };
             dgvHistory.EnableHeadersVisualStyles = false;
@@ -97,7 +139,7 @@ namespace ITP4915M_Group11
             dgvHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             dgvHistory.ColumnHeadersHeight = 35;
             dgvHistory.CellFormatting += dgvHistory_CellFormatting;
-            dgvHistory.SelectionChanged += DgvHistory_SelectionChanged; // 聯動事件
+            dgvHistory.SelectionChanged += DgvHistory_SelectionChanged;
             rightTable.Controls.Add(dgvHistory, 0, 1);
 
             Label lblDetailsTitle = new Label { Text = "🔍 Request Line Items", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
@@ -105,7 +147,7 @@ namespace ITP4915M_Group11
 
             dgvDetails = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, GridColor = Color.FromArgb(241, 245, 249) };
             dgvDetails.EnableHeadersVisualStyles = false;
-            dgvDetails.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105); // 灰藍色區分
+            dgvDetails.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
             dgvDetails.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvDetails.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             dgvDetails.ColumnHeadersHeight = 35;
@@ -237,7 +279,7 @@ namespace ITP4915M_Group11
                         cboMaterials.SelectedIndex = -1;
                     }
                 }
-                catch (Exception ex) { MessageBox.Show("Failed to load Materials: " + ex.Message); }
+                catch (Exception ex) { MessageBox.Show("Failed to load Materials: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
         }
 
@@ -248,6 +290,24 @@ namespace ITP4915M_Group11
                 MaterialItem mat = (MaterialItem)cboMaterials.SelectedItem;
                 currentUnitCost = mat.StandardCost;
                 txtUnitPrice.Text = currentUnitCost.ToString("F2");
+            }
+        }
+
+        // 🌟 新增：搜尋過濾器邏輯
+        private void TxtSearchReq_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvHistory.DataSource is DataTable dt)
+            {
+                string keyword = txtSearchReq.Text.Trim().Replace("'", "''");
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    dt.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    // 根據載入時的欄位名稱 (Request ID, Status) 進行實時搜尋
+                    dt.DefaultView.RowFilter = $"[Request ID] LIKE '%{keyword}%' OR Status LIKE '%{keyword}%'";
+                }
             }
         }
         #endregion
@@ -335,7 +395,6 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            // 🌟 核心修改：只使用 1 個 ID 貫穿整個購物車 (One-To-Many)
                             string requestID = txtRequestID.Text.Trim();
 
                             string query = @"INSERT INTO reorder_card 
@@ -360,10 +419,10 @@ namespace ITP4915M_Group11
                             ClearFields();
                             RefreshHistoryGrid();
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             trans.Rollback();
-                            throw ex;
+                            throw;
                         }
                     }
                 }
@@ -383,7 +442,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 🌟 核心修改：利用 GROUP BY 將同一個 RequestID 打包成一行顯示
                     string query = @"SELECT ReOrderCardID AS 'Request ID', 
                                             COUNT(MaterialID) AS 'Items Included', 
                                             SUM(RequestedQty) AS 'Total Qty', 
@@ -400,16 +458,24 @@ namespace ITP4915M_Group11
                         dgvHistory.DataSource = dt;
                     }
                 }
-                catch (Exception) { /* Fail silently */ }
+                catch (Exception ex)
+                {
+                    DataTable errDt = new DataTable();
+                    errDt.Columns.Add("System Error");
+                    errDt.Rows.Add("Failed to refresh: " + ex.Message);
+                    dgvHistory.DataSource = errDt;
+                }
             }
         }
 
-        // 🌟 核心修改：當點擊 Header 時，自動從資料庫拉取對應嘅 Line Items 顯示喺下半部
         private void DgvHistory_SelectionChanged(object sender, EventArgs e)
         {
-            if (dgvHistory.SelectedRows.Count > 0)
+            if (dgvHistory.SelectedRows.Count > 0 && dgvHistory.SelectedRows[0].Cells["Request ID"].Value != null)
             {
                 string reqID = dgvHistory.SelectedRows[0].Cells["Request ID"].Value.ToString();
+
+                if (reqID.StartsWith("Failed to refresh")) { dgvDetails.DataSource = null; return; }
+
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
                     try
@@ -431,7 +497,13 @@ namespace ITP4915M_Group11
                             }
                         }
                     }
-                    catch (Exception) { dgvDetails.DataSource = null; }
+                    catch (Exception ex)
+                    {
+                        DataTable errDt = new DataTable();
+                        errDt.Columns.Add("Line Items Error");
+                        errDt.Rows.Add(ex.Message);
+                        dgvDetails.DataSource = errDt;
+                    }
                 }
             }
             else
@@ -442,14 +514,14 @@ namespace ITP4915M_Group11
 
         private void GenerateRequestBatchID()
         {
-            // 🌟 產生極具識別度嘅唯一 Request ID
-            txtRequestID.Text = "REQ-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+            txtRequestID.Text = "RQ" + DateTime.Now.ToString("yyMMddHHmmss");
         }
 
         private void ClearFields()
         {
             cartTable.Clear();
             UpdateGlobalTotal();
+            if (txtSearchReq != null) txtSearchReq.Clear(); // 🌟 清除搜尋框
             cboMaterials.SelectedIndex = -1;
             txtQty.Clear();
             txtUnitPrice.Clear();

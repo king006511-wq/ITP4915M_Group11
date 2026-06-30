@@ -20,7 +20,7 @@ namespace ITP4915M_Group11
         // ==========================================
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
-        // 🚨 庫存紅字警告線 (你可以按需要修改呢個數值)
+        // 🚨 庫存紅字警告線
         private readonly int STOCK_WARNING_THRESHOLD = 50;
 
         // ==========================================
@@ -34,11 +34,10 @@ namespace ITP4915M_Group11
 
         public ProductManufacturingForm()
         {
-            // InitializeComponent();  // 👈 刪除或註解呢一行！
-
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 SetupCustomSleekUI();
+                EnforceSecurityGatekeeper(); // 🛡️ 新增：載入時檢查權限
                 LoadManufacturableProducts();
                 LoadRawMaterialInventory();
 
@@ -46,6 +45,35 @@ namespace ITP4915M_Group11
                 this.Layout += (s, e) => RecalculateDynamicLayout();
             }
         }
+
+        #region 🔒 System Security Gatekeeper Enforcement (優化新增)
+        private void EnforceSecurityGatekeeper()
+        {
+            string currentRole = UserSession.LoggedInStaffRole;
+            string currentStaffID = UserSession.LoggedInStaffID;
+
+            // 假設只有 Manager, Administrator 或者負責生產嘅 Factory 員工可以入
+            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
+                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Factory", StringComparison.OrdinalIgnoreCase));
+
+            if (!isAuthorized)
+            {
+                MessageBox.Show(
+                    $"[SECURITY ALERT] Access Denied!\n\n" +
+                    $"Logged In Staff ID: {(string.IsNullOrEmpty(currentStaffID) ? "Unknown" : currentStaffID)}\n" +
+                    $"Your Account Role is: \"{(string.IsNullOrEmpty(currentRole) ? "None" : currentRole)}\"\n\n" +
+                    $"You are not authorized to access the Manufacturing Module.",
+                    "System Security Guard",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Stop
+                );
+
+                this.Shown += (s, e) => this.Close();
+            }
+        }
+        #endregion
 
         #region 🎨 精緻手動算繪排版
         private void SetupCustomSleekUI()
@@ -178,8 +206,8 @@ namespace ITP4915M_Group11
                     if (stock < STOCK_WARNING_THRESHOLD)
                     {
                         // 整行變成淡紅色，文字變深紅加粗
-                        custom_dgvRawMaterialStock.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(254, 226, 226); // Light Red
-                        custom_dgvRawMaterialStock.Rows[e.RowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(185, 28, 28);   // Dark Red
+                        custom_dgvRawMaterialStock.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(254, 226, 226);
+                        custom_dgvRawMaterialStock.Rows[e.RowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(185, 28, 28);
                         custom_dgvRawMaterialStock.Rows[e.RowIndex].DefaultCellStyle.Font = new Font(custom_dgvRawMaterialStock.Font, FontStyle.Bold);
                     }
                 }
@@ -195,7 +223,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 只載入喺 bill_of_materials 有配方設定嘅 Product
                     string query = @"
                         SELECT DISTINCT p.ProductID, p.ProductName 
                         FROM product p
@@ -239,7 +266,14 @@ namespace ITP4915M_Group11
                         custom_dgvRawMaterialStock.DataSource = dt;
                     }
                 }
-                catch (Exception) { /* Fail silently */ }
+                catch (Exception ex)
+                {
+                    // 🛠️ 優化：唔再靜音食咗個 Error，顯示喺 Grid 提示開發者
+                    DataTable errorDt = new DataTable();
+                    errorDt.Columns.Add("System Status");
+                    errorDt.Rows.Add("Database Connection Error: " + ex.Message);
+                    custom_dgvRawMaterialStock.DataSource = errorDt;
+                }
             }
         }
 
@@ -274,7 +308,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 聯合 BOM 同 Raw_Material，一次過計出所需數量同目前庫存
                     string query = @"
                         SELECT 
                             b.MaterialID AS 'Mat ID',
@@ -297,7 +330,6 @@ namespace ITP4915M_Group11
                             adapter.Fill(dt);
                             custom_dgvBOMRequirements.DataSource = dt;
 
-                            // 檢查有無任何零件 Shortage (缺貨)
                             bool canManufacture = true;
                             foreach (DataRow row in dt.Rows)
                             {
@@ -348,7 +380,8 @@ namespace ITP4915M_Group11
                         {
                             try
                             {
-                                // 1. 根據 BOM 扣減 Raw Material 庫存
+                                // 1. 根據 BOM 扣減 Raw Material 庫存 
+                                // 💡 確保 Database 中嘅 StockLevel 有設定為 UNSIGNED，以防止多人同時操作導致扣至負數嘅 Concurrency 問題
                                 string deductSql = @"
                                     UPDATE raw_material rm
                                     JOIN bill_of_materials b ON rm.MaterialID = b.MaterialID

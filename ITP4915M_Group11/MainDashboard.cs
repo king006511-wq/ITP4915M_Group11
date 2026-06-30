@@ -92,18 +92,18 @@ namespace ITP4915M_Group11
         {
             flpNavMenu.Controls.Clear();
 
+            // 📊 系統看板區
             AddNavHeader("📊 System Dashboards");
             AddNavButton("🏠 Home Dashboard", null, "HOME", "HOME");
 
-            // Core Business Modules
-            if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") ||
-                AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") ||
-                AuthorizationHelper.HasMenuPermission("SALES_ORDER") ||
-                AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") ||
-                AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") ||
-                AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE") ||
-                AuthorizationHelper.HasMenuPermission("PRODUCT_CREATION_BOM") ||
-                AuthorizationHelper.HasMenuPermission("PRODUCT_MANUFACTURING"))
+            // 📈 高級統計報表（完美透過標準 HasMenuPermission 檢查，非 Admin 職員會自動隱藏！）
+            if (AuthorizationHelper.HasMenuPermission("STAT_REPORT"))
+            {
+                AddNavButton("📈 Statistical Report", typeof(StatisticalReportForm), "FORM", "STAT_REPORT");
+            }
+
+            // 💼 核心商務模組
+            if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") || AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") || AuthorizationHelper.HasMenuPermission("SALES_ORDER") || AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") || AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") || AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE") || AuthorizationHelper.HasMenuPermission("PRODUCT_CREATION_BOM") || AuthorizationHelper.HasMenuPermission("PRODUCT_MANUFACTURING"))
             {
                 AddNavHeader("💼 Core Modules");
                 AddNavButton("👥 Customer Mgmt", typeof(CustomerManagement), "FORM", "CUSTOMER_MGMT");
@@ -112,17 +112,12 @@ namespace ITP4915M_Group11
                 AddNavButton("🚚 Delivery Logistics", typeof(LogisticsForm), "FORM", "DELIVERY_LOGISTICS");
                 AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM", "GOODS_RECEIVED");
                 AddNavButton("🛋️ Product Maintenance", typeof(ProductManagement), "FORM", "PRODUCT_MAINTENANCE");
-
                 AddNavButton("✨ New Product R&D", typeof(ProductCreationBOMForm), "FORM", "PRODUCT_CREATION_BOM");
                 AddNavButton("🛠️ Product Manufacturing", typeof(ProductManufacturingForm), "FORM", "PRODUCT_MANUFACTURING");
             }
 
-            // Internal Operations Modules
-            if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") ||
-                AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") ||
-                AuthorizationHelper.HasMenuPermission("SUPPLIER_MATERIAL_CREATION") ||
-                AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") ||
-                AuthorizationHelper.HasMenuPermission("CUSTOMER_SUPPORT"))
+            // ⚙️ 內部營運模組
+            if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") || AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") || AuthorizationHelper.HasMenuPermission("SUPPLIER_MATERIAL_CREATION") || AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") || AuthorizationHelper.HasMenuPermission("CUSTOMER_SUPPORT"))
             {
                 AddNavHeader("⚙️ Internal Ops");
                 AddNavButton("🏭 Material Requests", typeof(RawMaterialRequestForm), "FORM", "MATERIAL_REQUESTS");
@@ -130,8 +125,6 @@ namespace ITP4915M_Group11
                 AddNavButton("🤝 Supplier & Material", typeof(SupplierAndMaterialCreationForm), "FORM", "SUPPLIER_MATERIAL_CREATION");
                 AddNavButton("👔 HR / Staff Mgmt", typeof(EmployeeManagement), "FORM", "HR_STAFF_MGMT");
                 AddNavButton("📞 Customer Support", typeof(AfterServiceForm), "FORM", "CUSTOMER_SUPPORT");
-
-                // Sales Activity Log (For historical review)
                 AddNavButton("📜 Sales Activity Log", typeof(SalesActivityLogForm), "FORM", "CUSTOMER_SUPPORT");
             }
 

@@ -23,16 +23,20 @@ namespace ITP4915M_Group11
         private DataGridView custom_dgvPendingRC, custom_dgvDetails, custom_dgvPOCart;
         private Button custom_btnAddAllocation, custom_btnRemoveAllocation, custom_btnCreatePO, custom_btnReject, custom_btnClear;
 
-        // 🌟 新增：用於儲存準備發送畀唔同供應商嘅採購分配表 (Allocation Cart)
+        // 🌟 新增：PO 歷史記錄的 DataGridView 與 搜尋框
+        private DataGridView dgvPOList;
+        private TextBox txtPOSearch;
+
+        // 用於儲存準備發送畀唔同供應商嘅採購分配表 (Allocation Cart)
         private DataTable poCartTable;
 
         public ProcurementForm()
         {
-            InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 SetupCustomSleekUI();
                 LoadPendingRequests();
+                LoadPOHistory(); // 🌟 啟動時載入歷史 PO
                 this.Load += ProcurementForm_Load;
             }
         }
@@ -56,7 +60,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 🎨 精緻主從聯動排版 (Master-Detail UI & PO Cart)
+        #region 🎨 精緻主從聯動排版 (含分頁 TabControl 設計)
         private void SetupCustomSleekUI()
         {
             this.Controls.Clear();
@@ -83,7 +87,7 @@ namespace ITP4915M_Group11
             contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));  // Right Grids
             mainTable.Controls.Add(contentTable, 0, 1);
 
-            // --- Left Card ---
+            // ================== 左側操作卡片 ==================
             Panel custom_pnlLeftCard = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = true };
             custom_pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, custom_pnlLeftCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(custom_pnlLeftCard, 0, 0);
@@ -96,7 +100,6 @@ namespace ITP4915M_Group11
 
             custom_txtRCID = CreateCustomTextBox(custom_pnlLeftCard, ref startY, "Ref. Request ID (Header):", true, inputWidth);
 
-            // 將 Material ID 同 Name 擺埋一齊
             Label lblMat = new Label { Text = "Selected Material (Detail):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             custom_txtMaterialID = new TextBox { Location = new Point(20, startY + 22), Width = 100, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, ReadOnly = true, BackColor = Color.FromArgb(241, 245, 249) };
             custom_txtMaterialName = new TextBox { Location = new Point(125, startY + 22), Width = 295, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, ReadOnly = true, BackColor = Color.FromArgb(241, 245, 249) };
@@ -113,7 +116,6 @@ namespace ITP4915M_Group11
             custom_pnlLeftCard.Controls.Add(lblSup); custom_pnlLeftCard.Controls.Add(custom_cmbSupplier);
             startY += 65;
 
-            // 🌟 購物車按鈕
             custom_btnAddAllocation = new Button { Text = "➕ Add to PO Cart", Location = new Point(20, startY), Size = new Size(220, 35), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             custom_btnRemoveAllocation = new Button { Text = "❌ Remove", Location = new Point(250, startY), Size = new Size(170, 35), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             custom_btnAddAllocation.FlatAppearance.BorderSize = 0; custom_btnRemoveAllocation.FlatAppearance.BorderSize = 0;
@@ -121,7 +123,6 @@ namespace ITP4915M_Group11
             custom_pnlLeftCard.Controls.Add(custom_btnAddAllocation); custom_pnlLeftCard.Controls.Add(custom_btnRemoveAllocation);
             startY += 50;
 
-            // 🌟 採購分配車表格 (PO Cart Grid)
             Label lblCart = new Label { Text = "📦 PO Staging Cart (Will split automatically):", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42) };
             custom_pnlLeftCard.Controls.Add(lblCart); startY += 25;
 
@@ -155,15 +156,20 @@ namespace ITP4915M_Group11
 
             custom_pnlLeftCard.Controls.Add(custom_btnCreatePO); custom_pnlLeftCard.Controls.Add(custom_btnReject); custom_pnlLeftCard.Controls.Add(custom_btnClear);
 
-            // --- Right Table (Master-Detail) ---
+            // ================== 🌟 右側分頁面板 (TabControl) ==================
+            TabControl tcRight = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold) };
+
+            // 📍 Tab 1: 處理中的請求 (原有功能)
+            TabPage tpRequests = new TabPage("📥 Pending Requests");
+            tpRequests.BackColor = Color.White;
+
             TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = new Padding(0) };
             rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
             rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
             rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            contentTable.Controls.Add(rightTable, 2, 0);
+            tpRequests.Controls.Add(rightTable);
 
-            // Master Grid
             Label lblGridTitle = new Label { Text = "⏳ Pending Material Requests (Headers)", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
             rightTable.Controls.Add(lblGridTitle, 0, 0);
 
@@ -174,7 +180,6 @@ namespace ITP4915M_Group11
             custom_dgvPendingRC.SelectionChanged += dgvPendingRC_SelectionChanged;
             rightTable.Controls.Add(custom_dgvPendingRC, 0, 1);
 
-            // Details Grid
             Label lblDetailsTitle = new Label { Text = "🔍 Request Line Items (Click to allocate vendor)", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
             rightTable.Controls.Add(lblDetailsTitle, 0, 2);
 
@@ -182,8 +187,32 @@ namespace ITP4915M_Group11
             custom_dgvDetails.EnableHeadersVisualStyles = false;
             custom_dgvDetails.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(14, 165, 233);
             custom_dgvDetails.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            custom_dgvDetails.SelectionChanged += dgvDetails_SelectionChanged; // 🌟 監聽子表點擊
+            custom_dgvDetails.SelectionChanged += dgvDetails_SelectionChanged;
             rightTable.Controls.Add(custom_dgvDetails, 0, 3);
+
+            // 📍 Tab 2: 採購單歷史與搜尋 (新增滿足 "Search and List Procurement" 要求)
+            TabPage tpPOHistory = new TabPage("📜 Purchase Order History");
+            tpPOHistory.BackColor = Color.White;
+
+            Panel pnlPOSearch = new Panel { Dock = DockStyle.Top, Height = 60, BackColor = Color.White };
+            Label lblSearchPO = new Label { Text = "🔍 Fast Search PO:", Location = new Point(15, 20), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtPOSearch = new TextBox { Location = new Point(150, 18), Width = 300, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            txtPOSearch.TextChanged += TxtPOSearch_TextChanged;
+            pnlPOSearch.Controls.Add(lblSearchPO);
+            pnlPOSearch.Controls.Add(txtPOSearch);
+            tpPOHistory.Controls.Add(pnlPOSearch);
+
+            dgvPOList = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            dgvPOList.EnableHeadersVisualStyles = false;
+            dgvPOList.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(16, 185, 129); // 祖母綠色
+            dgvPOList.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvPOList.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            tpPOHistory.Controls.Add(dgvPOList);
+            dgvPOList.BringToFront(); // 確保 DataGridView 在 Panel 下方填滿
+
+            tcRight.TabPages.Add(tpRequests);
+            tcRight.TabPages.Add(tpPOHistory);
+            contentTable.Controls.Add(tcRight, 2, 0); // 將 TabControl 加入佈局
         }
 
         private TextBox CreateCustomTextBox(Panel container, ref int topY, string labelText, bool readOnly, int width, int offsetX = 20)
@@ -198,7 +227,6 @@ namespace ITP4915M_Group11
         #endregion
 
         #region 💾 資料庫連線與智能過濾
-        // 🌟 智能過濾：只顯示能夠供應呢款物料嘅供應商
         private void LoadSuppliersForMaterial(string materialID)
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -210,7 +238,7 @@ namespace ITP4915M_Group11
                         SELECT s.SupplierID, s.SupplierName 
                         FROM supplier s
                         JOIN supplier_material sm ON s.SupplierID = sm.SupplierID
-                        WHERE sm.MaterialID = @matID";
+                        WHERE sm.MaterialID = @matID AND s.IsActive = 1";
 
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
@@ -249,7 +277,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 🌟 修正：將最後一行的 ASC 改為 DESC，等最新嘅申請排最前
                     string query = @"
                 SELECT r.ReOrderCardID AS 'Request ID', 
                        COUNT(r.MaterialID) AS 'Total Items', 
@@ -258,7 +285,7 @@ namespace ITP4915M_Group11
                 FROM reorder_card r
                 WHERE r.Status = 'Pending Approval'
                 GROUP BY r.ReOrderCardID
-                ORDER BY MAX(r.TriggerDate) DESC"; // <-- 呢度由 ASC 改成 DESC
+                ORDER BY MAX(r.TriggerDate) DESC";
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
@@ -272,6 +299,53 @@ namespace ITP4915M_Group11
             }
         }
 
+        // 🌟 新增：載入已開出之 PO 歷史 (List Procurement)
+        private void LoadPOHistory()
+        {
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = @"
+                        SELECT 
+                            po.PO_ID AS 'PO Number', 
+                            s.SupplierName AS 'Supplier', 
+                            po.PODate AS 'Date', 
+                            po.Status 
+                        FROM purchase_order po
+                        JOIN supplier s ON po.SupplierID = s.SupplierID
+                        ORDER BY po.PODate DESC";
+
+                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
+                    {
+                        DataTable dt = new DataTable();
+                        adapter.Fill(dt);
+                        dgvPOList.DataSource = dt;
+                        dgvPOList.ClearSelection();
+                    }
+                }
+                catch (Exception ex) { MessageBox.Show("Failed to load PO History: " + ex.Message); }
+            }
+        }
+
+        // 🌟 新增：搜尋 PO 邏輯 (Search Procurement)
+        private void TxtPOSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvPOList.DataSource is DataTable dt)
+            {
+                string keyword = txtPOSearch.Text.Trim().Replace("'", "''");
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    dt.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    dt.DefaultView.RowFilter = string.Format("[PO Number] LIKE '%{0}%' OR Supplier LIKE '%{0}%' OR Status LIKE '%{0}%'", keyword);
+                }
+            }
+        }
+
         private void dgvPendingRC_SelectionChanged(object sender, EventArgs e)
         {
             if (custom_dgvPendingRC.SelectedRows.Count > 0)
@@ -279,7 +353,6 @@ namespace ITP4915M_Group11
                 string rcID = custom_dgvPendingRC.SelectedRows[0].Cells["Request ID"].Value.ToString();
                 custom_txtRCID.Text = rcID;
 
-                // Load Details
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
                     try
@@ -310,7 +383,6 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🌟 當點擊子表格時，將資料填入輸入框，並智能過濾供應商
         private void dgvDetails_SelectionChanged(object sender, EventArgs e)
         {
             if (custom_dgvDetails.SelectedRows.Count > 0)
@@ -325,9 +397,8 @@ namespace ITP4915M_Group11
 
                 if (!string.IsNullOrEmpty(matID))
                 {
-                    LoadSuppliersForMaterial(matID); // 智能過濾
+                    LoadSuppliersForMaterial(matID);
 
-                    // 自動抓取 StandardCost 作為參考價
                     using (MySqlConnection conn = new MySqlConnection(connString))
                     {
                         try
@@ -366,7 +437,6 @@ namespace ITP4915M_Group11
             string matID = custom_txtMaterialID.Text;
             decimal subtotal = qty * price;
 
-            // 檢查是否已有相同料配相同供應商，有的話直接加上去
             bool exists = false;
             foreach (DataRow row in poCartTable.Rows)
             {
@@ -421,7 +491,6 @@ namespace ITP4915M_Group11
                 MessageBox.Show("PO Cart is empty! Please allocate materials to vendors first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning); return;
             }
 
-            // 確認全部拆單
             DialogResult res = MessageBox.Show($"Ready to generate Purchase Orders based on the Cart.\n\nThe system will automatically group items by Vendor and generate multiple POs if necessary. Proceed?", "Confirm Dispatch", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (res != DialogResult.Yes) return;
 
@@ -434,10 +503,8 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            // 🌟 核心分拆邏輯：按供應商 Group By
                             var supplierGroups = poCartTable.AsEnumerable().GroupBy(r => r.Field<string>("Sup.ID"));
 
-                            // 獲取最新 PO_ID 序號
                             string prefix = "PO" + DateTime.Now.ToString("yyyyMMdd") + "-";
                             int nextSeq = 1;
                             using (MySqlCommand seqCmd = new MySqlCommand("SELECT PO_ID FROM purchase_order WHERE PO_ID LIKE @prefix ORDER BY PO_ID DESC LIMIT 1", conn, trans))
@@ -459,7 +526,6 @@ namespace ITP4915M_Group11
                                 string poID = prefix + nextSeq.ToString("D3");
                                 nextSeq++;
 
-                                // 1. 建立 PO Header
                                 string poSql = "INSERT INTO purchase_order (PO_ID, SupplierID, ReOrderCardID, PODate, Status, StaffID) VALUES (@PO, @Sup, @RC, NOW(), 'Ordered', @Staff)";
                                 using (MySqlCommand cmd = new MySqlCommand(poSql, conn, trans))
                                 {
@@ -470,7 +536,6 @@ namespace ITP4915M_Group11
                                     cmd.ExecuteNonQuery();
                                 }
 
-                                // 2. 寫入該供應商嘅所有 Line Items
                                 string polSql = "INSERT INTO po_lineitem (PO_ID, MaterialID, Quantity, UnitPrice) VALUES (@PO, @Mat, @Qty, @Price)";
                                 using (MySqlCommand cmd = new MySqlCommand(polSql, conn, trans))
                                 {
@@ -487,7 +552,6 @@ namespace ITP4915M_Group11
                                 generatedPOs += poID + "\n";
                             }
 
-                            // 3. 升級狀態
                             string rcSql = "UPDATE reorder_card SET Status = 'Approved' WHERE ReOrderCardID = @RC";
                             using (MySqlCommand cmd = new MySqlCommand(rcSql, conn, trans))
                             {
@@ -500,6 +564,7 @@ namespace ITP4915M_Group11
 
                             ClearCustomFields();
                             LoadPendingRequests();
+                            LoadPOHistory(); // 🌟 重大更新：派單後自動刷新右邊分頁的 PO 歷史清單！
                         }
                         catch (Exception ex)
                         {
