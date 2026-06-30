@@ -12,23 +12,20 @@ namespace ITP4915M_Group11
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         // ==========================================
-        // 🔒 全域容器架構變數
+        // 🔒 Global Container Variables
         // ==========================================
         private Form activeForm = null;
         private Panel pnlContent;
         private Panel pnlLeftNav;
         private FlowLayoutPanel flpNavMenu;
+        private Timer clockTimer; // Clock timer for general staff workspace
 
         public MainDashboard()
         {
-            InitializeComponent();
-            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
-            {
-                InitializePremiumContainerUI();
-            }
+            InitializePremiumContainerUI();
         }
 
-        #region 🎨 真正的現代化視窗佈局 (動態適應 + 安全尺寸防護)
+        #region 🎨 Modern Window Layout (Dynamic Responsive & Safe Size)
         private void InitializePremiumContainerUI()
         {
             this.Controls.Clear();
@@ -40,7 +37,7 @@ namespace ITP4915M_Group11
             this.BackColor = Color.FromArgb(243, 244, 246);
             this.FormBorderStyle = FormBorderStyle.Sizable;
 
-            // 左側導航欄
+            // 1. Left Sidebar
             pnlLeftNav = new Panel
             {
                 Dock = DockStyle.Left,
@@ -49,7 +46,7 @@ namespace ITP4915M_Group11
                 Padding = new Padding(0, 20, 0, 0)
             };
 
-            // 企業商標 Logo
+            // Corporate Logo
             Label lblLogo = new Label
             {
                 Text = "PREMIUM\nLIVING",
@@ -63,7 +60,7 @@ namespace ITP4915M_Group11
             };
             pnlLeftNav.Controls.Add(lblLogo);
 
-            // 導航按鈕流式佈局容器
+            // Navigation Menu Flow Layout
             flpNavMenu = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -74,30 +71,31 @@ namespace ITP4915M_Group11
             };
             pnlLeftNav.Controls.Add(flpNavMenu);
 
-            // 右側主內容容器
+            // 2. Right Main Content Container
             pnlContent = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(243, 244, 246),
                 AutoScroll = true
             };
-
-            // 監聽容器縮放事件，確保內嵌子表單動態 RWD 適應尺寸
             pnlContent.Resize += PnlContent_Resize;
 
             this.Controls.Add(pnlContent);
             this.Controls.Add(pnlLeftNav);
+            pnlContent.BringToFront();
 
             SetupNavigationMenu();
-            ShowHomeDashboard(); // 預設顯示主戰情室
+            ShowHomeDashboard(); // Show home dashboard by default
         }
 
         private void SetupNavigationMenu()
         {
+            flpNavMenu.Controls.Clear();
+
             AddNavHeader("📊 System Dashboards");
             AddNavButton("🏠 Home Dashboard", null, "HOME", "HOME");
 
-            // 🌟 權限控管組合：判斷是否顯示核心業務模組
+            // Core Business Modules
             if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") ||
                 AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") ||
                 AuthorizationHelper.HasMenuPermission("SALES_ORDER") ||
@@ -115,27 +113,26 @@ namespace ITP4915M_Group11
                 AddNavButton("📦 Goods Received (GRN)", typeof(GoodsReceivedForm), "FORM", "GOODS_RECEIVED");
                 AddNavButton("🛋️ Product Maintenance", typeof(ProductManagement), "FORM", "PRODUCT_MAINTENANCE");
 
-                // 新產品研發與 BOM 模組
                 AddNavButton("✨ New Product R&D", typeof(ProductCreationBOMForm), "FORM", "PRODUCT_CREATION_BOM");
                 AddNavButton("🛠️ Product Manufacturing", typeof(ProductManufacturingForm), "FORM", "PRODUCT_MANUFACTURING");
             }
 
-            // 🌟 修正：加入 SUPPLIER_MATERIAL_CREATION 到內部營運權限檢查組入面
+            // Internal Operations Modules
             if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") ||
                 AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") ||
-                AuthorizationHelper.HasMenuPermission("SUPPLIER_MATERIAL_CREATION") || // 👈 加咗呢行判斷
+                AuthorizationHelper.HasMenuPermission("SUPPLIER_MATERIAL_CREATION") ||
                 AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") ||
                 AuthorizationHelper.HasMenuPermission("CUSTOMER_SUPPORT"))
             {
                 AddNavHeader("⚙️ Internal Ops");
                 AddNavButton("🏭 Material Requests", typeof(RawMaterialRequestForm), "FORM", "MATERIAL_REQUESTS");
                 AddNavButton("📈 Procurement Control", typeof(ProcurementForm), "FORM", "PROCUREMENT_CONTROL");
-
-                // 🌟 新增：真正將「供應商與物料建立」按鈕放落選單到！
                 AddNavButton("🤝 Supplier & Material", typeof(SupplierAndMaterialCreationForm), "FORM", "SUPPLIER_MATERIAL_CREATION");
-
                 AddNavButton("👔 HR / Staff Mgmt", typeof(EmployeeManagement), "FORM", "HR_STAFF_MGMT");
                 AddNavButton("📞 Customer Support", typeof(AfterServiceForm), "FORM", "CUSTOMER_SUPPORT");
+
+                // Sales Activity Log (For historical review)
+                AddNavButton("📜 Sales Activity Log", typeof(SalesActivityLogForm), "FORM", "CUSTOMER_SUPPORT");
             }
 
             AddNavHeader("");
@@ -149,20 +146,13 @@ namespace ITP4915M_Group11
                 flpNavMenu.Controls.Add(new Panel { Size = new Size(220, 20), BackColor = Color.Transparent });
                 return;
             }
-            Label lblHeader = new Label
-            {
-                Text = text,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                Size = new Size(220, 25),
-                Margin = new Padding(5, 15, 5, 5),
-                TextAlign = ContentAlignment.BottomLeft
-            };
+            Label lblHeader = new Label { Text = text, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Size = new Size(220, 25), Margin = new Padding(5, 15, 5, 5), TextAlign = ContentAlignment.BottomLeft };
             flpNavMenu.Controls.Add(lblHeader);
         }
 
         private void AddNavButton(string text, Type formType, string actionType, string menuId = "")
         {
+            // ⚠️ Permission interception: Do not add button if no permission
             if (actionType == "FORM" && !AuthorizationHelper.HasMenuPermission(menuId)) return;
 
             Button btn = new Button
@@ -185,70 +175,154 @@ namespace ITP4915M_Group11
             btn.Click += (s, e) =>
             {
                 if (actionType == "HOME") ShowHomeDashboard();
-                else if (actionType == "LOGOUT") this.Close();
+                else if (actionType == "LOGOUT") { this.Hide(); new Login().Show(); }
                 else LoadModule(formType);
             };
             flpNavMenu.Controls.Add(btn);
         }
         #endregion
 
-        #region 🏠 Enterprise Home Dashboard (Analytics & Self-Service)
+        #region 🏠 Core Dashboard Routing System (Manager vs Staff)
         private void ShowHomeDashboard()
         {
             if (activeForm != null) { activeForm.Close(); activeForm = null; }
+            if (clockTimer != null) { clockTimer.Stop(); clockTimer.Dispose(); }
             pnlContent.Controls.Clear();
 
             string staffID = UserSession.LoggedInStaffID ?? "Guest";
             string role = UserSession.LoggedInStaffRole ?? "Unknown Role";
 
-            // 1. Header 歡迎區區塊
+            // Header Welcome Section
             Label lblTitle = new Label { Text = $"Welcome back, {staffID} ✨", Font = new Font("Segoe UI Black", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(40, 30), AutoSize = true };
-            Label lblSubTitle = new Label { Text = $"Role: {role} | Premium Living Enterprise Control Center", Font = new Font("Segoe UI", 11F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(43, 75), AutoSize = true };
+            Label lblSubTitle = new Label { Text = $"Role: {role} | Premium Living ERP Workspace", Font = new Font("Segoe UI", 11F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(43, 75), AutoSize = true };
             pnlContent.Controls.Add(lblTitle); pnlContent.Controls.Add(lblSubTitle);
 
-            // 自主變更密碼按鈕
-            Button btnChangePwd = new Button { Text = "🔑 Change My Password", Location = new Point(pnlContent.Width - 300, 40), Size = new Size(220, 42), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            // Change Password Button
+            Button btnChangePwd = new Button { Text = "🔑 Account Security", Location = new Point(pnlContent.Width - 260, 40), Size = new Size(180, 42), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand, Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnChangePwd.FlatAppearance.BorderSize = 0;
             btnChangePwd.Click += BtnChangeMyPwd_Click;
             pnlContent.Controls.Add(btnChangePwd);
 
-            string todayOrders = "0", pendingApprove = "0", pendingDispatch = "0", lowStock = "0";
-            DataTable dtRecentOrders = new DataTable();
-            DataTable dtLowStock = new DataTable();
+            // 🌟 Strict Permission Checking
+            var currentEnum = AuthorizationHelper.ParseRole(role);
+            bool isManagement = (currentEnum == AuthorizationHelper.UserRoleEnum.Manager ||
+                                 currentEnum == AuthorizationHelper.UserRoleEnum.Administrator ||
+                                 currentEnum == AuthorizationHelper.UserRoleEnum.SystemManager);
+
+            if (isManagement)
+            {
+                RenderManagerDashboardMetrics(); // Management Professional Charts
+            }
+            else
+            {
+                RenderGeneralStaffDashboard();   // General Staff Workspace
+            }
+        }
+        #endregion
+
+        #region 🔴 Management Exclusive: Advanced Visual Dashboard
+        private void RenderManagerDashboardMetrics()
+        {
+            int todayOrders = 0, pendingApprove = 0, processingOrders = 0, pendingDispatch = 0, lowStockCount = 0;
+            DataTable dtCombinedLowStock = new DataTable();
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE DATE(OrderDate) = CURDATE()", conn)) todayOrders = cmd.ExecuteScalar()?.ToString() ?? "0";
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status LIKE 'Awaiting Approval%'", conn)) pendingApprove = cmd.ExecuteScalar()?.ToString() ?? "0";
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status = 'Ready for Dispatch'", conn)) pendingDispatch = cmd.ExecuteScalar()?.ToString() ?? "0";
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM product WHERE StockLevel <= 10", conn)) lowStock = cmd.ExecuteScalar()?.ToString() ?? "0";
+                    // 1. Order Status Statistics
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE DATE(OrderDate) = CURDATE()", conn)) todayOrders = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status LIKE 'Awaiting Approval%'", conn)) pendingApprove = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status LIKE 'Processing%'", conn)) processingOrders = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status = 'Ready for Dispatch'", conn)) pendingDispatch = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
 
-                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT OrderID AS 'Order Ref', CustomerID AS 'Customer', TotalAmount AS 'Amount', Status FROM orders ORDER BY OrderDate DESC LIMIT 8", conn)) da.Fill(dtRecentOrders);
-                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT ProductID AS 'Product ID', ProductName AS 'Item Name', StockLevel AS 'Stock Left' FROM product WHERE StockLevel <= 10 ORDER BY StockLevel ASC LIMIT 8", conn)) da.Fill(dtLowStock);
+                    // 2. Calculate Total Low Stock (Product + Material)
+                    int pLow = Convert.ToInt32(new MySqlCommand("SELECT COUNT(*) FROM product WHERE StockLevel <= 10", conn).ExecuteScalar() ?? 0);
+                    int mLow = Convert.ToInt32(new MySqlCommand("SELECT COUNT(*) FROM raw_material WHERE StockLevel <= ReorderLevel", conn).ExecuteScalar() ?? 0);
+                    lowStockCount = pLow + mLow;
+
+                    // 3. 🌟 Ultimate UNION ALL: Fetch low stock for both products and materials
+                    string unionSql = @"
+                        SELECT ProductID AS 'Item ID', ProductName AS 'Item Name', StockLevel AS 'Qty Left', 'Product' AS 'Category' 
+                        FROM product WHERE StockLevel <= 10
+                        UNION ALL
+                        SELECT MaterialID AS 'Item ID', MaterialName AS 'Item Name', StockLevel AS 'Qty Left', 'Raw Material' AS 'Category' 
+                        FROM raw_material WHERE StockLevel <= ReorderLevel
+                        ORDER BY `Qty Left` ASC LIMIT 8";
+
+                    using (MySqlDataAdapter da = new MySqlDataAdapter(unionSql, conn))
+                    {
+                        da.Fill(dtCombinedLowStock);
+                    }
                 }
-                catch (Exception) { }
+                catch (Exception) { /* Silent catch to prevent system crash */ }
             }
 
-            // 2. 數據統計卡片區塊
+            // Statistics Card Section
             FlowLayoutPanel flpStats = new FlowLayoutPanel { Location = new Point(40, 120), Size = new Size(pnlContent.Width - 80, 130), FlowDirection = FlowDirection.LeftToRight, WrapContents = true, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             pnlContent.Controls.Add(flpStats);
 
-            flpStats.Controls.Add(CreateStatCard("TODAY'S ORDERS", todayOrders, "Active", Color.FromArgb(14, 165, 233)));
-            flpStats.Controls.Add(CreateStatCard("PENDING APPROVAL", pendingApprove, "Requires Action", Color.FromArgb(245, 158, 11)));
-            flpStats.Controls.Add(CreateStatCard("READY FOR DISPATCH", pendingDispatch, "Logistics Queue", Color.FromArgb(139, 92, 246)));
-            flpStats.Controls.Add(CreateStatCard("LOW STOCK ALERTS", lowStock, "Procurement Needed", Color.FromArgb(239, 68, 68)));
+            flpStats.Controls.Add(CreateStatCard("TODAY'S ORDERS", todayOrders.ToString(), "Active", Color.FromArgb(14, 165, 233)));
+            flpStats.Controls.Add(CreateStatCard("PENDING APPROVAL", pendingApprove.ToString(), "Requires Action", Color.FromArgb(245, 158, 11)));
+            flpStats.Controls.Add(CreateStatCard("READY FOR DISPATCH", pendingDispatch.ToString(), "Logistics Queue", Color.FromArgb(139, 92, 246)));
+            flpStats.Controls.Add(CreateStatCard("SYSTEM LOW STOCK", lowStockCount.ToString(), "Procurement Needed", Color.FromArgb(239, 68, 68))); // Unified Low Stock Card
 
-            // 3. 戰情分析網格
+            // Tactical Analysis Grid
             TableLayoutPanel tlpGrids = new TableLayoutPanel { Location = new Point(40, 270), Size = new Size(pnlContent.Width - 80, 450), ColumnCount = 2, RowCount = 1, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
-            tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
-            tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
+            tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
+            tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
             pnlContent.Controls.Add(tlpGrids);
 
-            tlpGrids.Controls.Add(CreateGridPanel("📈 Recent Sales Activity", dtRecentOrders, Color.FromArgb(37, 99, 235)), 0, 0);
-            tlpGrids.Controls.Add(CreateGridPanel("⚠️ Low Stock Warning", dtLowStock, Color.FromArgb(220, 38, 38)), 1, 0);
+            // 🌟 Pro Graphic: Order Pulse Chart
+            tlpGrids.Controls.Add(CreateOrderPulseGraphicPanel(pendingApprove, processingOrders, pendingDispatch), 0, 0);
+
+            // 🌟 Combined Low Stock Warning Grid (Product + Raw Material)
+            tlpGrids.Controls.Add(CreateGridPanel("⚠️ Global Inventory Shortage Alerts", dtCombinedLowStock, Color.FromArgb(220, 38, 38)), 1, 0);
+        }
+
+        // 📊 Pro Graphic: Order Pulse Chart (GDI+ Custom Paint)
+        private Panel CreateOrderPulseGraphicPanel(int pending, int processing, int dispatch)
+        {
+            Panel pnl = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Margin = new Padding(0, 0, 20, 0) };
+            pnl.Paint += (s, e) => {
+                Graphics g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                ControlPaint.DrawBorder(g, pnl.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+
+                // Title and Underline
+                g.DrawString("📈 Order Fulfillment Pulse", new Font("Segoe UI", 13F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), 20, 20);
+                g.DrawLine(new Pen(Color.FromArgb(241, 245, 249), 2), 20, 60, pnl.Width - 20, 60);
+
+                int maxVal = Math.Max(10, Math.Max(pending, Math.Max(processing, dispatch))); // Set scale
+                int barWidth = pnl.Width - 200;
+                if (barWidth < 100) barWidth = 100;
+
+                // 1. Pending Approval Bar
+                g.DrawString("Awaiting Approval", new Font("Segoe UI", 10F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 90);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(241, 245, 249)), 30, 120, barWidth, 24);
+                int w1 = (int)(((double)pending / maxVal) * barWidth);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(245, 158, 11)), 30, 120, w1, 24);
+                g.DrawString(pending.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 120);
+
+                // 2. Processing Bar
+                g.DrawString("Production / Processing", new Font("Segoe UI", 10F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 180);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(241, 245, 249)), 30, 210, barWidth, 24);
+                int w2 = (int)(((double)processing / maxVal) * barWidth);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(59, 130, 246)), 30, 210, w2, 24);
+                g.DrawString(processing.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 210);
+
+                // 3. Ready for Dispatch Bar
+                g.DrawString("Ready for Dispatch (Logistics)", new Font("Segoe UI", 10F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 270);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(241, 245, 249)), 30, 300, barWidth, 24);
+                int w3 = (int)(((double)dispatch / maxVal) * barWidth);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(16, 185, 129)), 30, 300, w3, 24);
+                g.DrawString(dispatch.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 300);
+
+                // Footer Note
+                g.DrawString("💡 System automatically updates order pipeline metrics in real-time.", new Font("Segoe UI", 9F, FontStyle.Italic), Brushes.GetInstance().GetColorBrush(Color.FromArgb(148, 163, 184)), 30, 380);
+            };
+            return pnl;
         }
 
         private Panel CreateStatCard(string title, string value, string subtitle, Color themeColor)
@@ -293,14 +367,47 @@ namespace ITP4915M_Group11
             dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             dgv.ColumnHeadersHeight = 35;
             pnl.Controls.Add(dgv);
-
             return pnl;
         }
+        #endregion
 
+        #region 🟢 Staff & Driver Exclusive: Safe Workspace
+        private void RenderGeneralStaffDashboard()
+        {
+            // Create a clean panel with no sensitive data
+            Panel pnlWorkspace = new Panel { Location = new Point(40, 120), Size = new Size(pnlContent.Width - 80, 400), BackColor = Color.White, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            pnlWorkspace.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlWorkspace.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+            pnlContent.Controls.Add(pnlWorkspace);
+
+            // 1. Left Clock Area (Optimized spacing to prevent overlap)
+            Label lblTime = new Label { Text = "00:00:00", Font = new Font("Segoe UI Semibold", 44F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(40, 40), AutoSize = true };
+
+            // 🌟 Fix: Adjusted Y-axis for Date to prevent overlapping
+            Label lblDate = new Label { Text = DateTime.Now.ToString("dddd, MMMM dd, yyyy"), Font = new Font("Segoe UI", 12.5F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(48, 145), AutoSize = true };
+            pnlWorkspace.Controls.Add(lblTime); pnlWorkspace.Controls.Add(lblDate);
+
+            clockTimer = new Timer { Interval = 1000 };
+            clockTimer.Tick += (s, e) => lblTime.Text = DateTime.Now.ToString("HH:mm:ss");
+            clockTimer.Start();
+
+            // 2. Right Quick Guide Area
+            Label lblGuideTitle = new Label { Text = "✨ Premium Living Team Workspace", Font = new Font("Segoe UI", 15F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(450, 50), AutoSize = true };
+            Label lblGuide1 = new Label { Text = "☀️ Welcome! Wishing you a smooth, productive, and wonderful shift today!", Font = new Font("Segoe UI", 11.5F), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(450, 105), AutoSize = true };
+            Label lblGuide2 = new Label { Text = "🚚 Logistics & Drivers Reminder: Safety first! Please stay alert and drive safely.", Font = new Font("Segoe UI", 11.5F), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(450, 150), AutoSize = true };
+            Label lblGuide3 = new Label { Text = "🤝 Missing module access? Contact your Manager or IT Support. We are here to help!", Font = new Font("Segoe UI", 11.5F), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(450, 195), AutoSize = true };
+
+            pnlWorkspace.Controls.Add(lblGuideTitle); pnlWorkspace.Controls.Add(lblGuide1); pnlWorkspace.Controls.Add(lblGuide2); pnlWorkspace.Controls.Add(lblGuide3);
+
+            // 3. Decorative Bottom Bar
+            Panel pnlDeco = new Panel { Dock = DockStyle.Bottom, Height = 6, BackColor = Color.FromArgb(79, 70, 229) };
+            pnlWorkspace.Controls.Add(pnlDeco);
+        }
+        #endregion
+
+        #region 🔒 Shared Account Features (Change Password)
         private void BtnChangeMyPwd_Click(object sender, EventArgs e)
         {
             string loggedInID = UserSession.LoggedInStaffID ?? "S001";
-
             Form pwdForm = new Form
             {
                 Text = "Account Security",
@@ -364,7 +471,6 @@ namespace ITP4915M_Group11
                             updateCmd.Parameters.AddWithValue("@newPwd", txtNew.Text);
                             updateCmd.ExecuteNonQuery();
                         }
-
                         MessageBox.Show("Your password has been changed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         pwdForm.Close();
                     }
@@ -375,7 +481,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 🚀 模組動態加載引擎與全域佈局修復
+        #region 🚀 Dynamic Module Loading Engine & Global Layout Fix
         private void LoadModule(Type formType)
         {
             try
@@ -388,10 +494,7 @@ namespace ITP4915M_Group11
 
                 if (targetForm is ProductCreationBOMForm bomForm)
                 {
-                    bomForm.OnNavigationBack = () =>
-                    {
-                        LoadModule(typeof(ProductManagement));
-                    };
+                    bomForm.OnNavigationBack = () => LoadModule(typeof(ProductManagement));
                 }
 
                 targetForm.TopLevel = false;
@@ -407,7 +510,6 @@ namespace ITP4915M_Group11
 
                 pnlContent.Controls.Clear();
                 pnlContent.Controls.Add(targetForm);
-
                 GlobalOptimizeChildForm(targetForm);
 
                 targetForm.Show();
@@ -453,8 +555,15 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        private void MainDashboard_Load(object sender, EventArgs e)
+        // 💡 Brushes Cache Optimizer for Drawing
+        public class Brushes
         {
+            private static Brushes _instance;
+            private System.Collections.Generic.Dictionary<Color, SolidBrush> _cache = new System.Collections.Generic.Dictionary<Color, SolidBrush>();
+            public static Brushes GetInstance() { if (_instance == null) _instance = new Brushes(); return _instance; }
+            public SolidBrush GetColorBrush(Color color) { if (!_cache.ContainsKey(color)) _cache[color] = new SolidBrush(color); return _cache[color]; }
         }
+
+        private void MainDashboard_Load(object sender, EventArgs e) { }
     }
 }

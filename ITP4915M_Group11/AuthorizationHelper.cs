@@ -37,19 +37,22 @@ namespace ITP4915M_Group11
             Staff
         }
 
-        // 由資料庫字串轉換為 enum（寬鬆比對）
+        // 由資料庫字串轉換為 enum（寬鬆比對，增加容錯性）
         public static UserRoleEnum ParseRole(string roleString)
         {
             if (string.IsNullOrWhiteSpace(roleString)) return UserRoleEnum.Unknown;
+
+            // 轉成純小寫並去空白，確保完美比對
             string r = roleString.Trim().ToLowerInvariant();
+
             if (r == "manager") return UserRoleEnum.Manager;
-            if (r == "administrator" || r == "admin") return UserRoleEnum.Administrator;
-            if (r == "sales representative" || r == "sales") return UserRoleEnum.SalesRepresentative;
-            if (r == "logistics driver" || r == "delivery driver" || r == "delivery representative") return UserRoleEnum.LogisticsDriver;
-            if (r == "warehouse specialist" || r == "warehouse") return UserRoleEnum.WarehouseSpecialist;
-            if (r == "procurement officer" || r == "procurement") return UserRoleEnum.ProcurementOfficer;
-            if (r == "system manager") return UserRoleEnum.SystemManager;
-            if (r == "staff") return UserRoleEnum.Staff;
+            if (r == "administrator" || r == "admin" || r == "systemmanager" || r == "system manager") return UserRoleEnum.Administrator;
+            if (r == "sales representative" || r == "sales" || r == "salesrep") return UserRoleEnum.SalesRepresentative;
+            if (r == "logistics driver" || r == "delivery driver" || r == "delivery representative" || r == "driver") return UserRoleEnum.LogisticsDriver;
+            if (r == "warehouse specialist" || r == "warehouse" || r == "storekeeper") return UserRoleEnum.WarehouseSpecialist;
+            if (r == "procurement officer" || r == "procurement" || r == "buyer") return UserRoleEnum.ProcurementOfficer;
+            if (r == "staff" || r == "employee") return UserRoleEnum.Staff;
+
             return UserRoleEnum.Unknown;
         }
 
@@ -60,7 +63,7 @@ namespace ITP4915M_Group11
             {
                 case UserRoleEnum.Manager: return Roles.Manager;
                 case UserRoleEnum.Administrator: return Roles.Administrator;
-                case UserRoleEnum.SalesRepresentative: return Roles.Sales;
+                case UserRoleEnum.SalesRepresentative: return Roles.SalesRepresentative; // 修正保持一致
                 case UserRoleEnum.LogisticsDriver: return Roles.LogisticsDriver;
                 case UserRoleEnum.WarehouseSpecialist: return Roles.WarehouseSpecialist;
                 case UserRoleEnum.ProcurementOfficer: return Roles.ProcurementOfficer;
@@ -73,6 +76,7 @@ namespace ITP4915M_Group11
         // 🌟 權限對照字典 (集中管理哪一個 MenuID 允許哪些 Role 進入)
         private static readonly Dictionary<string, List<UserRoleEnum>> MenuPermissions = new Dictionary<string, List<UserRoleEnum>>
         {
+            // 核心商務模組
             { "CUSTOMER_MGMT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative } },
             { "SALES_QUOTATION", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative } },
             { "SALES_ORDER", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative } },
@@ -80,17 +84,18 @@ namespace ITP4915M_Group11
             { "GOODS_RECEIVED", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist } },
             { "PRODUCT_MAINTENANCE", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist } },
             
-            // 🌟 新產品研發與 BOM 設定的選單權限
-            { "PRODUCT_CREATION_BOM", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist } },
+            // 研發與生產製造模組
+            { "PRODUCT_CREATION_BOM", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist, UserRoleEnum.ProcurementOfficer } },
             { "PRODUCT_MANUFACTURING", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist } },
             
-            // ✨ 新增：供應商與原材料建立的權限 (開放畀經理、管理員同埋採購員)
-            { "SUPPLIER_MATERIAL_CREATION", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.ProcurementOfficer } },
-
+            // 供應商與物料管理
+            { "SUPPLIER_MATERIAL_CREATION", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.ProcurementOfficer, UserRoleEnum.WarehouseSpecialist } },
             { "MATERIAL_REQUESTS", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist, UserRoleEnum.ProcurementOfficer } },
             { "PROCUREMENT_CONTROL", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.ProcurementOfficer } },
+            
+            // 後台行政與客訴
             { "HR_STAFF_MGMT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator } },
-            { "CUSTOMER_SUPPORT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative } }
+            { "CUSTOMER_SUPPORT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative, UserRoleEnum.Staff } }
         };
 
         /// <summary>
@@ -100,17 +105,23 @@ namespace ITP4915M_Group11
         {
             if (string.IsNullOrWhiteSpace(menuId)) return false;
 
-            // 獲取當前用戶的角色
+            // 1. 獲取當前用戶的角色
             var currentRole = ParseRole(UserSession.LoggedInStaffRole);
             if (currentRole == UserRoleEnum.Unknown) return false;
 
-            // 檢查菜單是否在權限字典中
-            if (!MenuPermissions.ContainsKey(menuId))
+            // 🔥【超級安全防禦機制】如果是 Manager 或者是 Administrator，直接放行所有功能，保證唔會因為漏寫字典而消失！
+            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator)
             {
-                return false;
+                return true;
             }
 
-            // 檢查當前用戶的角色是否在允許列表中
+            // 2. 檢查菜單是否在權限字典中
+            if (!MenuPermissions.ContainsKey(menuId))
+            {
+                return false; // 如果字典內沒定義這個 Menu ID，預設不允許非管理員進入
+            }
+
+            // 3. 檢查當前用戶的角色是否在允許列表中
             return MenuPermissions[menuId].Contains(currentRole);
         }
 
@@ -131,6 +142,10 @@ namespace ITP4915M_Group11
         /// </summary>
         public static void EnforceRole(Form f, params string[] roles)
         {
+            // 如果是高階主管，直接略過執法檢查，允許開啟
+            var currentRole = ParseRole(UserSession.LoggedInStaffRole);
+            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator) return;
+
             if (!IsInRole(roles))
             {
                 MessageBox.Show("Access Denied: insufficient privileges.", "Authorization", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -146,23 +161,33 @@ namespace ITP4915M_Group11
             string current = UserSession.LoggedInStaffRole;
             if (string.IsNullOrWhiteSpace(current)) return false;
 
+            // 經理與系統管理員在所有舊代碼角色檢查中自動視為通過
+            var currentRole = ParseRole(current);
+            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator) return true;
+
             foreach (string r in roles)
             {
                 if (string.IsNullOrWhiteSpace(r)) continue;
                 if (current.Trim().Equals(r.Trim(), StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                // 擴展比對：如果傳入的是舊字串 "Sales"，而當前是 SalesRepresentative 也算通過
+                if (r.Trim().Equals("Sales", StringComparison.OrdinalIgnoreCase) && currentRole == UserRoleEnum.SalesRepresentative)
                     return true;
             }
             return false;
         }
 
         /// <summary>
-        /// 🌟 【修復補回方法】檢查當前用戶是否屬於指定的 UserRoleEnum 角色清單之一
-        /// 解決 'AuthorizationHelper' 未包含 'IsInRoleEnum' 的定義 報錯
+        /// 🌟 檢查當前用戶是否屬於指定的 UserRoleEnum 角色清單之一
         /// </summary>
         public static bool IsInRoleEnum(params UserRoleEnum[] roles)
         {
             var currentRole = ParseRole(UserSession.LoggedInStaffRole);
             if (currentRole == UserRoleEnum.Unknown) return false;
+
+            // 高級管理職直接放行
+            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator) return true;
 
             foreach (var r in roles)
             {

@@ -11,11 +11,17 @@ namespace ITP4915M_Group11
     {
         public string ID { get; set; }
         public string Name { get; set; }
+        public string Contact { get; set; } // 🌟 暫存聯絡資料供畫面連動顯示
+
+        // 🌟 UX 優化：如果是未指定，顯示提示字；否則「只顯示 ID」
+        public string DisplayText => ID == "UNASSIGNED" ? "--- Unassigned ---" : ID;
     }
 
     public partial class SupplierAndMaterialCreationForm : Form
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+
+        private string editingSupplierID = null;
 
         private RadioButton rbExistingSupplier, rbNewSupplier;
         private ComboBox cmbExistingSuppliers;
@@ -23,10 +29,9 @@ namespace ITP4915M_Group11
         private TextBox txtMatName, txtMatPrice, txtMatReorderLevel;
         private Button btnSave;
 
-        // 📊 右邊看板控制項
         private DataGridView dgvSuppliers;
         private Button btnDeleteSupplier;
-        private Button btnUpdateSupplier; // 🌟 新增：修改供應商資料按掣
+        private Button btnUpdateSupplier;
 
         public SupplierAndMaterialCreationForm()
         {
@@ -56,9 +61,6 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "🏭 Material Procurement & Supplier Management Hub", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(25, 15), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            // =========================================================================
-            // 🏢 Step 1: Supplier Assignment & Editor
-            // =========================================================================
             Panel pnlSupplier = new Panel { Location = new Point(25, 70), Size = new Size(420, 240), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             pnlSupplier.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlSupplier.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlSupplier);
@@ -74,14 +76,18 @@ namespace ITP4915M_Group11
             rbExistingSupplier.CheckedChanged += SupplierMode_CheckedChanged;
             rbNewSupplier.CheckedChanged += SupplierMode_CheckedChanged;
 
-            Label lblSelectSupp = new Label { Text = "Select Supplier:", Location = new Point(220, 42), AutoSize = true, ForeColor = Color.FromArgb(71, 85, 105), Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            Label lblSelectSupp = new Label { Text = "Select Supplier ID:", Location = new Point(220, 42), AutoSize = true, ForeColor = Color.FromArgb(71, 85, 105), Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
             cmbExistingSuppliers = new ComboBox { Location = new Point(220, 62), Width = 180, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9.5F) };
+
+            // 🌟 綁定下拉選單變更事件，動態更新下方 TextBox 顯示公司全名
+            cmbExistingSuppliers.SelectedIndexChanged += CmbExistingSuppliers_SelectedIndexChanged;
+
             pnlSupplier.Controls.Add(lblSelectSupp); pnlSupplier.Controls.Add(cmbExistingSuppliers);
 
             Label lblLine = new Label { Text = "──────────────────────────────────────────", Location = new Point(15, 95), AutoSize = true, ForeColor = Color.FromArgb(241, 245, 249) };
             pnlSupplier.Controls.Add(lblLine);
 
-            Label lblNewSupp = new Label { Text = "Supplier Name * (New / Edit):", Location = new Point(15, 120), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            Label lblNewSupp = new Label { Text = "Supplier Name * (New / View):", Location = new Point(15, 120), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
             txtNewSuppName = new TextBox { Location = new Point(15, 140), Width = 180, Font = new Font("Segoe UI", 9.5F), BorderStyle = BorderStyle.FixedSingle };
 
             Label lblNewContact = new Label { Text = "Contact Info (Phone/Email):", Location = new Point(220, 120), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
@@ -90,9 +96,6 @@ namespace ITP4915M_Group11
             pnlSupplier.Controls.Add(lblNewSupp); pnlSupplier.Controls.Add(txtNewSuppName);
             pnlSupplier.Controls.Add(lblNewContact); pnlSupplier.Controls.Add(txtNewSuppContact);
 
-            // =========================================================================
-            // 📦 Step 2: Raw Material Details
-            // =========================================================================
             Panel pnlMaterial = new Panel { Location = new Point(25, 325), Size = new Size(420, 260), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             pnlMaterial.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlMaterial.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlMaterial);
@@ -114,11 +117,6 @@ namespace ITP4915M_Group11
             btnSave.Click += btnSave_Click;
             pnlMaterial.Controls.Add(btnSave);
 
-            SupplierMode_CheckedChanged(null, null);
-
-            // =========================================================================
-            // 📊 Live Monitor DataGrid & Management Buttons
-            // =========================================================================
             Panel pnlRight = new Panel { Location = new Point(465, 70), Size = new Size(590, 515), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             pnlRight.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlRight.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlRight);
@@ -155,13 +153,12 @@ namespace ITP4915M_Group11
             dgvSuppliers.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             pnlRight.Controls.Add(dgvSuppliers);
 
-            // 🌟 核心排版：將修改按掣放喺左下角，刪除掣放喺右下角，互相呼應
             btnUpdateSupplier = new Button
             {
                 Text = "✏️ Update Selected Supplier",
                 Location = new Point(15, 460),
                 Size = new Size(220, 40),
-                BackColor = Color.FromArgb(245, 158, 11), // 高質感琥珀橘色代表 Modify
+                BackColor = Color.FromArgb(245, 158, 11),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
@@ -185,6 +182,8 @@ namespace ITP4915M_Group11
             btnDeleteSupplier.FlatAppearance.BorderSize = 0;
             btnDeleteSupplier.Click += btnDeleteSupplier_Click;
             pnlRight.Controls.Add(btnDeleteSupplier);
+
+            SupplierMode_CheckedChanged(null, null);
         }
 
         private TextBox CreateInputField(Panel container, ref int topY, string labelText)
@@ -196,31 +195,44 @@ namespace ITP4915M_Group11
             return txt;
         }
 
+        // 🌟 動態更新：當 Combobox 選擇改變時，自動將資料填入下方的唯讀 TextBox
+        private void CmbExistingSuppliers_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (rbExistingSupplier.Checked && cmbExistingSuppliers.SelectedItem is SupplierComboItem item)
+            {
+                txtNewSuppName.Text = item.Name;
+                txtNewSuppContact.Text = item.Contact;
+            }
+        }
+
         private void SupplierMode_CheckedChanged(object sender, EventArgs e)
         {
             if (rbExistingSupplier.Checked)
             {
                 cmbExistingSuppliers.Enabled = true;
-                txtNewSuppName.Enabled = false;
-                txtNewSuppContact.Enabled = false;
+                txtNewSuppName.ReadOnly = true;     // 改為唯讀，防止修改
+                txtNewSuppContact.ReadOnly = true;  // 改為唯讀，防止修改
                 txtNewSuppName.BackColor = Color.FromArgb(241, 245, 249);
                 txtNewSuppContact.BackColor = Color.FromArgb(241, 245, 249);
-                txtNewSuppName.Clear();
-                txtNewSuppContact.Clear();
+
+                // 強制觸發一次事件來刷新欄位
+                CmbExistingSuppliers_SelectedIndexChanged(null, null);
             }
             else
             {
                 cmbExistingSuppliers.Enabled = false;
                 cmbExistingSuppliers.SelectedIndex = -1;
-                txtNewSuppName.Enabled = true;
-                txtNewSuppContact.Enabled = true;
+                txtNewSuppName.ReadOnly = false;
+                txtNewSuppContact.ReadOnly = false;
                 txtNewSuppName.BackColor = Color.White;
                 txtNewSuppContact.BackColor = Color.White;
+                txtNewSuppName.Clear();
+                txtNewSuppContact.Clear();
             }
         }
         #endregion
 
-        #region 💾 資料庫核心處理：載入、整理、更新與安全停用
+        #region 💾 Database Core Processing Mechanics
 
         private void LoadExistingSuppliers()
         {
@@ -229,19 +241,34 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "SELECT SupplierID FROM supplier WHERE IsActive = 1 ORDER BY SupplierID ASC";
+                    // 🌟 讀取時加入 ContactInfo 供前端顯示用
+                    string query = "SELECT SupplierID, SupplierName, ContactInfo FROM supplier WHERE IsActive = 1 ORDER BY SupplierID ASC";
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         List<SupplierComboItem> list = new List<SupplierComboItem>();
+
+                        // 🌟 方案 A 核心：加入「不指定供應商」選項
+                        list.Add(new SupplierComboItem
+                        {
+                            ID = "UNASSIGNED",
+                            Name = "(Pending Procurement Sourcing)",
+                            Contact = "-"
+                        });
+
                         while (reader.Read())
                         {
-                            list.Add(new SupplierComboItem { ID = reader["SupplierID"].ToString(), Name = reader["SupplierID"].ToString() });
+                            list.Add(new SupplierComboItem
+                            {
+                                ID = reader["SupplierID"].ToString(),
+                                Name = reader["SupplierName"].ToString(),
+                                Contact = reader["ContactInfo"].ToString()
+                            });
                         }
                         cmbExistingSuppliers.DataSource = list;
-                        cmbExistingSuppliers.DisplayMember = "Name";
+                        cmbExistingSuppliers.DisplayMember = "DisplayText"; // 綁定顯示屬性 (只顯示 ID)
                         cmbExistingSuppliers.ValueMember = "ID";
-                        cmbExistingSuppliers.SelectedIndex = -1;
+                        cmbExistingSuppliers.SelectedIndex = 0; // 預設選中 UNASSIGNED
                     }
                 }
                 catch (Exception ex) { MessageBox.Show("Failed to load existing suppliers: " + ex.Message); }
@@ -288,80 +315,82 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🌟 新增：供應商名稱及聯絡電話智慧修改邏輯
         private void btnUpdateSupplier_Click(object sender, EventArgs e)
         {
-            if (dgvSuppliers.SelectedRows.Count == 0)
+            if (editingSupplierID == null)
             {
-                MessageBox.Show("Please select a supplier row from the live monitor table first.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+                if (dgvSuppliers.SelectedRows.Count == 0)
+                {
+                    MessageBox.Show("Please select a supplier row from the live monitor table first.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-            // 讀取當前 Grid 選中的舊資料
-            string targetID = dgvSuppliers.SelectedRows[0].Cells["ID"].Value.ToString();
-            string oldName = dgvSuppliers.SelectedRows[0].Cells["Supplier Name"].Value.ToString();
-            string oldContact = dgvSuppliers.SelectedRows[0].Cells["Contact Reference"].Value.ToString();
+                string targetID = dgvSuppliers.SelectedRows[0].Cells["ID"].Value.ToString();
+                string oldName = dgvSuppliers.SelectedRows[0].Cells["Supplier Name"].Value.ToString();
+                string oldContact = dgvSuppliers.SelectedRows[0].Cells["Contact Reference"].Value.ToString();
 
-            // 💡 智慧型判斷：如果左邊輸入框係空嘅，代表用家想「開始編輯」，幫佢一鍵車入去
-            if (string.IsNullOrWhiteSpace(txtNewSuppName.Text))
-            {
-                rbNewSupplier.Checked = true; // 切換 Mode 解鎖 Textbox 
+                editingSupplierID = targetID;
+                rbNewSupplier.Checked = true;
+                rbExistingSupplier.Enabled = false;
+                rbNewSupplier.Enabled = false;
+                btnSave.Enabled = false;
+
                 txtNewSuppName.Text = oldName;
                 txtNewSuppContact.Text = oldContact;
+                txtNewSuppName.ReadOnly = false;
+                txtNewSuppContact.ReadOnly = false;
+                txtNewSuppName.BackColor = Color.White;
+                txtNewSuppContact.BackColor = Color.White;
 
-                MessageBox.Show($"Supplier [{targetID}] details loaded!\n\nPlease modify the Name or Contact Info in Step 1, then click this button again to execute updates.", "Data Loaded into Step 1", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                btnUpdateSupplier.Text = "💾 Save Supplier Changes";
+                btnUpdateSupplier.BackColor = Color.FromArgb(37, 99, 235);
+                btnDeleteSupplier.Text = "❌ Cancel Editing";
+                btnDeleteSupplier.BackColor = Color.FromArgb(100, 116, 139);
+
                 txtNewSuppName.Focus();
-                return;
+                MessageBox.Show($"Supplier [{targetID}] details loaded!\n\nPlease modify the Name or Contact Info in Step 1, then click 'Save Supplier Changes' to write back.", "Data Loaded into Workspace", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-
-            // 💡 如果輸入框已經有字，代表用家改完、撳第二次，準備寫入 Database
-            string updatedName = txtNewSuppName.Text.Trim();
-            string updatedContact = txtNewSuppContact.Text.Trim();
-
-            if (string.IsNullOrWhiteSpace(updatedName))
+            else
             {
-                MessageBox.Show("Supplier Name cannot be blank.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+                string updatedName = txtNewSuppName.Text.Trim();
+                string updatedContact = txtNewSuppContact.Text.Trim();
 
-            DialogResult confirm = MessageBox.Show(
-                $"Are you sure you want to update Supplier [{targetID}]?\n\n" +
-                $"🔹 [Before]: {oldName} | {oldContact}\n" +
-                $"🔸 [After]:  {updatedName} | {updatedContact}",
-                "Confirm Data Amendment",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question
-            );
-
-            if (confirm == DialogResult.Yes)
-            {
-                using (MySqlConnection conn = new MySqlConnection(connString))
+                if (string.IsNullOrWhiteSpace(updatedName))
                 {
-                    try
+                    MessageBox.Show("Supplier Name cannot be blank.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                DialogResult confirm = MessageBox.Show(
+                    $"Are you sure you want to update Supplier [{editingSupplierID}]?\n\n🔸 [New Name]: {updatedName}\n🔸 [New Contact]: {updatedContact}",
+                    "Confirm Data Amendment",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (confirm == DialogResult.Yes)
+                {
+                    using (MySqlConnection conn = new MySqlConnection(connString))
                     {
-                        conn.Open();
-                        string updateSql = "UPDATE supplier SET SupplierName = @name, ContactInfo = @contact WHERE SupplierID = @id";
-                        using (MySqlCommand cmd = new MySqlCommand(updateSql, conn))
+                        try
                         {
-                            cmd.Parameters.AddWithValue("@name", updatedName);
-                            cmd.Parameters.AddWithValue("@contact", updatedContact);
-                            cmd.Parameters.AddWithValue("@id", targetID);
-                            cmd.ExecuteNonQuery();
+                            conn.Open();
+                            string updateSql = "UPDATE supplier SET SupplierName = @name, ContactInfo = @contact WHERE SupplierID = @id";
+                            using (MySqlCommand cmd = new MySqlCommand(updateSql, conn))
+                            {
+                                cmd.Parameters.AddWithValue("@name", updatedName);
+                                cmd.Parameters.AddWithValue("@contact", updatedContact);
+                                cmd.Parameters.AddWithValue("@id", editingSupplierID);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            MessageBox.Show($"Supplier [{editingSupplierID}] has been updated successfully!", "Update Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            ResetFormEditContext();
                         }
-
-                        MessageBox.Show($"Supplier [{targetID}] has been updated successfully!", "Update Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        // 清空欄位並重設畫面
-                        txtNewSuppName.Clear();
-                        txtNewSuppContact.Clear();
-                        rbExistingSupplier.Checked = true;
-
-                        LoadExistingSuppliers();
-                        RefreshSupplierGrid();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Failed to update database record: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Failed to update database record: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
             }
@@ -369,6 +398,12 @@ namespace ITP4915M_Group11
 
         private void btnDeleteSupplier_Click(object sender, EventArgs e)
         {
+            if (editingSupplierID != null)
+            {
+                ResetFormEditContext();
+                return;
+            }
+
             if (dgvSuppliers.SelectedRows.Count == 0)
             {
                 MessageBox.Show("Please select a supplier from the view table.", "Operation Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -412,8 +447,35 @@ namespace ITP4915M_Group11
             }
         }
 
+        private void ResetFormEditContext()
+        {
+            editingSupplierID = null;
+
+            txtNewSuppName.Clear();
+            txtNewSuppContact.Clear();
+
+            rbExistingSupplier.Enabled = true;
+            rbNewSupplier.Enabled = true;
+            btnSave.Enabled = true;
+            rbExistingSupplier.Checked = true;
+
+            btnUpdateSupplier.Text = "✏️ Update Selected Supplier";
+            btnUpdateSupplier.BackColor = Color.FromArgb(245, 158, 11);
+            btnDeleteSupplier.Text = "🗑️ Deactivate Selected Supplier";
+            btnDeleteSupplier.BackColor = Color.FromArgb(239, 68, 68);
+
+            LoadExistingSuppliers();
+            RefreshSupplierGrid();
+        }
+
         private void btnSave_Click(object sender, EventArgs e)
         {
+            if (rbExistingSupplier.Checked && cmbExistingSuppliers.SelectedItem == null)
+            {
+                MessageBox.Show("Please select an existing supplier from the dropdown list.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             string finalSuppName = txtNewSuppName.Text.Trim();
             if (rbNewSupplier.Checked && string.IsNullOrWhiteSpace(finalSuppName))
             {
@@ -456,43 +518,45 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            if (rbExistingSupplier.Checked)
+                            // 🌟 判斷是否為「不指定供應商」
+                            bool isUnassigned = rbExistingSupplier.Checked && ((SupplierComboItem)cmbExistingSuppliers.SelectedItem).ID == "UNASSIGNED";
+
+                            // 1. 如果有指定供應商，處理供應商邏輯
+                            if (!isUnassigned)
                             {
-                                if (cmbExistingSuppliers.SelectedItem == null)
+                                if (rbExistingSupplier.Checked)
                                 {
-                                    MessageBox.Show("Please select an existing supplier from the dropdown list.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                                    return;
+                                    finalSuppID = ((SupplierComboItem)cmbExistingSuppliers.SelectedItem).ID;
                                 }
-                                finalSuppID = ((SupplierComboItem)cmbExistingSuppliers.SelectedItem).ID;
-                            }
-                            else
-                            {
-                                string getSuppIdQuery = "SELECT SupplierID FROM supplier WHERE SupplierID LIKE 'V___' ORDER BY SupplierID DESC LIMIT 1";
-                                using (MySqlCommand cmdMaxSupp = new MySqlCommand(getSuppIdQuery, conn, trans))
+                                else
                                 {
-                                    object result = cmdMaxSupp.ExecuteScalar();
-                                    if (result != null && result != DBNull.Value)
+                                    string getSuppIdQuery = "SELECT SupplierID FROM supplier WHERE SupplierID LIKE 'V___' ORDER BY SupplierID DESC LIMIT 1";
+                                    using (MySqlCommand cmdMaxSupp = new MySqlCommand(getSuppIdQuery, conn, trans))
                                     {
-                                        string maxId = result.ToString();
-                                        if (maxId.Length == 4 && int.TryParse(maxId.Substring(1), out int currentInt))
+                                        object result = cmdMaxSupp.ExecuteScalar();
+                                        if (result != null && result != DBNull.Value)
                                         {
-                                            finalSuppID = "V" + (currentInt + 1).ToString("D3");
+                                            string maxId = result.ToString();
+                                            if (maxId.Length == 4 && int.TryParse(maxId.Substring(1), out int currentInt))
+                                                finalSuppID = "V" + (currentInt + 1).ToString("D3");
+                                            else
+                                                finalSuppID = "V001";
                                         }
                                         else { finalSuppID = "V001"; }
                                     }
-                                    else { finalSuppID = "V001"; }
-                                }
 
-                                string insertSuppSql = "INSERT INTO supplier (SupplierID, SupplierName, ContactInfo) VALUES (@id, @name, @contact)";
-                                using (MySqlCommand cmdInsSupp = new MySqlCommand(insertSuppSql, conn, trans))
-                                {
-                                    cmdInsSupp.Parameters.AddWithValue("@id", finalSuppID);
-                                    cmdInsSupp.Parameters.AddWithValue("@name", finalSuppName);
-                                    cmdInsSupp.Parameters.AddWithValue("@contact", txtNewSuppContact.Text.Trim());
-                                    cmdInsSupp.ExecuteNonQuery();
+                                    string insertSuppSql = "INSERT INTO supplier (SupplierID, SupplierName, ContactInfo) VALUES (@id, @name, @contact)";
+                                    using (MySqlCommand cmdInsSupp = new MySqlCommand(insertSuppSql, conn, trans))
+                                    {
+                                        cmdInsSupp.Parameters.AddWithValue("@id", finalSuppID);
+                                        cmdInsSupp.Parameters.AddWithValue("@name", finalSuppName);
+                                        cmdInsSupp.Parameters.AddWithValue("@contact", txtNewSuppContact.Text.Trim());
+                                        cmdInsSupp.ExecuteNonQuery();
+                                    }
                                 }
                             }
 
+                            // 2. 必定生成原材料 ID 並寫入 raw_material (不受供應商影響)
                             string getMatIdQuery = "SELECT MaterialID FROM raw_material WHERE MaterialID LIKE 'RM___' ORDER BY MaterialID DESC LIMIT 1";
                             using (MySqlCommand cmdMaxMat = new MySqlCommand(getMatIdQuery, conn, trans))
                             {
@@ -501,10 +565,9 @@ namespace ITP4915M_Group11
                                 {
                                     string maxMatId = matResult.ToString();
                                     if (maxMatId.Length == 5 && int.TryParse(maxMatId.Substring(2), out int currentMatInt))
-                                    {
                                         finalMatID = "RM" + (currentMatInt + 1).ToString("D3");
-                                    }
-                                    else { finalMatID = "RM001"; }
+                                    else
+                                        finalMatID = "RM001";
                                 }
                                 else { finalMatID = "RM001"; }
                             }
@@ -519,21 +582,37 @@ namespace ITP4915M_Group11
                                 cmdInsMat.ExecuteNonQuery();
                             }
 
-                            string insertLinkSql = "INSERT INTO supplier_material (SupplierID, MaterialID) VALUES (@suppID, @matID)";
-                            using (MySqlCommand cmdLink = new MySqlCommand(insertLinkSql, conn, trans))
+                            // 3. 只有當有指派供應商時，才寫入關聯表 supplier_material
+                            if (!isUnassigned)
                             {
-                                cmdLink.Parameters.AddWithValue("@suppID", finalSuppID);
-                                cmdLink.Parameters.AddWithValue("@matID", finalMatID);
-                                cmdLink.ExecuteNonQuery();
+                                string insertLinkSql = "INSERT INTO supplier_material (SupplierID, MaterialID) VALUES (@suppID, @matID)";
+                                using (MySqlCommand cmdLink = new MySqlCommand(insertLinkSql, conn, trans))
+                                {
+                                    cmdLink.Parameters.AddWithValue("@suppID", finalSuppID);
+                                    cmdLink.Parameters.AddWithValue("@matID", finalMatID);
+                                    cmdLink.ExecuteNonQuery();
+                                }
                             }
 
                             trans.Commit();
 
-                            string successMsg = rbNewSupplier.Checked
-                                ? $"Success! New Supplier [{finalSuppName}] (ID: {finalSuppID}) and Material [{matName}] (ID: {finalMatID}) have been registered."
-                                : $"Success! Material [{matName}] (ID: {finalMatID}) successfully linked to existing supplier ({finalSuppID}).";
-
-                            MessageBox.Show(successMsg, "Transaction Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            // 🌟 依據不同情況顯示對應成功訊息 (方案 A 軟性提示)
+                            string successMsg;
+                            if (isUnassigned)
+                            {
+                                successMsg = $"Material [{matName}] (ID: {finalMatID}) created successfully!\n\n⚠️ Note: No supplier is linked yet. You can still use it in Product BOM, but please assign a supplier before procurement.";
+                                MessageBox.Show(successMsg, "Created Without Supplier", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+                            else if (rbNewSupplier.Checked)
+                            {
+                                successMsg = $"Success! New Supplier [{finalSuppName}] (ID: {finalSuppID}) and Material [{matName}] (ID: {finalMatID}) registered.";
+                                MessageBox.Show(successMsg, "Transaction Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            else
+                            {
+                                successMsg = $"Success! Material [{matName}] (ID: {finalMatID}) successfully linked to existing supplier ({finalSuppID}).";
+                                MessageBox.Show(successMsg, "Transaction Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
 
                             LoadExistingSuppliers();
                             RefreshSupplierGrid();
@@ -541,8 +620,11 @@ namespace ITP4915M_Group11
                             txtMatName.Clear();
                             txtMatPrice.Clear();
                             txtMatReorderLevel.Text = "20";
-                            txtNewSuppName.Clear();
-                            txtNewSuppContact.Clear();
+                            if (rbNewSupplier.Checked)
+                            {
+                                txtNewSuppName.Clear();
+                                txtNewSuppContact.Clear();
+                            }
                         }
                         catch (Exception innerEx)
                         {
