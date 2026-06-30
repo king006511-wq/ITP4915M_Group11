@@ -37,6 +37,7 @@ namespace ITP4915M_Group11
                 InitializeComponentDataCart();
                 SetupPremiumCreationUI();
                 LoadRawMaterialsToCombo();
+                GenerateNextProductID(); // ⚡ 載入時自動計算下一個 Product ID
             }
         }
 
@@ -78,11 +79,13 @@ namespace ITP4915M_Group11
             pnlLeftCard.Controls.Add(lblSec1);
 
             int startY = 55;
-            txtProductID = CreateInputField(pnlLeftCard, ref startY, "New Product ID * (e.String, e.g., P005):");
+            // ⚡ 將 Product ID 改為唯讀，防止人手輸入
+            txtProductID = CreateInputField(pnlLeftCard, ref startY, "New Product ID (Auto-Generated):");
+            txtProductID.ReadOnly = true;
+            txtProductID.BackColor = Color.FromArgb(241, 245, 249); // 灰色背景提示唯讀
+
             txtProductName = CreateInputField(pnlLeftCard, ref startY, "Product Name *:");
             txtRetailPrice = CreateInputField(pnlLeftCard, ref startY, "Retail Price (HKD) *:");
-
-            // 💡 註解：已移除照片上載區塊，將由 ProductManagement 負責
 
             // --- 2. 右側面板：BOM 配方設定與購物車 (Card 2) ---
             Panel pnlRightCard = new Panel { Location = new Point(470, 75), Size = new Size(640, 580), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
@@ -137,7 +140,7 @@ namespace ITP4915M_Group11
             btnRemoveMaterial.Click += btnRemoveMaterial_Click;
             pnlRightCard.Controls.Add(btnRemoveMaterial);
 
-            // --- 3. 底部全域控制按鈕 (只有儲存，已移除 Dismiss) ---
+            // --- 3. 底部全域控制按鈕 ---
             btnSaveProduct = new Button { Text = "💾 Deploy Product & Lock BOM", Location = new Point(880, 665), Size = new Size(230, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnSaveProduct.FlatAppearance.BorderSize = 0;
             btnSaveProduct.Click += btnSaveProduct_Click;
@@ -154,7 +157,49 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 💾 資料庫讀取
+        #region 💾 資料庫讀取 & ID 自動生成邏輯
+
+        // ⚡ 核心演算法：自動向 DB 查詢目前最大 ID 並加 1 (支援 P001 格式)
+        private void GenerateNextProductID()
+        {
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    // 撈取排序後最後一個 ProductID
+                    string query = "SELECT ProductID FROM product ORDER BY ProductID DESC LIMIT 1";
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    {
+                        object result = cmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            string lastID = result.ToString(); // 例如 "P005"
+                            if (lastID.StartsWith("P") && lastID.Length > 1)
+                            {
+                                string numPart = lastID.Substring(1); // 拆出 "005"
+                                if (int.TryParse(numPart, out int currentNum))
+                                {
+                                    int nextNum = currentNum + 1; // 加 1 變成 6
+                                    // 格式化回 P 加三位數，如 P006
+                                    txtProductID.Text = "P" + nextNum.ToString("D3");
+                                    return;
+                                }
+                            }
+                        }
+
+                        // 如果資料庫是空的，預設給予第一筆 ID
+                        txtProductID.Text = "P001";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error generating automatic Product ID: " + ex.Message, "System Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtProductID.Text = "PERR"; // 發生異常時的錯誤標記
+                }
+            }
+        }
+
         private void LoadRawMaterialsToCombo()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -188,7 +233,6 @@ namespace ITP4915M_Group11
 
         #region ⚡ 研發核心互動邏輯 (配方購物車)
 
-        // 1. 將原材料加入臨時 BOM 配方表 (購物車)
         private void btnAddMaterial_Click(object sender, EventArgs e)
         {
             if (cmbRawMaterial.SelectedItem == null)
@@ -220,7 +264,6 @@ namespace ITP4915M_Group11
             cmbRawMaterial.SelectedIndex = -1;
         }
 
-        // 2. 從配方表移走不需要的材料
         private void btnRemoveMaterial_Click(object sender, EventArgs e)
         {
             if (dgvBOMCart.SelectedRows.Count > 0)
@@ -236,17 +279,22 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 3. 一鍵儲存：新產品基本檔案 + 批量寫入 BOM 關係
         private void btnSaveProduct_Click(object sender, EventArgs e)
         {
-            // A. 前端數據驗證
+            // A. 前端數據驗證 (移除了對 prodID 留白的驗證，因為是自動生成)
             string prodID = txtProductID.Text.Trim();
             string prodName = txtProductName.Text.Trim();
             string priceStr = txtRetailPrice.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(prodID) || string.IsNullOrWhiteSpace(prodName) || string.IsNullOrWhiteSpace(priceStr))
+            if (prodID == "PERR" || string.IsNullOrWhiteSpace(prodID))
             {
-                MessageBox.Show("Product ID, Name, and Retail Price are mandatory fields!", "Data Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("System failed to secure a safe Product ID sequence. Please reopening this form.", "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(prodName) || string.IsNullOrWhiteSpace(priceStr))
+            {
+                MessageBox.Show("Product Name and Retail Price are mandatory fields!", "Data Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -272,7 +320,7 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            // 1. 檢查 ProductID 是否早已重複
+                            // 1. 再次防禦性檢查 ProductID 是否重複
                             string checkSql = "SELECT COUNT(*) FROM product WHERE ProductID = @id";
                             using (MySqlCommand checkCmd = new MySqlCommand(checkSql, conn, trans))
                             {

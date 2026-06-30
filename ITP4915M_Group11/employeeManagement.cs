@@ -47,7 +47,8 @@ namespace ITP4915M_Group11
 
             Label lblRole = new Label { Text = "System Role *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboRole = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
-            cboRole.Items.AddRange(new string[] { "Manager", "Administrator", "Sales Representative", "Logistics Driver", "Warehouse Specialist", "Procurement Officer", "System Manager" });
+            // 移除重複的角色：Manager 與 System Manager (保留 Administrator)
+            cboRole.Items.AddRange(new string[] { "Administrator", "Sales Representative", "Logistics Driver", "Warehouse Specialist", "Procurement Officer" });
             pnlCard.Controls.Add(lblRole); pnlCard.Controls.Add(cboRole);
             startY += 75;
 

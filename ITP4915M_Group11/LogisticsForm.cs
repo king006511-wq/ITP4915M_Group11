@@ -26,6 +26,9 @@ namespace ITP4915M_Group11
 
         public LogisticsForm()
         {
+            // 強制權限：只有 Manager / Administrator / Logistics Driver 可以開呢個表單
+            AuthorizationHelper.EnforceRole(this, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.LogisticsDriver);
+
             this.currentStaffID = string.IsNullOrEmpty(UserSession.LoggedInStaffID) ? "S001" : UserSession.LoggedInStaffID;
 
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
@@ -33,6 +36,15 @@ namespace ITP4915M_Group11
                 InitializePremiumModernUI();
                 LoadDeliveryStaff();
                 RefreshPendingOrdersGrid();
+
+                // UI 授權：只有物流司機或高級帳號可以執行派送 / 標記已送達 / 產生交收單
+                bool isLogistics = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.LogisticsDriver);
+                bool isAdminOrManager = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Administrator);
+
+                // 按鈕在 InitializePremiumModernUI 之後已創建
+                btnAssignDelivery.Enabled = isLogistics || isAdminOrManager;
+                btnUpdateStatus.Enabled = isLogistics || isAdminOrManager;
+                btnGenerateNote.Enabled = isLogistics || isAdminOrManager;
             }
         }
 
@@ -176,6 +188,11 @@ namespace ITP4915M_Group11
             cboDeliveryStaff.Items.Add("Outsource - SF Express");
         }
 
+        private void LogisticsForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
         private void RefreshPendingOrdersGrid()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -183,8 +200,19 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 🌟 絕對隔離邏輯：只顯示等待出車 (Ready for Dispatch) 同送緊貨 (Dispatched) 嘅訂單
-                    string query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status IN ('Ready for Dispatch', 'Dispatched') ORDER BY OrderDate DESC";
+                    // 根據用戶角色調整可見訂單範圍
+                    string query;
+                    var role = UserSession.LoggedInStaffRoleEnum;
+                    if (role == AuthorizationHelper.UserRoleEnum.LogisticsDriver)
+                    {
+                        // 物流司機只可以睇到 Ready for Dispatch（防止誤操作查看已出車/已完成的歷史紀錄）
+                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status = 'Ready for Dispatch' ORDER BY OrderDate DESC";
+                    }
+                    else
+                    {
+                        // 管理員 / 經理 顯示準備出車及已出車兩種狀態，以利監控
+                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status IN ('Ready for Dispatch', 'Dispatched') ORDER BY OrderDate DESC";
+                    }
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
