@@ -126,7 +126,9 @@ namespace ITP4915M_Group11
             pnlHistoryHeader.Controls.Add(lblGridTitle);
 
             Label lblSearch = new Label { Text = "🔍 Search:", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), AutoSize = true, Location = new Point(220, 15) };
-            txtSearchReq = new TextBox { Location = new Point(300, 12), Width = 180, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
+
+            // 🌟 修正：向右移至 X=330 避免重疊
+            txtSearchReq = new TextBox { Location = new Point(330, 12), Width = 180, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
             txtSearchReq.TextChanged += TxtSearchReq_TextChanged; // 綁定搜尋事件
             pnlHistoryHeader.Controls.Add(lblSearch);
             pnlHistoryHeader.Controls.Add(txtSearchReq);
@@ -136,7 +138,8 @@ namespace ITP4915M_Group11
             dgvHistory.EnableHeadersVisualStyles = false;
             dgvHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvHistory.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題粗體
+            dgvHistory.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular); // 🌟 修正：資料正常字體
             dgvHistory.ColumnHeadersHeight = 35;
             dgvHistory.CellFormatting += dgvHistory_CellFormatting;
             dgvHistory.SelectionChanged += DgvHistory_SelectionChanged;
@@ -149,7 +152,8 @@ namespace ITP4915M_Group11
             dgvDetails.EnableHeadersVisualStyles = false;
             dgvDetails.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
             dgvDetails.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvDetails.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvDetails.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題粗體
+            dgvDetails.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular); // 🌟 修正：資料正常字體
             dgvDetails.ColumnHeadersHeight = 35;
             rightTable.Controls.Add(dgvDetails, 0, 3);
 
@@ -200,6 +204,8 @@ namespace ITP4915M_Group11
             dgvCart.EnableHeadersVisualStyles = false;
             dgvCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
             dgvCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題粗體
+            dgvCart.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular); // 🌟 修正：資料正常字體
             pnlCard.Controls.Add(dgvCart);
             startY += 175;
 

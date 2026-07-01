@@ -5,7 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Net; // 🔐 安全防護網必備：引入 HTML 編碼元件 (防止 XSS 攻擊)
+using System.Net;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
@@ -53,9 +53,7 @@ namespace ITP4915M_Group11
 
         private void OrderManagementForm_Load(object sender, EventArgs e)
         {
-            // 🛡️ 安全防護網 1：強制進行會話驗證，杜絕未授權繞過登入直接開 Form
             ValidateUserSession();
-
             this.currentStaffID = UserSession.LoggedInStaffID ?? "S001";
             GenerateOrderID();
             LoadCustomersToCombo();
@@ -63,32 +61,25 @@ namespace ITP4915M_Group11
             RefreshOrdersGrid();
         }
 
-        // 🔐 安全防護控制項：驗證當前登入狀態
         private void ValidateUserSession()
         {
             if (string.IsNullOrEmpty(UserSession.LoggedInStaffID))
             {
-                MessageBox.Show("Security Violation: Access denied. Active user session is required.",
-                                "Authentication Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Security Violation: Access denied. Active user session is required.", "Authentication Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 this.Enabled = false;
                 this.BeginInvoke(new Action(() => this.Close()));
             }
         }
 
-        // 🛡️ 安全防護網 2：標準化異常處理器，防止敏感資料外洩 (Information Disclosure)
         private void HandleSecureException(Exception ex, string operationContext)
         {
             try
             {
-                // 將詳細報錯隱蔽地記錄於本地日誌，不直接展示給前台使用者
                 string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "security_audit.log");
                 File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [SECURITY-INFO] Context: {operationContext} | Details: {ex}{Environment.NewLine}");
             }
-            catch { /* 防禦性代碼：防止日誌寫入失敗造成二次崩潰 */ }
-
-            // 向前端使用者展示安全友好的通用錯誤訊息
-            MessageBox.Show($"A system safety restriction or database error occurred during [{operationContext}].\n\nAll details have been securely filed in the audit log. Please contact the administrator.",
-                            "System Protection Framework", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            catch { }
+            MessageBox.Show($"A system safety restriction or database error occurred during [{operationContext}].\n\nAll details have been securely filed in the audit log. Please contact the administrator.", "System Protection Framework", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private void InitializePremiumModernUI()
@@ -98,102 +89,135 @@ namespace ITP4915M_Group11
             this.BackColor = Color.FromArgb(241, 245, 249);
             this.FormBorderStyle = FormBorderStyle.None;
             this.Load += OrderManagementForm_Load;
+
             TableLayoutPanel mainTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Color.Transparent };
             mainTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
             mainTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             this.Controls.Add(mainTable);
+
             Panel pnlHeader = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
             Label lblHeader = new Label { Text = "Sales Order Drafting (Front-End)", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(20, 20), AutoSize = true };
             pnlHeader.Controls.Add(lblHeader);
+
             Label lblStaff = new Label { Text = $"👤 Sales Rep: {currentStaffID}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(13, 148, 136), Location = new Point(480, 26), AutoSize = true };
             pnlHeader.Controls.Add(lblStaff);
             mainTable.Controls.Add(pnlHeader, 0, 0);
+
             TableLayoutPanel contentTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Margin = new Padding(20, 0, 20, 20) };
             contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 510F));
             contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
             contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             mainTable.Controls.Add(contentTable, 0, 1);
+
             Panel pnlCard = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = true };
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(pnlCard, 0, 0);
+
             TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0) };
             rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
             rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
             Label lblGridTitle = new Label { Text = "📊 Order Status Tracking", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
             rightTable.Controls.Add(lblGridTitle, 0, 0);
+
             dgvOrders = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvOrders.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題保持粗體
+            dgvOrders.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular); // 資料變回正常字體
             dgvOrders.SelectionChanged += dgvOrders_SelectionChanged;
             rightTable.Controls.Add(dgvOrders, 0, 1);
             contentTable.Controls.Add(rightTable, 2, 0);
+
             Label lblCardTitle = new Label { Text = "📝 Draft New Customer Order", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };
             pnlCard.Controls.Add(lblCardTitle);
+
             int startY = 50;
             txtOrderID = CreateStyledTextBox(pnlCard, ref startY, "Order ID (Auto):", true, 210);
             startY -= 65;
+
             Label lblCust = new Label { Text = "Select Customer *:", Location = new Point(240, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboCustomers = new ComboBox { Location = new Point(240, startY + 25), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F), BackColor = Color.White };
             pnlCard.Controls.Add(lblCust);
             pnlCard.Controls.Add(cboCustomers);
             startY += 65;
+
             txtStaffUIID = CreateStyledTextBox(pnlCard, ref startY, "Staff ID:", true, 210);
             txtStaffUIID.Text = currentStaffID;
             startY -= 65;
+
             Label lblCbo = new Label { Text = "Select Product:", Location = new Point(240, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboProducts = new ComboBox { Location = new Point(240, startY + 25), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F), BackColor = Color.White };
             cboProducts.SelectedIndexChanged += cboProducts_SelectedIndexChanged;
             pnlCard.Controls.Add(lblCbo);
             pnlCard.Controls.Add(cboProducts);
             startY += 65;
+
             txtUnitPrice = CreateStyledTextBox(pnlCard, ref startY, "Unit Price ($):", true, 130);
             startY -= 65;
+
             txtQty = CreateStyledTextBox(pnlCard, ref startY, "Qty:", false, 80, 160);
             startY -= 65;
+
             btnAddItem = new Button { Text = "➕ Add Item", Location = new Point(255, startY + 23), Size = new Size(100, 32), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
             btnAddItem.Click += BtnAddItem_Click;
             pnlCard.Controls.Add(btnAddItem);
+
             btnRemoveItem = new Button { Text = "❌ Remove", Location = new Point(365, startY + 23), Size = new Size(105, 32), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
             btnRemoveItem.Click += BtnRemoveItem_Click;
             pnlCard.Controls.Add(btnRemoveItem);
             startY += 70;
+
             Label lblCartGridTitle = new Label { Text = "📦 Order Cart (Requires Approval Later)", Location = new Point(20, startY), Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             pnlCard.Controls.Add(lblCartGridTitle);
             startY += 25;
+
             cartTable = new DataTable();
             cartTable.Columns.Add("ProductID", typeof(string));
             cartTable.Columns.Add("Product Name", typeof(string));
             cartTable.Columns.Add("Qty", typeof(int));
             cartTable.Columns.Add("Unit Price", typeof(decimal));
             cartTable.Columns.Add("Subtotal", typeof(decimal));
+
             dgvCart = new DataGridView { Location = new Point(20, startY), Size = new Size(450, 160), DataSource = cartTable, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, BackgroundColor = Color.White, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
             dgvCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題保持粗體
+            dgvCart.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular); // 資料變回正常字體
             pnlCard.Controls.Add(dgvCart);
             startY += 175;
+
             lblTotalAmountDisplay = new Label { Text = "Total Bill: $0.00", Location = new Point(20, startY), Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), AutoSize = true };
             pnlCard.Controls.Add(lblTotalAmountDisplay);
             startY += 40;
+
             chkRequireDelivery = new CheckBox { Text = "🚚 Require Delivery Service (Logistics)", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), ForeColor = Color.FromArgb(234, 88, 12), Checked = true };
             pnlCard.Controls.Add(chkRequireDelivery);
             startY += 30;
+
             dtpDeliveryDate = new DateTimePicker { Location = new Point(45, startY), Width = 250, Font = new Font("Segoe UI", 10F), Format = DateTimePickerFormat.Long, MinDate = DateTime.Now.AddDays(3) };
             pnlCard.Controls.Add(dtpDeliveryDate);
             startY += 40;
+
             chkRequireDelivery.CheckedChanged += (s, e) => { dtpDeliveryDate.Visible = chkRequireDelivery.Checked; };
+
             btnSubmitOrder = new Button { Text = "✅ Submit", Location = new Point(20, startY), Size = new Size(110, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
             btnSubmitOrder.Click += btnCreateOrder_Click;
             pnlCard.Controls.Add(btnSubmitOrder);
+
             btnUpdateOrder = new Button { Text = "✏️ Update", Location = new Point(140, startY), Size = new Size(100, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
             btnUpdateOrder.Click += btnUpdateOrder_Click;
             pnlCard.Controls.Add(btnUpdateOrder);
+
             btnCompletePickup = new Button { Text = "🛍️ Pickup Done", Location = new Point(250, startY), Size = new Size(130, 42), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
             btnCompletePickup.Click += btnCompletePickup_Click;
             pnlCard.Controls.Add(btnCompletePickup);
+
             btnClear = new Button { Text = "🆕 New", Location = new Point(390, startY), Size = new Size(80, 42), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
             btnClear.Click += (s, e) => ClearFields();
             pnlCard.Controls.Add(btnClear);
             startY += 55;
+
             btnCreateQuotation = new Button { Text = "📄 Export Document to Show Customer", Location = new Point(20, startY), Size = new Size(450, 42), BackColor = Color.FromArgb(124, 58, 237), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10.5F, FontStyle.Bold) };
             btnCreateQuotation.Click += BtnCreateQuotation_Click;
             pnlCard.Controls.Add(btnCreateQuotation);
@@ -287,8 +311,6 @@ namespace ITP4915M_Group11
                 MessageBox.Show("Invalid quantity value.", "Validation Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
-            // 🛡️ 安全防護網 3：防止數字溢出攻擊 (Numeric Bounds/Overflow Guardrail)
             if (qty > 9999)
             {
                 MessageBox.Show("Quantity exceeds allowable systemic boundary limits per item (Max 9,999).", "Security Guardrail", MessageBoxButtons.OK, MessageBoxIcon.Hand);
@@ -302,7 +324,6 @@ namespace ITP4915M_Group11
                 if (row["ProductID"].ToString() == prod.ID)
                 {
                     int totalQty = Convert.ToInt32(row["Qty"]) + qty;
-                    // 二次驗證累計單項總數是否溢出
                     if (totalQty > 99999)
                     {
                         MessageBox.Show("Accumulated quantity limits exceeded for this line item.", "Security Guardrail", MessageBoxButtons.OK, MessageBoxIcon.Hand);
@@ -314,8 +335,10 @@ namespace ITP4915M_Group11
                     break;
                 }
             }
+
             if (!exists)
                 cartTable.Rows.Add(prod.ID, prod.Name, qty, prod.Price, prod.Price * qty);
+
             UpdateGlobalOrderTotal();
             txtQty.Clear();
         }
@@ -346,6 +369,7 @@ namespace ITP4915M_Group11
             if (dgvOrders.CurrentRow == null || dgvOrders.CurrentRow.Index < 0) return;
             string selectedOrderID = dgvOrders.CurrentRow.Cells["Order ID"].Value.ToString();
             cartTable.Clear();
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
@@ -380,10 +404,11 @@ namespace ITP4915M_Group11
                                             dtpDeliveryDate.Value = delDate;
                                     }
                                 }
-                                catch { /* 容錯隔離處理 */ }
+                                catch { }
                             }
                         }
                     }
+
                     using (MySqlCommand cmdLines = new MySqlCommand("SELECT l.ProductID,p.ProductName,l.Quantity,l.UnitPrice FROM order_lineitem l JOIN product p ON l.ProductID=p.ProductID WHERE l.OrderID=@OID", conn))
                     {
                         cmdLines.Parameters.AddWithValue("@OID", selectedOrderID);
@@ -440,8 +465,10 @@ namespace ITP4915M_Group11
                 MessageBox.Show("Customer/Cart cannot be empty.", "Validation Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
             string orderID = txtOrderID.Text.Trim();
             string orderStatus = chkRequireDelivery.Checked ? "Awaiting Approval-D" : "Awaiting Approval-P";
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
@@ -456,6 +483,7 @@ namespace ITP4915M_Group11
                             return;
                         }
                     }
+
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
@@ -470,6 +498,7 @@ namespace ITP4915M_Group11
                                 cmdOrder.Parameters.AddWithValue("@DelDate", chkRequireDelivery.Checked ? (object)dtpDeliveryDate.Value.Date : DBNull.Value);
                                 cmdOrder.ExecuteNonQuery();
                             }
+
                             using (MySqlCommand cmdLine = new MySqlCommand("INSERT INTO order_lineitem (OrderID,ProductID,Quantity,UnitPrice) VALUES (@OID,@ProductID,@Qty,@Price)", conn, trans))
                             {
                                 foreach (DataRow row in cartTable.Rows)
@@ -490,7 +519,7 @@ namespace ITP4915M_Group11
                         catch (Exception innerEx)
                         {
                             trans.Rollback();
-                            throw innerEx; // 拋向上層交由通用安全記錄器處理
+                            throw innerEx;
                         }
                     }
                 }
@@ -505,6 +534,7 @@ namespace ITP4915M_Group11
         {
             string orderID = txtOrderID.Text.Trim();
             if (string.IsNullOrEmpty(orderID) || cartTable.Rows.Count == 0 || cboCustomers.SelectedItem == null) return;
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
@@ -522,12 +552,15 @@ namespace ITP4915M_Group11
                         }
                         currentStatus = res.ToString();
                     }
+
                     if (!currentStatus.StartsWith("Awaiting Approval") && currentStatus != "Rejected")
                     {
                         MessageBox.Show("🔒 This order has already been Approved, Processed, or Completed!\n\nYou cannot modify a locked order.", "Order System Locked", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                         return;
                     }
+
                     string orderStatus = chkRequireDelivery.Checked ? "Awaiting Approval-D" : "Awaiting Approval-P";
+
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
@@ -537,6 +570,7 @@ namespace ITP4915M_Group11
                                 cmdDel.Parameters.AddWithValue("@OID", orderID);
                                 cmdDel.ExecuteNonQuery();
                             }
+
                             using (MySqlCommand cmdLine = new MySqlCommand("INSERT INTO order_lineitem (OrderID,ProductID,Quantity,UnitPrice) VALUES (@OID,@ProductID,@Qty,@Price)", conn, trans))
                             {
                                 foreach (DataRow row in cartTable.Rows)
@@ -549,6 +583,7 @@ namespace ITP4915M_Group11
                                     cmdLine.ExecuteNonQuery();
                                 }
                             }
+
                             using (MySqlCommand cmdOrder = new MySqlCommand("UPDATE orders SET CustomerID=@CID,TotalAmount=@Total,Status=@Status,DeliveryDate=@DelDate WHERE OrderID=@OID", conn, trans))
                             {
                                 cmdOrder.Parameters.AddWithValue("@CID", ((OrderCustomerItem)cboCustomers.SelectedItem).ID);
@@ -558,6 +593,7 @@ namespace ITP4915M_Group11
                                 cmdOrder.Parameters.AddWithValue("@OID", orderID);
                                 cmdOrder.ExecuteNonQuery();
                             }
+
                             trans.Commit();
                             MessageBox.Show($"Order Updated Successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             ClearFields();
@@ -581,11 +617,13 @@ namespace ITP4915M_Group11
         {
             string orderID = txtOrderID.Text.Trim();
             if (string.IsNullOrEmpty(orderID) || cartTable.Rows.Count == 0) return;
+
             if (chkRequireDelivery.Checked)
             {
                 MessageBox.Show("This is a Delivery order. It cannot be marked as Pickup Completed here (hand over to Logistics).", "Invalid Action", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
             DialogResult res = MessageBox.Show($"Is the customer currently picking up the items?\n\nAre you sure you want to mark order [{orderID}] as 'Pickup Completed'?", "Confirm Completion", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (res == DialogResult.Yes)
             {
@@ -620,7 +658,6 @@ namespace ITP4915M_Group11
                 {
                     try
                     {
-                        // 🛡️ 安全防護網 4：在動態拼接 HTML 報表時，執行 HtmlEncode 杜絕 XSS 惡意腳本注入
                         string safeOrderID = WebUtility.HtmlEncode(txtOrderID.Text);
                         string safeCustomer = cboCustomers.SelectedItem != null ? WebUtility.HtmlEncode(cboCustomers.Text) : "";
                         string safeDate = WebUtility.HtmlEncode(DateTime.Now.ToString("yyyy-MM-dd"));
@@ -634,7 +671,6 @@ namespace ITP4915M_Group11
                             string safeQty = WebUtility.HtmlEncode(row["Qty"].ToString());
                             string safePrice = WebUtility.HtmlEncode(row["Unit Price"].ToString());
                             string safeSub = WebUtility.HtmlEncode(row["Subtotal"].ToString());
-
                             html += $"<tr><td>{safeProdName}</td><td>{safeQty}</td><td>${safePrice}</td><td>${safeSub}</td></tr>";
                         }
 
