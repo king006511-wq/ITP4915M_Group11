@@ -139,7 +139,7 @@ namespace ITP4915M_Group11
                 flpNavMenu.Controls.Add(new Panel { Size = new Size(220, 20), BackColor = Color.Transparent });
                 return;
             }
-            Label lblHeader = new Label { Text = text, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Size = new Size(220, 25), Margin = new Padding(5, 15, 5, 5), TextAlign = ContentAlignment.BottomLeft };
+            Label lblHeader = new Label { Text = text, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = ThemeManager.MutedText, Size = new Size(220, 25), Margin = new Padding(5, 15, 5, 5), TextAlign = ContentAlignment.BottomLeft };
             flpNavMenu.Controls.Add(lblHeader);
         }
 
@@ -154,7 +154,7 @@ namespace ITP4915M_Group11
                 Width = 220,
                 Height = 42,
                 FlatStyle = FlatStyle.Flat,
-                ForeColor = actionType == "LOGOUT" ? Color.FromArgb(239, 68, 68) : Color.FromArgb(226, 232, 240),
+                ForeColor = actionType == "LOGOUT" ? ThemeManager.Danger : Color.FromArgb(226, 232, 240),
                 BackColor = Color.Transparent,
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -163,7 +163,11 @@ namespace ITP4915M_Group11
                 Tag = menuId
             };
             btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 41, 59);
+            // 使用一致的 hover 顏色（在深色側邊欄上稍微變亮）
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(37, 43, 66);
+
+            // 統一按鈕焦點與 active 顯示（避免系統預設造成顏色差異）
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(30, 36, 55);
 
             btn.Click += (s, e) =>
             {

@@ -52,11 +52,12 @@ namespace ITP4915M_Group11
             string currentRole = UserSession.LoggedInStaffRole;
             string currentStaffID = UserSession.LoggedInStaffID;
 
-            // 假設只有 Manager, Administrator 或者負責生產嘅 Factory 員工可以入
+            // 假設只有 Manager, Administrator, Factory 或 Warehouse Specialist 可以入
             bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
                                 (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
                                  currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Factory", StringComparison.OrdinalIgnoreCase));
+                                 currentRole.Equals("Factory", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Warehouse Specialist", StringComparison.OrdinalIgnoreCase));
 
             if (!isAuthorized)
             {

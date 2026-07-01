@@ -25,8 +25,9 @@ namespace ITP4915M_Group11
             InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                ThemeManager.ApplyTheme(this);
+                // 先建立 UI，再套用主題，確保 ThemeManager 可覆寫 DataGrid 等元件樣式
                 InitializePremiumModernUI();
+                ThemeManager.ApplyTheme(this);
                 LoadDatabaseData();
             }
         }
@@ -37,9 +38,11 @@ namespace ITP4915M_Group11
             string currentRole = UserSession.LoggedInStaffRole;
             string currentStaffID = UserSession.LoggedInStaffID;
 
+            // 允許 Warehouse Specialist 檢視此頁面，但只有 Manager/Administrator 可以編輯
             bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
                                 (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Warehouse Specialist", StringComparison.OrdinalIgnoreCase));
 
             if (!isAuthorized)
             {
@@ -168,6 +171,9 @@ namespace ITP4915M_Group11
 
             dgvProductCatalog.SelectionChanged += dgvProductCatalog_SelectionChanged;
             dgvProductCatalog.CellFormatting += dgvProductCatalog_CellFormatting;
+
+            // 統一樣式（若其他地方有覆寫，StyleDataGrid 將再次套用一致性樣式）
+            ThemeManager.StyleDataGrid(dgvProductCatalog);
 
             pnlMain.Controls.Add(dgvProductCatalog);
         }

@@ -26,8 +26,8 @@ namespace ITP4915M_Group11
 
         public LogisticsForm()
         {
-            // 強制權限：只有 Manager / Administrator / Logistics Driver 可以開呢個表單
-            AuthorizationHelper.EnforceRole(this, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.LogisticsDriver);
+            // 強制權限：Manager / Administrator / Logistics Driver / Warehouse Specialist 可開呢個表單
+            AuthorizationHelper.EnforceRole(this, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.LogisticsDriver, AuthorizationHelper.Roles.WarehouseSpecialist);
 
             this.currentStaffID = string.IsNullOrEmpty(UserSession.LoggedInStaffID) ? "S001" : UserSession.LoggedInStaffID;
 
