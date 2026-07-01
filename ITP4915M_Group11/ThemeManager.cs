@@ -6,17 +6,21 @@ namespace ITP4915M_Group11
 {
     public static class ThemeManager
     {
-        // 主題色彩（擴充調色盤）
+        // 主題色彩
         public static Color PrimaryBackground = Color.FromArgb(249, 250, 251);
         public static Color CardBackground = Color.White;
         public static Color PrimaryDark = Color.FromArgb(15, 23, 42);
         public static Color MutedText = Color.FromArgb(100, 116, 139);
-        // 主色（藍色系）
-        public static Color Accent = ColorTranslator.FromHtml("#2563EB"); // blue (Tailwind blue-600)
-        public static Color AccentStrong = ColorTranslator.FromHtml("#1E40AF"); // stronger/darker blue
+
+        // 主色
+        public static Color Accent = ColorTranslator.FromHtml("#2563EB"); // Tailwind blue-600
+        public static Color AccentStrong = ColorTranslator.FromHtml("#1E40AF");
+
+        // 🎨 補返呢度：保留原本嘅狀態顏色定義，等其他 form 可以繼續用
         public static Color Success = Color.FromArgb(16, 185, 129);
         public static Color Warning = Color.FromArgb(245, 158, 11);
         public static Color Danger = Color.FromArgb(239, 68, 68);
+
         public static Color BorderColor = Color.FromArgb(226, 232, 240);
         public static Font DefaultFont = new Font("Segoe UI", 10F, FontStyle.Regular);
 
@@ -43,7 +47,6 @@ namespace ITP4915M_Group11
                 {
                     if (c is Panel)
                     {
-                        // 主要用作卡片背景／容器
                         c.BackColor = CardBackground;
                     }
                     else if (c is Label)
@@ -52,16 +55,17 @@ namespace ITP4915M_Group11
                     }
                     else if (c is Button btn)
                     {
-                        btn.BackColor = Accent;
+                        // 乾淨俐落：只處理預設灰色或冇色嘅掣。如果你有自訂色，佢直接放過！
+                        if (btn.BackColor == SystemColors.Control || btn.BackColor == Color.Empty || btn.BackColor == Color.Transparent)
+                        {
+                            btn.BackColor = Accent;
+                        }
+
+                        // 統一字體同框線，唔加任何滑鼠動畫，防止消失 bug
                         btn.ForeColor = Color.White;
                         btn.FlatStyle = FlatStyle.Flat;
                         btn.FlatAppearance.BorderColor = BorderColor;
                         btn.Font = new Font(DefaultFont.FontFamily, 10.5F, FontStyle.Bold);
-                        // 輕量 hover 效果
-                        btn.MouseEnter -= Button_MouseEnter;
-                        btn.MouseLeave -= Button_MouseLeave;
-                        btn.MouseEnter += Button_MouseEnter;
-                        btn.MouseLeave += Button_MouseLeave;
                     }
                     else if (c is TextBox tb)
                     {
@@ -123,22 +127,6 @@ namespace ITP4915M_Group11
                 // 如果有子控制項，遞迴
                 if (c.HasChildren)
                     ApplyToControls(c.Controls);
-            }
-        }
-
-        private static void Button_MouseLeave(object sender, EventArgs e)
-        {
-            if (sender is Button b)
-            {
-                try { b.BackColor = Accent; } catch { }
-            }
-        }
-
-        private static void Button_MouseEnter(object sender, EventArgs e)
-        {
-            if (sender is Button b)
-            {
-                try { b.BackColor = ControlPaint.Light(Accent); } catch { }
             }
         }
 

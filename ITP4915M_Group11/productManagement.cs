@@ -17,6 +17,14 @@ namespace ITP4915M_Group11
         private TextBox txtRetailPrice;
         private DataGridView dgvProductCatalog;
 
+        // 宣告 Button 為類別變數，方便後續強制上色 (防止被 ThemeManager 覆寫)
+        private Button btnBackHome;
+        private Button btnViewPhoto;
+        private Button btnUploadPhoto;
+        private Button btnUpdate;
+        private Button btnDelete;
+        private Button btnClear;
+
         // 🔒 Centralized Database Connection String
         private readonly string connectionString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
@@ -25,12 +33,28 @@ namespace ITP4915M_Group11
             InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                // 先建立 UI，再套用主題，確保 ThemeManager 可覆寫 DataGrid 等元件樣式
+                // 先建立 UI，再套用主題
                 InitializePremiumModernUI();
                 ThemeManager.ApplyTheme(this);
+
+                // 強制套用專屬按鈕顏色，蓋過 ThemeManager 的單一設定
+                ApplyButtonColors();
+
                 LoadDatabaseData();
             }
         }
+
+        #region 🎨 強制按鈕上色 (防止 ThemeManager 覆寫)
+        private void ApplyButtonColors()
+        {
+            if (btnBackHome != null) { btnBackHome.BackColor = Color.FromArgb(99, 102, 241); btnBackHome.ForeColor = Color.White; }
+            if (btnViewPhoto != null) { btnViewPhoto.BackColor = Color.FromArgb(14, 165, 233); btnViewPhoto.ForeColor = Color.White; }
+            if (btnUploadPhoto != null) { btnUploadPhoto.BackColor = Color.FromArgb(245, 158, 11); btnUploadPhoto.ForeColor = Color.White; }
+            if (btnUpdate != null) { btnUpdate.BackColor = Color.FromArgb(34, 197, 94); btnUpdate.ForeColor = Color.White; }
+            if (btnDelete != null) { btnDelete.BackColor = Color.FromArgb(239, 68, 68); btnDelete.ForeColor = Color.White; }
+            if (btnClear != null) { btnClear.BackColor = Color.FromArgb(100, 116, 139); btnClear.ForeColor = Color.White; }
+        }
+        #endregion
 
         #region 🔒 System Security Gatekeeper Enforcement
         private void ProductManagement_Load(object sender, EventArgs e)
@@ -66,6 +90,7 @@ namespace ITP4915M_Group11
                 if (c is Button b && (b.Text.Contains("Update") || b.Text.Contains("Delete") || b.Text.Contains("Upload")))
                 {
                     b.Enabled = canEdit;
+                    // 如果冇權限，先變灰；有權限就保持現有顏色
                     b.BackColor = canEdit ? b.BackColor : Color.LightGray;
                 }
             }
@@ -77,7 +102,7 @@ namespace ITP4915M_Group11
         {
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Product Maintenance & Catalog Control";
-            this.Size = new Size(1180, 780); // 稍微加高少少容納新掣
+            this.Size = new Size(1180, 780);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
@@ -93,7 +118,8 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "Finished Goods Inventory Maintenance", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            Button btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(1015, 22), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
+            // 🎨 按鈕 1: Go Back
+            btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(1015, 22), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { try { this.Close(); } catch { this.Hide(); } };
             pnlMain.Controls.Add(btnBackHome);
@@ -103,7 +129,7 @@ namespace ITP4915M_Group11
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlCard);
 
-            Label lblCardTitle = new Label { Text = "📦 Finished Product Details", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };
+            Label lblCardTitle = new Label { Text = "📦 Finished Product Details", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 15), AutoSize = true };
             pnlCard.Controls.Add(lblCardTitle);
 
             int startY = 60;
@@ -112,21 +138,19 @@ namespace ITP4915M_Group11
             txtStockLevel = CreateStyledTextBox(pnlCard, ref startY, "Stock Level:", false);
             txtRetailPrice = CreateStyledTextBox(pnlCard, ref startY, "Retail Price (HKD):", false);
 
-            Label lblDesc = new Label { Text = "🔍 Live Form Search Filter keyword:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235) };
+            Label lblDesc = new Label { Text = "🔍 Live Form Search Filter keyword:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229) };
             txtDescription = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 70, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             txtDescription.TextChanged += txtDescription_TextChanged;
             pnlCard.Controls.Add(lblDesc);
             pnlCard.Controls.Add(txtDescription);
             startY += 105;
 
-            // ✨ 重新排版掣位，加入 Upload Photo 掣
-            Button btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(20, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(139, 92, 246), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            Button btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(195, startY), Size = new Size(160, 42), BackColor = Color.FromArgb(245, 158, 11), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-
-            Button btnUpdate = new Button { Text = "💾 Update", Location = new Point(20, startY + 50), Size = new Size(160, 42), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            Button btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(195, startY + 50), Size = new Size(160, 42), BackColor = Color.FromArgb(239, 68, 68), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-
-            Button btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(20, startY + 100), Size = new Size(335, 42), BackColor = Color.FromArgb(71, 85, 105), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // 🎨 初始化各種操作按鈕
+            btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(20, startY), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(195, startY), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnUpdate = new Button { Text = "💾 Update", Location = new Point(20, startY + 50), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(195, startY + 50), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(20, startY + 100), Size = new Size(335, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
 
             foreach (var b in new Button[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear }) b.FlatAppearance.BorderSize = 0;
             pnlCard.Controls.AddRange(new Control[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear });
@@ -162,7 +186,8 @@ namespace ITP4915M_Group11
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
             dgvProductCatalog.EnableHeadersVisualStyles = false;
-            dgvProductCatalog.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
+            // DataGrid Header 都同步改成 Indigo 主色，互相呼應
+            dgvProductCatalog.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(79, 70, 229);
             dgvProductCatalog.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvProductCatalog.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             dgvProductCatalog.ColumnHeadersHeight = 38;
@@ -172,9 +197,7 @@ namespace ITP4915M_Group11
             dgvProductCatalog.SelectionChanged += dgvProductCatalog_SelectionChanged;
             dgvProductCatalog.CellFormatting += dgvProductCatalog_CellFormatting;
 
-            // 統一樣式（若其他地方有覆寫，StyleDataGrid 將再次套用一致性樣式）
             ThemeManager.StyleDataGrid(dgvProductCatalog);
-
             pnlMain.Controls.Add(dgvProductCatalog);
         }
 
