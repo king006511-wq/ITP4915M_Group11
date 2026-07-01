@@ -20,6 +20,7 @@ namespace ITP4915M_Group11
             {
                 InitializeUI();
                 LoadData();
+                ClearForm(); // 載入後自動進入「新增」模式並獲取最新 ID
             }
         }
 
@@ -42,12 +43,15 @@ namespace ITP4915M_Group11
             this.Controls.Add(pnlCard);
 
             int startY = 20;
-            txtStaffID = CreateInput(pnlCard, ref startY, "Staff ID * (Also used as Default Password):");
+            // 🌟 將 Staff ID 標籤改為提示由系統自動生成
+            txtStaffID = CreateInput(pnlCard, ref startY, "Staff ID (Auto-Generated / Default Password):");
+            txtStaffID.ReadOnly = true; // 🌟 鎖定輸入框，唔畀手打
+            txtStaffID.BackColor = Color.FromArgb(241, 245, 249); // 轉為灰色背景提示無法編輯
+
             txtName = CreateInput(pnlCard, ref startY, "Staff Name *:");
 
             Label lblRole = new Label { Text = "System Role *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboRole = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
-            // 移除重複的角色：Manager 與 System Manager (保留 Administrator)
             cboRole.Items.AddRange(new string[] { "Administrator", "Sales Representative", "Logistics Driver", "Warehouse Specialist", "Procurement Officer" });
             pnlCard.Controls.Add(lblRole); pnlCard.Controls.Add(cboRole);
             startY += 75;
@@ -75,6 +79,9 @@ namespace ITP4915M_Group11
             dgvStaff = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 600), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvStaff.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvStaff.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvStaff.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題粗體
+            dgvStaff.RowsDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);      // 🌟 資料列強制轉為正常字體
+
             dgvStaff.SelectionChanged += DgvStaff_SelectionChanged;
             this.Controls.Add(dgvStaff);
         }
@@ -87,6 +94,43 @@ namespace ITP4915M_Group11
             y += 65; return txt;
         }
 
+        // 🌟 核心：從資料庫獲取下一個自動遞增的 StaffID
+        private string GetNextStaffID(MySqlConnection conn)
+        {
+            string query = "SELECT StaffID FROM staff WHERE StaffID LIKE 'S%' ORDER BY StaffID DESC LIMIT 1";
+            using (MySqlCommand cmd = new MySqlCommand(query, conn))
+            {
+                object result = cmd.ExecuteScalar();
+                if (result != null && result != DBNull.Value)
+                {
+                    string maxId = result.ToString();
+                    // 假設格式係 S001, S002... 提取後面的數字並加 1
+                    if (maxId.Length >= 2 && int.TryParse(maxId.Substring(1), out int currentInt))
+                    {
+                        return "S" + (currentInt + 1).ToString("D3");
+                    }
+                }
+            }
+            return "S001"; // 如果資料庫無任何記錄，預設由 S001 開始
+        }
+
+        // 🌟 更新 UI 顯示下一個 ID
+        private void GenerateNextStaffIDUI()
+        {
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    txtStaffID.Text = GetNextStaffID(conn);
+                }
+                catch
+                {
+                    txtStaffID.Text = "S001";
+                }
+            }
+        }
+
         private void LoadData()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -94,7 +138,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 🗑️ 清除了 Email 欄位嘅查詢
                     using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT StaffID, Name, Role FROM staff", conn))
                     {
                         DataTable dt = new DataTable(); da.Fill(dt);
@@ -113,40 +156,41 @@ namespace ITP4915M_Group11
                 txtStaffID.Text = r.Cells["StaffID"].Value.ToString();
                 txtName.Text = r.Cells["Name"].Value.ToString();
                 cboRole.Text = r.Cells["Role"].Value.ToString();
-                txtStaffID.ReadOnly = true;
             }
         }
 
         private void BtnAdd_Click(object sender, EventArgs e)
         {
-            // 🗑️ 移除了 txtEmail 嘅驗證
-            if (string.IsNullOrWhiteSpace(txtStaffID.Text) || string.IsNullOrWhiteSpace(txtName.Text) || cboRole.SelectedIndex == -1)
+            if (string.IsNullOrWhiteSpace(txtName.Text) || cboRole.SelectedIndex == -1)
             {
-                MessageBox.Show("ID, Name, and Role are required!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Name and Role are required!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
-            string defaultPassword = txtStaffID.Text.Trim();
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    // 🗑️ 移除了 SQL 內嘅 Email 寫入
+
+                    // 🌟 即時重新獲取最新嘅 Staff ID，避免多人同時操作時撞 ID
+                    string newStaffID = GetNextStaffID(conn);
+                    string defaultPassword = newStaffID;
+
                     string sql = "INSERT INTO staff (StaffID, Name, Password, Role) VALUES (@id, @n, SHA2(@pwd, 256), @r)";
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
-                        cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim());
+                        cmd.Parameters.AddWithValue("@id", newStaffID);
                         cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
                         cmd.Parameters.AddWithValue("@pwd", defaultPassword);
                         cmd.Parameters.AddWithValue("@r", cboRole.Text);
                         cmd.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show($"Staff member added successfully!\n\nThe default password is set to their Staff ID: [{defaultPassword}]", "Account Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Staff member added successfully!\n\nAllocated Staff ID: {newStaffID}\nThe default password is set to their Staff ID: [{defaultPassword}]", "Account Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    LoadData(); ClearForm();
+                    LoadData();
+                    ClearForm(); // 新增完自動清空並準備下一個 ID
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
@@ -160,7 +204,6 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    // 🗑️ 移除了 SQL 內嘅 Email 更新
                     string sql = "UPDATE staff SET Name=@n, Role=@r WHERE StaffID=@id";
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
@@ -196,7 +239,7 @@ namespace ITP4915M_Group11
                         using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                         {
                             cmd.Parameters.AddWithValue("@id", targetStaff);
-                            cmd.Parameters.AddWithValue("@pwd", targetStaff);
+                            cmd.Parameters.AddWithValue("@pwd", targetStaff); // Password equals StaffID
                             cmd.ExecuteNonQuery();
                         }
                         MessageBox.Show($"Password for [{targetStaff}] has been successfully reset to default.", "Password Reset", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -232,12 +275,12 @@ namespace ITP4915M_Group11
 
         private void ClearForm()
         {
-            txtStaffID.Clear(); txtName.Clear(); cboRole.SelectedIndex = -1;
-            txtStaffID.ReadOnly = false; dgvStaff.ClearSelection();
-        }
+            txtName.Clear();
+            cboRole.SelectedIndex = -1;
+            dgvStaff.ClearSelection();
 
-        private void EmployeeManagement_Load(object sender, EventArgs e)
-        {
+            // 🌟 清空表單後，自動生成並顯示下一個可以用的 StaffID
+            GenerateNextStaffIDUI();
         }
     }
 }
