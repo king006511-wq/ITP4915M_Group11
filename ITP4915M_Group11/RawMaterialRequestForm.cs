@@ -56,20 +56,15 @@ namespace ITP4915M_Group11
         #region 🔒 System Security Gatekeeper Enforcement
         private void EnforceSecurityGatekeeper()
         {
-            string currentRole = UserSession.LoggedInStaffRole;
-
-            // 限制只有倉儲、工廠管理員、或高級經理可以發起原材料 Reorder 申請
-            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
-                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Warehouse", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Factory", StringComparison.OrdinalIgnoreCase));
+            // 使用集中化的授權輔助工具來決定是否允許開啟此表單
+            // 這樣可確保角色清單（例如 Warehouse Specialist）由 AuthorizationHelper 統一管理
+            bool isAuthorized = AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS");
 
             if (!isAuthorized)
             {
+                var currentRole = string.IsNullOrEmpty(UserSession.LoggedInStaffRole) ? "Guest" : UserSession.LoggedInStaffRole;
                 MessageBox.Show(
-                    $"[SECURITY ALERT] Access Denied!\n\n" +
-                    $"Your account role \"{(string.IsNullOrEmpty(currentRole) ? "Guest" : currentRole)}\" is not authorized to create Material Reorder Cards.",
+                    $"[SECURITY ALERT] Access Denied!\n\nYour account role \"{currentRole}\" is not authorized to create Material Reorder Cards.",
                     "System Security Guard",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Stop

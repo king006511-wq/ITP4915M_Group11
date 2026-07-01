@@ -33,11 +33,13 @@ namespace ITP4915M_Group11
         {
             string currentRole = UserSession.LoggedInStaffRole;
 
-            // 限制只有 Management / Warehouse Supervisor 級別可以進行審批與扣庫存操作
+            // 允許 Sales Representative 以「檢視」角色進入，但只有 Manager / Administrator / Warehouse Supervisor 可進行審批與扣庫存
             bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
                                 (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
                                  currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Warehouse Supervisor", StringComparison.OrdinalIgnoreCase));
+                                 currentRole.Equals("Warehouse Supervisor", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Sales Representative", StringComparison.OrdinalIgnoreCase) ||
+                                 currentRole.Equals("Sales", StringComparison.OrdinalIgnoreCase));
 
             if (!isAuthorized)
             {
@@ -208,8 +210,10 @@ namespace ITP4915M_Group11
             {
                 string orderID = dgvPendingOrders.SelectedRows[0].Cells["OrderID"].Value.ToString();
                 lblSelectedOrder.Text = $"Selected Order: {orderID} (Stock Level Validation)";
-                btnApprove.Enabled = true;
-                btnReject.Enabled = true;
+                // 只有 Manager / Administrator / Warehouse Specialist 可以批准或拒絕訂單
+                bool canApprove = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.WarehouseSpecialist);
+                btnApprove.Enabled = canApprove;
+                btnReject.Enabled = canApprove;
 
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
@@ -235,6 +239,7 @@ namespace ITP4915M_Group11
                                 {
                                     if (row["Stock Status"].ToString() == "SHORTAGE")
                                     {
+                                        // 若任何項目短缺，即使擁有批准權限亦不得批准
                                         btnApprove.Enabled = false;
                                         break;
                                     }
