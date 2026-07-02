@@ -270,14 +270,20 @@ namespace ITP4915M_Group11
             {
                 if (e.Value.ToString() == "SHORTAGE")
                 {
-                    e.CellStyle.BackColor = Color.FromArgb(254, 226, 226); // Soft Red
-                    e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);   // Dark Red text
+                    // 🚨 庫存不足：鮮紅底白字，極度搶眼
+                    e.CellStyle.BackColor = Color.FromArgb(239, 68, 68); // 強烈紅色
+                    e.CellStyle.ForeColor = Color.White;
+                    e.CellStyle.SelectionBackColor = Color.FromArgb(220, 38, 38); // 選中時更深嘅紅色
+                    e.CellStyle.SelectionForeColor = Color.White;
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
                 }
                 else
                 {
-                    e.CellStyle.BackColor = Color.FromArgb(240, 253, 250); // Soft Green
-                    e.CellStyle.ForeColor = Color.FromArgb(13, 148, 136);  // Dark Teal text
+                    // ✅ 庫存充足：鮮綠底白字
+                    e.CellStyle.BackColor = Color.FromArgb(34, 197, 94); // 明亮綠色
+                    e.CellStyle.ForeColor = Color.White;
+                    e.CellStyle.SelectionBackColor = Color.FromArgb(22, 163, 74); // 選中時更深嘅綠色
+                    e.CellStyle.SelectionForeColor = Color.White;
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
                 }
             }

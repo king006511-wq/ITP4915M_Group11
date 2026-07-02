@@ -63,7 +63,7 @@ namespace ITP4915M_Group11
             {
                 case UserRoleEnum.Manager: return Roles.Manager;
                 case UserRoleEnum.Administrator: return Roles.Administrator;
-                case UserRoleEnum.SalesRepresentative: return Roles.SalesRepresentative; // 修正保持一致
+                case UserRoleEnum.SalesRepresentative: return Roles.SalesRepresentative;
                 case UserRoleEnum.LogisticsDriver: return Roles.LogisticsDriver;
                 case UserRoleEnum.WarehouseSpecialist: return Roles.WarehouseSpecialist;
                 case UserRoleEnum.ProcurementOfficer: return Roles.ProcurementOfficer;
@@ -93,6 +93,9 @@ namespace ITP4915M_Group11
             { "MATERIAL_REQUESTS", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.WarehouseSpecialist, UserRoleEnum.ProcurementOfficer } },
             { "PROCUREMENT_CONTROL", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.ProcurementOfficer } },
             
+            // 💡 嚴格限制：專屬原材料管理權限 (只有 Administrator 和 Procurement Officer)
+            { "RAW_MATERIAL_MGMT", new List<UserRoleEnum> { UserRoleEnum.Administrator, UserRoleEnum.ProcurementOfficer } },
+            
             // 後台行政與客訴
             { "HR_STAFF_MGMT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator } },
             { "CUSTOMER_SUPPORT", new List<UserRoleEnum> { UserRoleEnum.Manager, UserRoleEnum.Administrator, UserRoleEnum.SalesRepresentative, UserRoleEnum.Staff } }
@@ -109,8 +112,8 @@ namespace ITP4915M_Group11
             var currentRole = ParseRole(UserSession.LoggedInStaffRole);
             if (currentRole == UserRoleEnum.Unknown) return false;
 
-            // 🔥【超級安全防禦機制】如果是 Manager 或者是 Administrator，直接放行所有功能，保證唔會因為漏寫字典而消失！
-            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator)
+            // 🔥【超級安全防禦機制】收緊權限：只保留 Administrator 可以無條件放行，Manager 必須遵守字典定義
+            if (currentRole == UserRoleEnum.Administrator)
             {
                 return true;
             }
@@ -142,9 +145,9 @@ namespace ITP4915M_Group11
         /// </summary>
         public static void EnforceRole(Form f, params string[] roles)
         {
-            // 如果是高階主管，直接略過執法檢查，允許開啟
+            // 收緊權限：只有 Administrator 可以略過執法檢查
             var currentRole = ParseRole(UserSession.LoggedInStaffRole);
-            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator) return;
+            if (currentRole == UserRoleEnum.Administrator) return;
 
             if (!IsInRole(roles))
             {
@@ -161,9 +164,9 @@ namespace ITP4915M_Group11
             string current = UserSession.LoggedInStaffRole;
             if (string.IsNullOrWhiteSpace(current)) return false;
 
-            // 經理與系統管理員在所有舊代碼角色檢查中自動視為通過
+            // 收緊權限：只有 Administrator 可以自動視為通過
             var currentRole = ParseRole(current);
-            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator) return true;
+            if (currentRole == UserRoleEnum.Administrator) return true;
 
             foreach (string r in roles)
             {
@@ -186,8 +189,8 @@ namespace ITP4915M_Group11
             var currentRole = ParseRole(UserSession.LoggedInStaffRole);
             if (currentRole == UserRoleEnum.Unknown) return false;
 
-            // 高級管理職直接放行
-            if (currentRole == UserRoleEnum.Manager || currentRole == UserRoleEnum.Administrator) return true;
+            // 收緊權限：只有 Administrator 直接放行
+            if (currentRole == UserRoleEnum.Administrator) return true;
 
             foreach (var r in roles)
             {

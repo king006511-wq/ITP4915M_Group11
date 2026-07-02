@@ -1,6 +1,7 @@
 using MySql.Data.MySqlClient;
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
@@ -16,78 +17,101 @@ namespace ITP4915M_Group11
         // 🎨 Modern UI Element Variables
         // ==========================================
         private TextBox txtUser, txtPass;
-        private Button btnLogin;
+        private Button btnLogin, btnExit, btnMinimize;
+        private Panel pnlCard;
+
+        // ⏳ 動畫引擎變數
+        private Timer animTimer;
+        private float timeOffset = 0f;
 
         public Login()
         {
-            InitializeComponent();      // ⬅️ 這會正確呼叫 Login.Designer.cs 裡的方法
-            InitializePremiumSplitUI(); // ⬅️ 一鍵動態渲染現代化雙色登入介面
+            InitializeComponent();
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                InitializeAnimatedPremiumUI();
+                StartBackgroundAnimation();
+            }
         }
 
-        #region 🎨 Dynamic Premium English UI Construction
-        private void InitializePremiumSplitUI()
+        #region 🎨 網頁級動態全螢幕 UI 構建
+        private void InitializeAnimatedPremiumUI()
         {
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Enterprise ERP Login";
-            this.Size = new Size(780, 480);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(249, 250, 251); // Soft grey-white background
-            this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
 
-            // 1. Left Corporate Brand Panel (Dark Slate / Deep Navy)
-            Panel pnlBrand = new Panel { Width = 320, Dock = DockStyle.Left, BackColor = Color.FromArgb(15, 23, 42) };
+            // 改為電影感無邊框全螢幕 (Borderless Fullscreen)
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.WindowState = FormWindowState.Maximized;
+            this.DoubleBuffered = true; // 開啟雙重緩衝避免閃爍
 
-            Label lblBrandLogo = new Label { Text = "🛋️", Font = new Font("Segoe UI", 48F), ForeColor = Color.White, Location = new Point(0, 110), Size = new Size(320, 80), TextAlign = ContentAlignment.MiddleCenter };
-            Label lblBrandName = new Label { Text = "Premium Living\nFurniture", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(0, 200), Size = new Size(320, 70), TextAlign = ContentAlignment.MiddleCenter };
-            Label lblBrandSub = new Label { Text = "Enterprise Resource Planning System v1.0", Font = new Font("Segoe UI", 8.5F), ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(0, 400), Size = new Size(320, 30), TextAlign = ContentAlignment.MiddleCenter };
+            // 💳 懸浮登入卡片 (Login Card)
+            pnlCard = new Panel
+            {
+                Size = new Size(440, 480),
+                BackColor = Color.White,
+                Padding = new Padding(40)
+            };
+            this.Controls.Add(pnlCard);
 
-            pnlBrand.Controls.Add(lblBrandLogo);
-            pnlBrand.Controls.Add(lblBrandName);
-            pnlBrand.Controls.Add(lblBrandSub);
-            this.Controls.Add(pnlBrand);
+            // 頂部琥珀金飾條
+            Panel pnlTopLine = new Panel { Dock = DockStyle.Top, Height = 6, BackColor = Color.FromArgb(245, 158, 11) };
+            pnlCard.Controls.Add(pnlTopLine);
 
-            // 2. Right Workspace Panel (Form Wrapper)
-            Panel pnlMain = new Panel { Location = new Point(320, 0), Size = new Size(460, 480), BackColor = Color.Transparent };
-            this.Controls.Add(pnlMain);
+            int currentY = 40;
 
-            Label lblHeader = new Label { Text = "Account Login", Font = new Font("Segoe UI", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(50, 50), AutoSize = true };
-            Label lblSubHeader = new Label { Text = "Please sign in with your corporate staff credentials.", Font = new Font("Segoe UI", 9.5F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(54, 100), AutoSize = true };
-            pnlMain.Controls.Add(lblHeader);
-            pnlMain.Controls.Add(lblSubHeader);
+            // 品牌 Logo 與標題
+            Label lblBrandLogo = new Label { Text = "🛋️", Font = new Font("Segoe UI", 36F), Location = new Point(0, currentY), Size = new Size(440, 60), TextAlign = ContentAlignment.MiddleCenter };
+            currentY += 65;
+            Label lblHeader = new Label { Text = "System Login", Font = new Font("Segoe UI", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(0, currentY), Size = new Size(440, 45), TextAlign = ContentAlignment.MiddleCenter };
+            currentY += 45;
+            Label lblSubHeader = new Label { Text = "Premium Living Furniture Co. Ltd.", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(0, currentY), Size = new Size(440, 20), TextAlign = ContentAlignment.MiddleCenter };
+            currentY += 50;
 
-            int currentY = 145;
+            pnlCard.Controls.Add(lblBrandLogo);
+            pnlCard.Controls.Add(lblHeader);
+            pnlCard.Controls.Add(lblSubHeader);
 
-            // Staff ID Input Block
-            Label lblUser = new Label { Text = "Staff ID *", Location = new Point(50, currentY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtUser = new TextBox { Location = new Point(50, currentY + 22), Width = 350, Font = new Font("Segoe UI", 13F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Staff ID..." };
-            SetupPlaceholder(txtUser, "Enter Staff ID...", false);
-            pnlMain.Controls.Add(lblUser);
-            pnlMain.Controls.Add(txtUser);
-
+            // 帳號輸入框
+            Label lblUser = new Label { Text = "USERNAME / STAFF ID", Location = new Point(45, currentY), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtUser = new TextBox { Location = new Point(45, currentY + 20), Width = 350, Font = new Font("Segoe UI", 12F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Username or ID..." };
+            SetupPlaceholder(txtUser, "Enter Username or ID...", false);
+            pnlCard.Controls.Add(lblUser); pnlCard.Controls.Add(txtUser);
             currentY += 75;
 
-            // Password Input Block
-            Label lblPass = new Label { Text = "Password *", Location = new Point(50, currentY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtPass = new TextBox { Location = new Point(50, currentY + 22), Width = 350, Font = new Font("Segoe UI", 13F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Password..." };
+            // 密碼輸入框
+            Label lblPass = new Label { Text = "PASSWORD", Location = new Point(45, currentY), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtPass = new TextBox { Location = new Point(45, currentY + 20), Width = 350, Font = new Font("Segoe UI", 12F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Password..." };
             SetupPlaceholder(txtPass, "Enter Password...", true);
-            pnlMain.Controls.Add(lblPass);
-            pnlMain.Controls.Add(txtPass);
+            pnlCard.Controls.Add(lblPass); pnlCard.Controls.Add(txtPass);
+            currentY += 75;
 
-            currentY += 85;
-
-            // Premium Login Button
-            btnLogin = new Button { Text = "Secure Sign In", Location = new Point(50, currentY), Size = new Size(350, 46), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // 登入按鈕
+            btnLogin = new Button { Text = "Sign In / 登入", Location = new Point(45, currentY), Size = new Size(350, 48), BackColor = Color.FromArgb(15, 23, 42), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnLogin.FlatAppearance.BorderSize = 0;
-
-            // Hover Effect Animation
-            btnLogin.MouseEnter += (s, e) => btnLogin.BackColor = Color.FromArgb(29, 78, 216); // Darker blue on hover
-            btnLogin.MouseLeave += (s, e) => btnLogin.BackColor = Color.FromArgb(37, 99, 235); // Original Royal Blue
+            btnLogin.MouseEnter += (s, e) => btnLogin.BackColor = Color.FromArgb(30, 41, 59);
+            btnLogin.MouseLeave += (s, e) => btnLogin.BackColor = Color.FromArgb(15, 23, 42);
             btnLogin.Click += btnLogin_Click;
-            pnlMain.Controls.Add(btnLogin);
+            pnlCard.Controls.Add(btnLogin);
 
-            // Accept Enter Key to instantly submit the login form
+            // 🛠️ 建立右上角全螢幕專用「最小化」與「關閉」按鈕
+            btnMinimize = new Button { Text = "—", Font = new Font("Segoe UI", 9F, FontStyle.Bold), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, BackColor = Color.Transparent };
+            btnMinimize.FlatAppearance.BorderSize = 0;
+            btnMinimize.Click += (s, e) => this.WindowState = FormWindowState.Minimized;
+            this.Controls.Add(btnMinimize);
+
+            btnExit = new Button { Text = "✕", Font = new Font("Segoe UI", 11F, FontStyle.Bold), Size = new Size(40, 40), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, BackColor = Color.Transparent };
+            btnExit.FlatAppearance.BorderSize = 0;
+            btnExit.Click += (s, e) => Application.Exit();
+            this.Controls.Add(btnExit);
+
+            // 🔄 智能 Resize 引擎：無論任何解析度，永遠即時重新導向計算「絕對置中」
+            this.Resize += (s, e) => {
+                if (pnlCard != null) pnlCard.Location = new Point((this.Width - pnlCard.Width) / 2, (this.Height - pnlCard.Height) / 2);
+                if (btnExit != null) btnExit.Location = new Point(this.Width - 45, 10);
+                if (btnMinimize != null) btnMinimize.Location = new Point(this.Width - 85, 10);
+            };
+
             this.AcceptButton = btnLogin;
         }
 
@@ -97,30 +121,118 @@ namespace ITP4915M_Group11
                 if (txt.Text == placeholder)
                 {
                     txt.Text = "";
-                    txt.ForeColor = Color.FromArgb(15, 23, 42); // Deep dark text
+                    txt.ForeColor = Color.FromArgb(15, 23, 42);
                     if (isPassword) txt.PasswordChar = '●';
                 }
             };
             txt.LostFocus += (s, e) => {
                 if (string.IsNullOrWhiteSpace(txt.Text))
                 {
-                    if (isPassword) txt.PasswordChar = '\0'; // Turn off dots for placeholder text
+                    if (isPassword) txt.PasswordChar = '\0';
                     txt.Text = placeholder;
                     txt.ForeColor = Color.Gray;
                 }
             };
         }
+
+        private void Login_Load(object sender, EventArgs e)
+        {
+        }
+        #endregion
+
+        #region 🌌 日夜交替全螢幕重繪引擎
+        private void StartBackgroundAnimation()
+        {
+            animTimer = new Timer { Interval = 30 };
+            animTimer.Tick += (s, e) =>
+            {
+                timeOffset += 0.012f; // 稍微放慢一點點，大螢幕滑動更流暢優雅
+                if (timeOffset > Math.PI * 2) timeOffset -= (float)(Math.PI * 2);
+                this.Invalidate();
+            };
+            animTimer.Start();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            float ratio = (float)(Math.Sin(timeOffset) + 1) / 2f;
+
+            Color dayColor = Color.FromArgb(243, 244, 246);
+            Color nightColor = Color.FromArgb(15, 23, 42);
+
+            int r = (int)(dayColor.R + (nightColor.R - dayColor.R) * ratio);
+            int gCol = (int)(dayColor.G + (nightColor.G - dayColor.G) * ratio);
+            int b = (int)(dayColor.B + (nightColor.B - dayColor.B) * ratio);
+
+            Color currentSky = Color.FromArgb(r, gCol, b);
+            g.Clear(currentSky);
+
+            // 🌟 智能動態反轉控制掣顏色，避免按鈕喺日頭/黑夜被背景「食咗」
+            Color controlColor = ratio > 0.5f ? Color.FromArgb(203, 213, 225) : Color.FromArgb(71, 85, 105);
+            if (btnExit != null) btnExit.ForeColor = controlColor;
+            if (btnMinimize != null) btnMinimize.ForeColor = controlColor;
+
+            // 針對全螢幕優化的日月軌跡計算
+            int centerX = this.Width / 2;
+            int centerY = this.Height + 200; // 降低圓心，擴大拱形拋物線
+            int orbitRadius = this.Width / 2 + 150;
+
+            // ☀️ 繪製太陽 (Sun Glow)
+            float sunAngle = timeOffset;
+            int sunX = centerX - (int)(Math.Cos(sunAngle) * orbitRadius);
+            int sunY = centerY - (int)(Math.Sin(sunAngle) * orbitRadius);
+
+            int sunAlpha = (int)(180 * (1 - ratio));
+            if (sunAlpha > 0)
+            {
+                using (GraphicsPath path = new GraphicsPath())
+                {
+                    path.AddEllipse(sunX - 350, sunY - 350, 700, 700); // 放大光暈範圍至 700px 迎合大螢幕
+                    using (PathGradientBrush pgb = new PathGradientBrush(path))
+                    {
+                        pgb.CenterColor = Color.FromArgb(sunAlpha, 245, 158, 11);
+                        pgb.SurroundColors = new Color[] { Color.Transparent };
+                        g.FillPath(pgb, path);
+                    }
+                }
+            }
+
+            // 🌙 繪製月亮 (Moon Glow)
+            float moonAngle = timeOffset + (float)Math.PI;
+            int moonX = centerX - (int)(Math.Cos(moonAngle) * orbitRadius);
+            int moonY = centerY - (int)(Math.Sin(moonAngle) * orbitRadius);
+
+            int moonAlpha = (int)(180 * ratio);
+            if (moonAlpha > 0)
+            {
+                using (GraphicsPath path = new GraphicsPath())
+                {
+                    path.AddEllipse(moonX - 300, moonY - 300, 600, 600); // 放大光暈範圍至 600px
+                    using (PathGradientBrush pgb = new PathGradientBrush(path))
+                    {
+                        pgb.CenterColor = Color.FromArgb(moonAlpha, 186, 230, 253);
+                        pgb.SurroundColors = new Color[] { Color.Transparent };
+                        g.FillPath(pgb, path);
+                    }
+                }
+            }
+        }
         #endregion
 
         // ==========================================
-        // 🚀 Core Enterprise Security Authentication
+        // 🚀 Core Enterprise Security Authentication (已融合第一段的高階邏輯)
         // ==========================================
         private void btnLogin_Click(object sender, EventArgs e)
         {
             string inputUser = txtUser.Text.Trim();
             string inputPass = txtPass.Text.Trim();
 
-            if (string.IsNullOrEmpty(inputUser) || inputUser == "Enter Staff ID..." ||
+            // 配合 V2 嘅 Placeholder 字眼進行驗證
+            if (string.IsNullOrEmpty(inputUser) || inputUser == "Enter Username or ID..." ||
                 string.IsNullOrEmpty(inputPass) || inputPass == "Enter Password...")
             {
                 MessageBox.Show("Security Notice:\nPlease enter both your corporate Staff ID and Password to proceed.", "Authorization Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -133,7 +245,7 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
 
-                    // 🌟 完美優化：加上 Department 欄位一併抽出
+                    // 🌟 完美優化：加上 Department 欄位一併抽出 (來自 V1)
                     string loginQuery = "SELECT StaffID, Name, Role, Department FROM staff WHERE StaffID = @user AND Password = SHA2(@pass,256)";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
@@ -150,10 +262,13 @@ namespace ITP4915M_Group11
                                 UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
                                 UserSession.LoggedInStaffRole = reader["Role"] != DBNull.Value ? reader["Role"].ToString().Trim() : "";
 
-                                // 🌟 完美優化：直接從 Database 讀取最新嘅所屬部門
+                                // 🌟 完美優化：直接從 Database 讀取最新嘅所屬部門 (來自 V1)
                                 UserSession.LoggedInDepartment = reader["Department"] != DBNull.Value ? reader["Department"].ToString().Trim() : "General";
 
                                 UserSession.LoginTime = DateTime.Now;
+
+                                // 登入成功後停止背景動畫以節省效能
+                                if (animTimer != null) animTimer.Stop();
 
                                 MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName}\nRole: {UserSession.LoggedInStaffRole}\nDepartment: {UserSession.LoggedInDepartment}", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -175,6 +290,7 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
+                    // 🌟 更詳盡嘅錯誤訊息 (來自 V1)
                     MessageBox.Show("Database Connectivity Error:\nUnable to reach the authentication server. Please contact IT Support.\n\nLogs: " + ex.Message, "System Infrastructure Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }

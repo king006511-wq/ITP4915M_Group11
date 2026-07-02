@@ -265,6 +265,11 @@ namespace ITP4915M_Group11
             else { dgvOrderItems.DataSource = null; lblOrderSummary.Text = "💳 Total Paid: $0.00"; }
         }
 
+        private void AfterServiceForm_Load_1(object sender, EventArgs e)
+        {
+
+        }
+
         private void LoadOrderContextItems(string orderId)
         {
             if (string.IsNullOrWhiteSpace(orderId)) { dgvOrderItems.DataSource = null; lblOrderSummary.Text = "💳 Total Paid: $0.00"; return; }

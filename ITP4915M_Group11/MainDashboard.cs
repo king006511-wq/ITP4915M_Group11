@@ -10,99 +10,55 @@ namespace ITP4915M_Group11
     public partial class MainDashboard : Form
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
-
-        // ==========================================
-        // 🔒 Global Container Variables
-        // ==========================================
         private Form activeForm = null;
         private Panel pnlContent;
         private Panel pnlLeftNav;
         private FlowLayoutPanel flpNavMenu;
-        private Timer clockTimer; // Clock timer for general staff workspace
+        private Timer clockTimer;
 
         public MainDashboard()
         {
             InitializePremiumContainerUI();
         }
 
-        #region 🎨 Modern Window Layout (Dynamic Responsive & Safe Size)
         private void InitializePremiumContainerUI()
         {
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Enterprise ERP Dashboard";
-
             this.Size = new Size(1300, 850);
             this.WindowState = FormWindowState.Maximized;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(243, 244, 246);
             this.FormBorderStyle = FormBorderStyle.Sizable;
 
-            // 1. Left Sidebar
-            pnlLeftNav = new Panel
-            {
-                Dock = DockStyle.Left,
-                Width = 260,
-                BackColor = Color.FromArgb(15, 23, 42),
-                Padding = new Padding(0, 20, 0, 0)
-            };
-
-            // Corporate Logo
-            Label lblLogo = new Label
-            {
-                Text = "PREMIUM\nLIVING",
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI Black", 18F, FontStyle.Bold),
-                AutoSize = false,
-                Width = 260,
-                Height = 80,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Top
-            };
+            pnlLeftNav = new Panel { Dock = DockStyle.Left, Width = 260, BackColor = Color.FromArgb(15, 23, 42), Padding = new Padding(0, 20, 0, 0) };
+            Label lblLogo = new Label { Text = "PREMIUM\nLIVING", ForeColor = Color.White, Font = new Font("Segoe UI Black", 18F, FontStyle.Bold), AutoSize = false, Width = 260, Height = 80, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Top };
             pnlLeftNav.Controls.Add(lblLogo);
 
-            // Navigation Menu Flow Layout
-            flpNavMenu = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoScroll = true,
-                Padding = new Padding(10, 20, 10, 10)
-            };
+            flpNavMenu = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(10, 20, 0, 20) };
             pnlLeftNav.Controls.Add(flpNavMenu);
 
-            // 2. Right Main Content Container
-            pnlContent = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(243, 244, 246),
-                AutoScroll = true
-            };
+            pnlContent = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(243, 244, 246), AutoScroll = true };
             pnlContent.Resize += PnlContent_Resize;
-
             this.Controls.Add(pnlContent);
             this.Controls.Add(pnlLeftNav);
             pnlContent.BringToFront();
 
             SetupNavigationMenu();
-            ShowHomeDashboard(); // Show home dashboard by default
+            ShowHomeDashboard();
         }
 
         private void SetupNavigationMenu()
         {
             flpNavMenu.Controls.Clear();
-
-            // 📊 系統看板區
             AddNavHeader("📊 System Dashboards");
             AddNavButton("🏠 Home Dashboard", null, "HOME", "HOME");
 
-            // 📈 高級統計報表（完美透過標準 HasMenuPermission 檢查，非 Admin 職員會自動隱藏！）
             if (AuthorizationHelper.HasMenuPermission("STAT_REPORT"))
             {
                 AddNavButton("📈 Statistical Report", typeof(StatisticalReportForm), "FORM", "STAT_REPORT");
             }
 
-            // 💼 核心商務模組
             if (AuthorizationHelper.HasMenuPermission("CUSTOMER_MGMT") || AuthorizationHelper.HasMenuPermission("SALES_QUOTATION") || AuthorizationHelper.HasMenuPermission("SALES_ORDER") || AuthorizationHelper.HasMenuPermission("DELIVERY_LOGISTICS") || AuthorizationHelper.HasMenuPermission("GOODS_RECEIVED") || AuthorizationHelper.HasMenuPermission("PRODUCT_MAINTENANCE") || AuthorizationHelper.HasMenuPermission("PRODUCT_CREATION_BOM") || AuthorizationHelper.HasMenuPermission("PRODUCT_MANUFACTURING"))
             {
                 AddNavHeader("💼 Core Modules");
@@ -116,13 +72,15 @@ namespace ITP4915M_Group11
                 AddNavButton("🛠️ Product Manufacturing", typeof(ProductManufacturingForm), "FORM", "PRODUCT_MANUFACTURING");
             }
 
-            // ⚙️ 內部營運模組
-            if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") || AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") || AuthorizationHelper.HasMenuPermission("SUPPLIER_MATERIAL_CREATION") || AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") || AuthorizationHelper.HasMenuPermission("CUSTOMER_SUPPORT"))
+            if (AuthorizationHelper.HasMenuPermission("MATERIAL_REQUESTS") || AuthorizationHelper.HasMenuPermission("PROCUREMENT_CONTROL") || AuthorizationHelper.HasMenuPermission("SUPPLIER_MATERIAL_CREATION") || AuthorizationHelper.HasMenuPermission("RAW_MATERIAL_MGMT") || AuthorizationHelper.HasMenuPermission("HR_STAFF_MGMT") || AuthorizationHelper.HasMenuPermission("CUSTOMER_SUPPORT"))
             {
                 AddNavHeader("⚙️ Internal Ops");
                 AddNavButton("🏭 Material Requests", typeof(RawMaterialRequestForm), "FORM", "MATERIAL_REQUESTS");
                 AddNavButton("📈 Procurement Control", typeof(ProcurementForm), "FORM", "PROCUREMENT_CONTROL");
                 AddNavButton("🤝 Supplier & Material", typeof(SupplierAndMaterialCreationForm), "FORM", "SUPPLIER_MATERIAL_CREATION");
+
+                AddNavButton("🪵 Material Manager", typeof(RawMaterialManagementForm), "FORM", "RAW_MATERIAL_MGMT");
+
                 AddNavButton("👔 HR / Staff Mgmt", typeof(EmployeeManagement), "FORM", "HR_STAFF_MGMT");
                 AddNavButton("📞 Customer Support", typeof(AfterServiceForm), "FORM", "CUSTOMER_SUPPORT");
                 AddNavButton("📜 Sales Activity Log", typeof(SalesActivityLogForm), "FORM", "CUSTOMER_SUPPORT");
@@ -136,22 +94,29 @@ namespace ITP4915M_Group11
         {
             if (string.IsNullOrEmpty(text))
             {
-                flpNavMenu.Controls.Add(new Panel { Size = new Size(220, 20), BackColor = Color.Transparent });
+                flpNavMenu.Controls.Add(new Panel { Size = new Size(230, 20), BackColor = Color.Transparent });
                 return;
             }
-            Label lblHeader = new Label { Text = text, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = ThemeManager.MutedText, Size = new Size(220, 25), Margin = new Padding(5, 15, 5, 5), TextAlign = ContentAlignment.BottomLeft };
+            Label lblHeader = new Label
+            {
+                Text = text,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = ThemeManager.MutedText,
+                Size = new Size(230, 25),
+                Margin = new Padding(10, 15, 0, 5),
+                TextAlign = ContentAlignment.BottomLeft
+            };
             flpNavMenu.Controls.Add(lblHeader);
         }
 
         private void AddNavButton(string text, Type formType, string actionType, string menuId = "")
         {
-            // ⚠️ Permission interception: Do not add button if no permission
             if (actionType == "FORM" && !AuthorizationHelper.HasMenuPermission(menuId)) return;
 
             Button btn = new Button
             {
-                Text = "  " + text,
-                Width = 220,
+                Text = " " + text,
+                Width = 230,
                 Height = 42,
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = actionType == "LOGOUT" ? ThemeManager.Danger : Color.FromArgb(226, 232, 240),
@@ -159,16 +124,13 @@ namespace ITP4915M_Group11
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(5, 2, 5, 2),
+                Margin = new Padding(10, 2, 0, 2),
+                Padding = new Padding(10, 0, 0, 0),
                 Tag = menuId
             };
             btn.FlatAppearance.BorderSize = 0;
-            // 使用一致的 hover 顏色（在深色側邊欄上稍微變亮）
             btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(37, 43, 66);
-
-            // 統一按鈕焦點與 active 顯示（避免系統預設造成顏色差異）
             btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(30, 36, 55);
-
             btn.Click += (s, e) =>
             {
                 if (actionType == "HOME") ShowHomeDashboard();
@@ -177,147 +139,92 @@ namespace ITP4915M_Group11
             };
             flpNavMenu.Controls.Add(btn);
         }
-        #endregion
 
-        #region 🏠 Core Dashboard Routing System (Manager vs Staff)
         private void ShowHomeDashboard()
         {
             if (activeForm != null) { activeForm.Close(); activeForm = null; }
             if (clockTimer != null) { clockTimer.Stop(); clockTimer.Dispose(); }
             pnlContent.Controls.Clear();
-
             string staffID = UserSession.LoggedInStaffID ?? "Guest";
             string role = UserSession.LoggedInStaffRole ?? "Unknown Role";
-
-            // Header Welcome Section
             Label lblTitle = new Label { Text = $"Welcome back, {staffID} ✨", Font = new Font("Segoe UI Black", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(40, 30), AutoSize = true };
             Label lblSubTitle = new Label { Text = $"Role: {role} | Premium Living ERP Workspace", Font = new Font("Segoe UI", 11F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(43, 75), AutoSize = true };
-            pnlContent.Controls.Add(lblTitle); pnlContent.Controls.Add(lblSubTitle);
-
-            // Change Password Button
+            pnlContent.Controls.Add(lblTitle);
+            pnlContent.Controls.Add(lblSubTitle);
             Button btnChangePwd = new Button { Text = "🔑 Account Security", Location = new Point(pnlContent.Width - 260, 40), Size = new Size(180, 42), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand, Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnChangePwd.FlatAppearance.BorderSize = 0;
             btnChangePwd.Click += BtnChangeMyPwd_Click;
             pnlContent.Controls.Add(btnChangePwd);
-
-            // 🌟 Strict Permission Checking
             var currentEnum = AuthorizationHelper.ParseRole(role);
-            bool isManagement = (currentEnum == AuthorizationHelper.UserRoleEnum.Manager ||
-                                 currentEnum == AuthorizationHelper.UserRoleEnum.Administrator ||
-                                 currentEnum == AuthorizationHelper.UserRoleEnum.SystemManager);
-
-            if (isManagement)
-            {
-                RenderManagerDashboardMetrics(); // Management Professional Charts
-            }
-            else
-            {
-                RenderGeneralStaffDashboard();   // General Staff Workspace
-            }
+            bool isManagement = (currentEnum == AuthorizationHelper.UserRoleEnum.Manager || currentEnum == AuthorizationHelper.UserRoleEnum.Administrator || currentEnum == AuthorizationHelper.UserRoleEnum.SystemManager);
+            if (isManagement) { RenderManagerDashboardMetrics(); } else { RenderGeneralStaffDashboard(); }
         }
-        #endregion
 
-        #region 🔴 Management Exclusive: Advanced Visual Dashboard
         private void RenderManagerDashboardMetrics()
         {
             int todayOrders = 0, pendingApprove = 0, processingOrders = 0, pendingDispatch = 0, lowStockCount = 0;
             DataTable dtCombinedLowStock = new DataTable();
-
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    // 1. Order Status Statistics
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE DATE(OrderDate) = CURDATE()", conn)) todayOrders = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE DATE(OrderDate)=CURDATE()", conn)) todayOrders = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
                     using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status LIKE 'Awaiting Approval%'", conn)) pendingApprove = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
                     using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status LIKE 'Processing%'", conn)) processingOrders = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
-                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status = 'Ready for Dispatch'", conn)) pendingDispatch = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
-
-                    // 2. Calculate Total Low Stock (Product + Material)
-                    int pLow = Convert.ToInt32(new MySqlCommand("SELECT COUNT(*) FROM product WHERE StockLevel <= 10", conn).ExecuteScalar() ?? 0);
-                    int mLow = Convert.ToInt32(new MySqlCommand("SELECT COUNT(*) FROM raw_material WHERE StockLevel <= ReorderLevel", conn).ExecuteScalar() ?? 0);
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status='Ready for Dispatch'", conn)) pendingDispatch = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                    int pLow = Convert.ToInt32(new MySqlCommand("SELECT COUNT(*) FROM product WHERE StockLevel<=10", conn).ExecuteScalar() ?? 0);
+                    int mLow = Convert.ToInt32(new MySqlCommand("SELECT COUNT(*) FROM raw_material WHERE StockLevel<=ReorderLevel", conn).ExecuteScalar() ?? 0);
                     lowStockCount = pLow + mLow;
-
-                    // 3. 🌟 Ultimate UNION ALL: Fetch low stock for both products and materials
-                    string unionSql = @"
-                        SELECT ProductID AS 'Item ID', ProductName AS 'Item Name', StockLevel AS 'Qty Left', 'Product' AS 'Category' 
-                        FROM product WHERE StockLevel <= 10
-                        UNION ALL
-                        SELECT MaterialID AS 'Item ID', MaterialName AS 'Item Name', StockLevel AS 'Qty Left', 'Raw Material' AS 'Category' 
-                        FROM raw_material WHERE StockLevel <= ReorderLevel
-                        ORDER BY `Qty Left` ASC LIMIT 8";
-
-                    using (MySqlDataAdapter da = new MySqlDataAdapter(unionSql, conn))
-                    {
-                        da.Fill(dtCombinedLowStock);
-                    }
+                    string unionSql = @"SELECT ProductID AS 'Item ID',ProductName AS 'Item Name',StockLevel AS 'Qty Left','Product' AS 'Category' FROM product WHERE StockLevel<=10 UNION ALL SELECT MaterialID AS 'Item ID',MaterialName AS 'Item Name',StockLevel AS 'Qty Left','Raw Material' AS 'Category' FROM raw_material WHERE StockLevel<=ReorderLevel ORDER BY `Qty Left` ASC LIMIT 8";
+                    using (MySqlDataAdapter da = new MySqlDataAdapter(unionSql, conn)) { da.Fill(dtCombinedLowStock); }
                 }
-                catch (Exception) { /* Silent catch to prevent system crash */ }
+                catch { }
             }
-
-            // Statistics Card Section
             FlowLayoutPanel flpStats = new FlowLayoutPanel { Location = new Point(40, 120), Size = new Size(pnlContent.Width - 80, 130), FlowDirection = FlowDirection.LeftToRight, WrapContents = true, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             pnlContent.Controls.Add(flpStats);
-
             flpStats.Controls.Add(CreateStatCard("TODAY'S ORDERS", todayOrders.ToString(), "Active", Color.FromArgb(14, 165, 233)));
             flpStats.Controls.Add(CreateStatCard("PENDING APPROVAL", pendingApprove.ToString(), "Requires Action", Color.FromArgb(245, 158, 11)));
             flpStats.Controls.Add(CreateStatCard("READY FOR DISPATCH", pendingDispatch.ToString(), "Logistics Queue", Color.FromArgb(139, 92, 246)));
-            flpStats.Controls.Add(CreateStatCard("SYSTEM LOW STOCK", lowStockCount.ToString(), "Procurement Needed", Color.FromArgb(239, 68, 68))); // Unified Low Stock Card
-
-            // Tactical Analysis Grid
+            flpStats.Controls.Add(CreateStatCard("SYSTEM LOW STOCK", lowStockCount.ToString(), "Procurement Needed", Color.FromArgb(239, 68, 68)));
             TableLayoutPanel tlpGrids = new TableLayoutPanel { Location = new Point(40, 270), Size = new Size(pnlContent.Width - 80, 450), ColumnCount = 2, RowCount = 1, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
             tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
             tlpGrids.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
             pnlContent.Controls.Add(tlpGrids);
-
-            // 🌟 Pro Graphic: Order Pulse Chart
             tlpGrids.Controls.Add(CreateOrderPulseGraphicPanel(pendingApprove, processingOrders, pendingDispatch), 0, 0);
-
-            // 🌟 Combined Low Stock Warning Grid (Product + Raw Material)
             tlpGrids.Controls.Add(CreateGridPanel("⚠️ Global Inventory Shortage Alerts", dtCombinedLowStock, Color.FromArgb(220, 38, 38)), 1, 0);
         }
 
-        // 📊 Pro Graphic: Order Pulse Chart (GDI+ Custom Paint)
         private Panel CreateOrderPulseGraphicPanel(int pending, int processing, int dispatch)
         {
             Panel pnl = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Margin = new Padding(0, 0, 20, 0) };
-            pnl.Paint += (s, e) => {
-                Graphics g = e.Graphics;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            pnl.Paint += (s, e) =>
+            {
+                Graphics g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 ControlPaint.DrawBorder(g, pnl.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
 
-                // Title and Underline
-                g.DrawString("📈 Order Fulfillment Pulse", new Font("Segoe UI", 13F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), 20, 20);
+                // 💡 已經將所有 Brushes.GetInstance() 改為 ThemeBrushes.GetInstance()
+                g.DrawString("📈 Order Fulfillment Pulse", new Font("Segoe UI", 13F, FontStyle.Bold), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), 20, 20);
                 g.DrawLine(new Pen(Color.FromArgb(241, 245, 249), 2), 20, 60, pnl.Width - 20, 60);
+                int maxVal = Math.Max(10, Math.Max(pending, Math.Max(processing, dispatch)));
+                int barWidth = pnl.Width - 200; if (barWidth < 100) barWidth = 100;
 
-                int maxVal = Math.Max(10, Math.Max(pending, Math.Max(processing, dispatch))); // Set scale
-                int barWidth = pnl.Width - 200;
-                if (barWidth < 100) barWidth = 100;
-
-                // 1. Pending Approval Bar
-                g.DrawString("Awaiting Approval", new Font("Segoe UI", 10F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 90);
+                g.DrawString("Awaiting Approval", new Font("Segoe UI", 10F, FontStyle.Bold), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 90);
                 g.FillRectangle(new SolidBrush(Color.FromArgb(241, 245, 249)), 30, 120, barWidth, 24);
-                int w1 = (int)(((double)pending / maxVal) * barWidth);
-                g.FillRectangle(new SolidBrush(Color.FromArgb(245, 158, 11)), 30, 120, w1, 24);
-                g.DrawString(pending.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 120);
+                int w1 = (int)(((double)pending / maxVal) * barWidth); g.FillRectangle(new SolidBrush(Color.FromArgb(245, 158, 11)), 30, 120, w1, 24);
+                g.DrawString(pending.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 120);
 
-                // 2. Processing Bar
-                g.DrawString("Production / Processing", new Font("Segoe UI", 10F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 180);
+                g.DrawString("Production / Processing", new Font("Segoe UI", 10F, FontStyle.Bold), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 180);
                 g.FillRectangle(new SolidBrush(Color.FromArgb(241, 245, 249)), 30, 210, barWidth, 24);
-                int w2 = (int)(((double)processing / maxVal) * barWidth);
-                g.FillRectangle(new SolidBrush(Color.FromArgb(59, 130, 246)), 30, 210, w2, 24);
-                g.DrawString(processing.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 210);
+                int w2 = (int)(((double)processing / maxVal) * barWidth); g.FillRectangle(new SolidBrush(Color.FromArgb(59, 130, 246)), 30, 210, w2, 24);
+                g.DrawString(processing.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 210);
 
-                // 3. Ready for Dispatch Bar
-                g.DrawString("Ready for Dispatch (Logistics)", new Font("Segoe UI", 10F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 270);
+                g.DrawString("Ready for Dispatch (Logistics)", new Font("Segoe UI", 10F, FontStyle.Bold), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(100, 116, 139)), 30, 270);
                 g.FillRectangle(new SolidBrush(Color.FromArgb(241, 245, 249)), 30, 300, barWidth, 24);
-                int w3 = (int)(((double)dispatch / maxVal) * barWidth);
-                g.FillRectangle(new SolidBrush(Color.FromArgb(16, 185, 129)), 30, 300, w3, 24);
-                g.DrawString(dispatch.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), Brushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 300);
+                int w3 = (int)(((double)dispatch / maxVal) * barWidth); g.FillRectangle(new SolidBrush(Color.FromArgb(16, 185, 129)), 30, 300, w3, 24);
+                g.DrawString(dispatch.ToString() + " Orders", new Font("Segoe UI", 10.5F, FontStyle.Bold), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(15, 23, 42)), barWidth + 45, 300);
 
-                // Footer Note
-                g.DrawString("💡 System automatically updates order pipeline metrics in real-time.", new Font("Segoe UI", 9F, FontStyle.Italic), Brushes.GetInstance().GetColorBrush(Color.FromArgb(148, 163, 184)), 30, 380);
+                g.DrawString("💡 System automatically updates order pipeline metrics in real-time.", new Font("Segoe UI", 9F, FontStyle.Italic), ThemeBrushes.GetInstance().GetColorBrush(Color.FromArgb(148, 163, 184)), 30, 380);
             };
             return pnl;
         }
@@ -330,7 +237,6 @@ namespace ITP4915M_Group11
             Label lblTitle = new Label { Text = title, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, 15), AutoSize = true };
             Label lblValue = new Label { Text = value, Font = new Font("Segoe UI Black", 26F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(12, 32), AutoSize = true };
             Label lblSub = new Label { Text = subtitle, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = themeColor, Location = new Point(15, 82), AutoSize = true };
-
             card.Controls.Add(topBar); card.Controls.Add(lblTitle); card.Controls.Add(lblValue); card.Controls.Add(lblSub);
             return card;
         }
@@ -339,146 +245,74 @@ namespace ITP4915M_Group11
         {
             Panel pnl = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Margin = new Padding(0, 0, 20, 0) };
             pnl.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnl.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
-
             Label lblTitle = new Label { Text = title, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(15, 15), AutoSize = true };
             pnl.Controls.Add(lblTitle);
-
-            DataGridView dgv = new DataGridView
-            {
-                Location = new Point(15, 55),
-                Size = new Size(pnl.Width - 30, pnl.Height - 70),
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                DataSource = data,
-                AllowUserToAddRows = false,
-                ReadOnly = true,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                GridColor = Color.FromArgb(241, 245, 249)
-            };
-            dgv.EnableHeadersVisualStyles = false;
-            dgv.ColumnHeadersDefaultCellStyle.BackColor = headerColor;
-            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
-            dgv.ColumnHeadersHeight = 35;
+            DataGridView dgv = new DataGridView { Location = new Point(15, 55), Size = new Size(pnl.Width - 30, pnl.Height - 70), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right, DataSource = data, AllowUserToAddRows = false, ReadOnly = true, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, GridColor = Color.FromArgb(241, 245, 249) };
+            dgv.EnableHeadersVisualStyles = false; dgv.ColumnHeadersDefaultCellStyle.BackColor = headerColor; dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White; dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold); dgv.ColumnHeadersHeight = 35;
             pnl.Controls.Add(dgv);
             return pnl;
         }
-        #endregion
 
-        #region 🟢 Staff & Driver Exclusive: Safe Workspace
         private void RenderGeneralStaffDashboard()
         {
-            // Create a clean panel with no sensitive data
             Panel pnlWorkspace = new Panel { Location = new Point(40, 120), Size = new Size(pnlContent.Width - 80, 400), BackColor = Color.White, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             pnlWorkspace.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlWorkspace.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlContent.Controls.Add(pnlWorkspace);
-
-            // 1. Left Clock Area (Optimized spacing to prevent overlap)
             Label lblTime = new Label { Text = "00:00:00", Font = new Font("Segoe UI Semibold", 44F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(40, 40), AutoSize = true };
-
-            // 🌟 Fix: Adjusted Y-axis for Date to prevent overlapping
             Label lblDate = new Label { Text = DateTime.Now.ToString("dddd, MMMM dd, yyyy"), Font = new Font("Segoe UI", 12.5F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(48, 145), AutoSize = true };
             pnlWorkspace.Controls.Add(lblTime); pnlWorkspace.Controls.Add(lblDate);
-
-            clockTimer = new Timer { Interval = 1000 };
-            clockTimer.Tick += (s, e) => lblTime.Text = DateTime.Now.ToString("HH:mm:ss");
-            clockTimer.Start();
-
-            // 2. Right Quick Guide Area
+            clockTimer = new Timer { Interval = 1000 }; clockTimer.Tick += (s, e) => lblTime.Text = DateTime.Now.ToString("HH:mm:ss"); clockTimer.Start();
             Label lblGuideTitle = new Label { Text = "✨ Premium Living Team Workspace", Font = new Font("Segoe UI", 15F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(450, 50), AutoSize = true };
             Label lblGuide1 = new Label { Text = "☀️ Welcome! Wishing you a smooth, productive, and wonderful shift today!", Font = new Font("Segoe UI", 11.5F), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(450, 105), AutoSize = true };
             Label lblGuide2 = new Label { Text = "🚚 Logistics & Drivers Reminder: Safety first! Please stay alert and drive safely.", Font = new Font("Segoe UI", 11.5F), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(450, 150), AutoSize = true };
             Label lblGuide3 = new Label { Text = "🤝 Missing module access? Contact your Manager or IT Support. We are here to help!", Font = new Font("Segoe UI", 11.5F), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(450, 195), AutoSize = true };
-
             pnlWorkspace.Controls.Add(lblGuideTitle); pnlWorkspace.Controls.Add(lblGuide1); pnlWorkspace.Controls.Add(lblGuide2); pnlWorkspace.Controls.Add(lblGuide3);
-
-            // 3. Decorative Bottom Bar
-            Panel pnlDeco = new Panel { Dock = DockStyle.Bottom, Height = 6, BackColor = Color.FromArgb(79, 70, 229) };
-            pnlWorkspace.Controls.Add(pnlDeco);
+            Panel pnlDeco = new Panel { Dock = DockStyle.Bottom, Height = 6, BackColor = Color.FromArgb(79, 70, 229) }; pnlWorkspace.Controls.Add(pnlDeco);
         }
-        #endregion
 
-        #region 🔒 Shared Account Features (Change Password)
         private void BtnChangeMyPwd_Click(object sender, EventArgs e)
         {
             string loggedInID = UserSession.LoggedInStaffID ?? "S001";
-            Form pwdForm = new Form
-            {
-                Text = "Account Security",
-                Size = new Size(400, 380),
-                StartPosition = FormStartPosition.CenterParent,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false,
-                MinimizeBox = false,
-                BackColor = Color.White
-            };
-
+            Form pwdForm = new Form { Text = "Account Security", Size = new Size(400, 380), StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, BackColor = Color.White };
             Label lblTitle = new Label { Text = $"Update Password for {loggedInID}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(20, 20), AutoSize = true };
             pwdForm.Controls.Add(lblTitle);
-
             Label lblOld = new Label { Text = "Current Password:", Location = new Point(20, 70), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
             TextBox txtOld = new TextBox { Location = new Point(20, 95), Width = 340, PasswordChar = '●', Font = new Font("Segoe UI", 10.5F) };
             pwdForm.Controls.Add(lblOld); pwdForm.Controls.Add(txtOld);
-
             Label lblNew = new Label { Text = "New Password:", Location = new Point(20, 140), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
             TextBox txtNew = new TextBox { Location = new Point(20, 165), Width = 340, PasswordChar = '●', Font = new Font("Segoe UI", 10.5F) };
             pwdForm.Controls.Add(lblNew); pwdForm.Controls.Add(txtNew);
-
             Label lblConfirm = new Label { Text = "Confirm New Password:", Location = new Point(20, 210), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
             TextBox txtConfirm = new TextBox { Location = new Point(20, 235), Width = 340, PasswordChar = '●', Font = new Font("Segoe UI", 10.5F) };
             pwdForm.Controls.Add(lblConfirm); pwdForm.Controls.Add(txtConfirm);
-
             Button btnSubmit = new Button { Text = "Update Password", Location = new Point(20, 285), Size = new Size(340, 40), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnSubmit.FlatAppearance.BorderSize = 0;
-            pwdForm.Controls.Add(btnSubmit);
-
+            btnSubmit.FlatAppearance.BorderSize = 0; pwdForm.Controls.Add(btnSubmit);
             btnSubmit.Click += (s, args) =>
             {
-                if (string.IsNullOrWhiteSpace(txtOld.Text) || string.IsNullOrWhiteSpace(txtNew.Text) || string.IsNullOrWhiteSpace(txtConfirm.Text))
-                {
-                    MessageBox.Show("Please fill in all password fields.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); return;
-                }
-                if (txtNew.Text != txtConfirm.Text)
-                {
-                    MessageBox.Show("New passwords do not match!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); return;
-                }
-
+                if (string.IsNullOrWhiteSpace(txtOld.Text) || string.IsNullOrWhiteSpace(txtNew.Text) || string.IsNullOrWhiteSpace(txtConfirm.Text)) { MessageBox.Show("Please fill in all password fields.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                if (txtNew.Text != txtConfirm.Text) { MessageBox.Show("New passwords do not match!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
                     try
                     {
                         conn.Open();
-                        using (MySqlCommand checkCmd = new MySqlCommand("SELECT COUNT(*) FROM staff WHERE StaffID = @id AND Password = SHA2(@oldPwd, 256)", conn))
+                        using (MySqlCommand checkCmd = new MySqlCommand("SELECT COUNT(*) FROM staff WHERE StaffID=@id AND Password=SHA2(@oldPwd,256)", conn))
                         {
-                            checkCmd.Parameters.AddWithValue("@id", loggedInID);
-                            checkCmd.Parameters.AddWithValue("@oldPwd", txtOld.Text);
-                            if (Convert.ToInt32(checkCmd.ExecuteScalar()) == 0)
-                            {
-                                MessageBox.Show("Incorrect Current Password. Access Denied.", "Security Alert", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return;
-                            }
+                            checkCmd.Parameters.AddWithValue("@id", loggedInID); checkCmd.Parameters.AddWithValue("@oldPwd", txtOld.Text);
+                            if (Convert.ToInt32(checkCmd.ExecuteScalar()) == 0) { MessageBox.Show("Incorrect Current Password. Access Denied.", "Security Alert", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
                         }
-
-                        using (MySqlCommand updateCmd = new MySqlCommand("UPDATE staff SET Password = SHA2(@newPwd, 256) WHERE StaffID = @id", conn))
+                        using (MySqlCommand updateCmd = new MySqlCommand("UPDATE staff SET Password=SHA2(@newPwd,256) WHERE StaffID=@id", conn))
                         {
-                            updateCmd.Parameters.AddWithValue("@id", loggedInID);
-                            updateCmd.Parameters.AddWithValue("@newPwd", txtNew.Text);
-                            updateCmd.ExecuteNonQuery();
+                            updateCmd.Parameters.AddWithValue("@id", loggedInID); updateCmd.Parameters.AddWithValue("@newPwd", txtNew.Text); updateCmd.ExecuteNonQuery();
                         }
-                        MessageBox.Show("Your password has been changed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        pwdForm.Close();
+                        MessageBox.Show("Your password has been changed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information); pwdForm.Close();
                     }
                     catch (Exception ex) { MessageBox.Show("Database error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }
             };
             pwdForm.ShowDialog();
         }
-        #endregion
 
-        #region 🚀 Dynamic Module Loading Engine & Global Layout Fix
         private void LoadModule(Type formType)
         {
             try
@@ -486,47 +320,24 @@ namespace ITP4915M_Group11
                 if (formType == null) return;
                 if (activeForm != null && activeForm.GetType() == formType) return;
                 if (activeForm != null) { activeForm.Close(); activeForm.Dispose(); }
-
                 Form targetForm = (Form)Activator.CreateInstance(formType);
-
-                if (targetForm is ProductCreationBOMForm bomForm)
-                {
-                    bomForm.OnNavigationBack = () => LoadModule(typeof(ProductManagement));
-                }
-
-                targetForm.TopLevel = false;
-                targetForm.FormBorderStyle = FormBorderStyle.None;
-                targetForm.Dock = DockStyle.None;
-                targetForm.Location = new Point(0, 0);
-                targetForm.BackColor = Color.White;
-
-                targetForm.Size = new Size(
-                    Math.Max(pnlContent.Width, 1150),
-                    Math.Max(pnlContent.Height, 800)
-                );
-
-                pnlContent.Controls.Clear();
-                pnlContent.Controls.Add(targetForm);
-                GlobalOptimizeChildForm(targetForm);
-
-                targetForm.Show();
-                activeForm = targetForm;
+                if (targetForm is ProductCreationBOMForm bomForm) { bomForm.OnNavigationBack = () => LoadModule(typeof(ProductManagement)); }
+                targetForm.TopLevel = false; targetForm.FormBorderStyle = FormBorderStyle.None; targetForm.Dock = DockStyle.None;
+                targetForm.Location = new Point(0, 0); targetForm.BackColor = Color.White;
+                targetForm.Size = new Size(Math.Max(pnlContent.Width, 1150), Math.Max(pnlContent.Height, 800));
+                pnlContent.Controls.Clear(); pnlContent.Controls.Add(targetForm); GlobalOptimizeChildForm(targetForm);
+                targetForm.Show(); activeForm = targetForm;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to load module: {formType?.Name}\n{ex.Message}", "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch (Exception ex) { MessageBox.Show($"Failed to load module: {formType?.Name}\n{ex.Message}", "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private void PnlContent_Resize(object sender, EventArgs e)
         {
-            if (activeForm != null)
-            {
-                activeForm.Size = new Size(
-                    Math.Max(pnlContent.Width, 1150),
-                    Math.Max(pnlContent.Height, 800)
-                );
-            }
+            if (activeForm != null) { activeForm.Size = new Size(Math.Max(pnlContent.Width, 1150), Math.Max(pnlContent.Height, 800)); }
+        }
+
+        private void MainDashboard_Load(object sender, EventArgs e)
+        {
         }
 
         private void GlobalOptimizeChildForm(Control parent)
@@ -550,17 +361,14 @@ namespace ITP4915M_Group11
                 }
             }
         }
-        #endregion
+    }
 
-        // 💡 Brushes Cache Optimizer for Drawing
-        public class Brushes
-        {
-            private static Brushes _instance;
-            private System.Collections.Generic.Dictionary<Color, SolidBrush> _cache = new System.Collections.Generic.Dictionary<Color, SolidBrush>();
-            public static Brushes GetInstance() { if (_instance == null) _instance = new Brushes(); return _instance; }
-            public SolidBrush GetColorBrush(Color color) { if (!_cache.ContainsKey(color)) _cache[color] = new SolidBrush(color); return _cache[color]; }
-        }
-
-        private void MainDashboard_Load(object sender, EventArgs e) { }
+    // 💡 類別改名為 ThemeBrushes 防止與 System.Drawing.Brushes 衝突
+    public class ThemeBrushes
+    {
+        private static ThemeBrushes _instance;
+        private Dictionary<Color, SolidBrush> _cache = new Dictionary<Color, SolidBrush>();
+        public static ThemeBrushes GetInstance() { if (_instance == null) _instance = new ThemeBrushes(); return _instance; }
+        public SolidBrush GetColorBrush(Color color) { if (!_cache.ContainsKey(color)) _cache[color] = new SolidBrush(color); return _cache[color]; }
     }
 }
