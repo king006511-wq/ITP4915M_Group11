@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class CustomerManagement : Form
+    public partial class CustomerManagement : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
@@ -19,6 +19,7 @@ namespace ITP4915M_Group11
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 InitializeEnterpriseCRM_UI();
                 LoadData();
                 GenerateCustomerID();
@@ -31,9 +32,9 @@ namespace ITP4915M_Group11
             this.Controls.Clear();
             this.Text = "Premium Living - Enterprise CRM & Customer 360";
             this.Size = new Size(1180, 750);
-            this.BackColor = Color.FromArgb(249, 250, 251);
+            this.BackColor = ThemeManager.PrimaryBackground;
             this.FormBorderStyle = FormBorderStyle.None;
-            this.Font = new Font("Segoe UI", 10F);
+            this.Font = ThemeManager.DefaultFont;
 
             AuthorizationHelper.EnforceRole(this, "Manager", "Administrator", "Sales Representative", "Sales", "Customer Support");
 
@@ -42,8 +43,8 @@ namespace ITP4915M_Group11
             this.Controls.Add(lblHeader);
 
             // --- Left Panel: Customer Profile & Metrics ---
-            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 620), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 620), BackColor = ThemeManager.CardBackground, BorderStyle = BorderStyle.FixedSingle };
+            pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, ThemeManager.BorderColor, ButtonBorderStyle.Solid);
             this.Controls.Add(pnlCard);
 
             Label lblCardTitle = new Label { Text = "📝 Customer Profile", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };

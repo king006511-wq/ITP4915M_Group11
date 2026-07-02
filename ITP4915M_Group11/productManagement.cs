@@ -8,7 +8,7 @@ using MySql.Data.MySqlClient;
 
 namespace ITP4915M_Group11
 {
-    public partial class ProductManagement : Form
+    public partial class ProductManagement : BaseForm
     {
         private TextBox txtProductID;
         private TextBox txtProductName;
@@ -33,9 +33,9 @@ namespace ITP4915M_Group11
             InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 // 先建立 UI，再套用主題
                 InitializePremiumModernUI();
-                ThemeManager.ApplyTheme(this);
 
                 // 強制套用專屬按鈕顏色，蓋過 ThemeManager 的單一設定
                 ApplyButtonColors();

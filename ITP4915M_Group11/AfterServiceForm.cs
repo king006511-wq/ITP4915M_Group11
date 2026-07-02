@@ -43,17 +43,17 @@ namespace ITP4915M_Group11
         private void InitializeEnterpriseHelpdeskUI()
         {
             this.Controls.Clear();
-            this.BackColor = Color.FromArgb(249, 250, 251); // #F9FAFB 極淺灰
-            this.Font = new Font("Segoe UI", 10F);
+            this.BackColor = ThemeManager.PrimaryBackground; // #F9FAFB 極淺灰
+            this.Font = ThemeManager.DefaultFont;
             this.FormBorderStyle = FormBorderStyle.None;
             this.TopLevel = false;
             this.Dock = DockStyle.Fill;
 
-            pnlLeftCard = new Panel { BackColor = Color.White, BorderStyle = BorderStyle.None, AutoScroll = true };
-            pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlLeftCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
+            pnlLeftCard = new Panel { BackColor = ThemeManager.CardBackground, BorderStyle = BorderStyle.None, AutoScroll = true };
+            pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlLeftCard.ClientRectangle, ThemeManager.BorderColor, ButtonBorderStyle.Solid);
             this.Controls.Add(pnlLeftCard);
 
-            Label lblCardTitle = new Label { Text = "🎧 After-Sales Service Center", Font = new Font("Segoe UI", 15F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(25, 25), AutoSize = true };
+            Label lblCardTitle = new Label { Text = "🎧 After-Sales Service Center", Font = new Font("Microsoft JhengHei", 15F, FontStyle.Bold), ForeColor = ThemeManager.AccentStrong, Location = new Point(25, 25), AutoSize = true };
             pnlLeftCard.Controls.Add(lblCardTitle);
 
             int startY = 80; int inputWidth = 350;
@@ -99,10 +99,10 @@ namespace ITP4915M_Group11
             btnSubmit.Click += btnSubmitComplaint_Click; btnClear.Click += (s, e) => ClearFields();
             pnlLeftCard.Controls.Add(btnSubmit); pnlLeftCard.Controls.Add(btnClear);
 
-            lblGridTitle = new Label { Text = "📂 Service Ticket History", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            lblGridTitle = new Label { Text = "📂 Service Ticket History", Font = new Font("Microsoft JhengHei", 20F, FontStyle.Bold), ForeColor = ThemeManager.PrimaryDark, AutoSize = true };
             this.Controls.Add(lblGridTitle);
 
-            txtSearchHistory = new TextBox { Width = 320, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "🔍 Search Ticket ID or Order ID..." };
+            txtSearchHistory = new TextBox { Width = 320, Font = new Font("Microsoft JhengHei", 10.5F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "🔍 Search Ticket ID or Order ID..." };
             txtSearchHistory.GotFocus += (s, e) => { if (txtSearchHistory.Text == "🔍 Search Ticket ID or Order ID...") { txtSearchHistory.Text = ""; txtSearchHistory.ForeColor = Color.Black; } };
             txtSearchHistory.LostFocus += (s, e) => { if (string.IsNullOrWhiteSpace(txtSearchHistory.Text)) { txtSearchHistory.Text = "🔍 Search Ticket ID or Order ID..."; txtSearchHistory.ForeColor = Color.Gray; } };
             txtSearchHistory.TextChanged += txtSearchHistory_TextChanged;
@@ -114,10 +114,10 @@ namespace ITP4915M_Group11
             this.Controls.Add(dgvComplaints);
             StyleGridHeader(dgvComplaints, colorRoyalBlue); // 初始化皇家藍樣式
 
-            lblItemsTitle = new Label { Text = "🛍️ Order Item Details", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            lblItemsTitle = new Label { Text = "🛍️ Order Item Details", Font = new Font("Microsoft JhengHei", 20F, FontStyle.Bold), ForeColor = ThemeManager.PrimaryDark, AutoSize = true };
             this.Controls.Add(lblItemsTitle);
 
-            lblOrderSummary = new Label { Text = "💳 Total Paid: $0.00", Font = new Font("Segoe UI", 11F, FontStyle.Bold), ForeColor = Color.FromArgb(16, 185, 129), AutoSize = true };
+            lblOrderSummary = new Label { Text = "💳 Total Paid: $0.00", Font = new Font("Microsoft JhengHei", 11F, FontStyle.Bold), ForeColor = ThemeManager.Success, AutoSize = true };
             this.Controls.Add(lblOrderSummary);
 
             dgvOrderItems = CreateCleanGrid();
@@ -141,8 +141,8 @@ namespace ITP4915M_Group11
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
             };
             dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
-            dgv.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
-            dgv.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F);
+            dgv.DefaultCellStyle.SelectionForeColor = ThemeManager.PrimaryDark;
+            dgv.DefaultCellStyle.Font = new Font("Microsoft JhengHei", 9.5F);
             return dgv;
         }
 

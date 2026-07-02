@@ -40,6 +40,10 @@ namespace ITP4915M_Group11
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Enterprise ERP Login";
 
+            // Apply theme tokens
+            this.BackColor = ThemeManager.PrimaryBackground;
+            this.Font = ThemeManager.DefaultFont;
+
             // 改為電影感無邊框全螢幕 (Borderless Fullscreen)
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
@@ -49,13 +53,13 @@ namespace ITP4915M_Group11
             pnlCard = new Panel
             {
                 Size = new Size(440, 480),
-                BackColor = Color.White,
+                BackColor = ThemeManager.CardBackground,
                 Padding = new Padding(40)
             };
             this.Controls.Add(pnlCard);
 
             // 頂部琥珀金飾條
-            Panel pnlTopLine = new Panel { Dock = DockStyle.Top, Height = 6, BackColor = Color.FromArgb(245, 158, 11) };
+            Panel pnlTopLine = new Panel { Dock = DockStyle.Top, Height = 6, BackColor = ThemeManager.Warning };
             pnlCard.Controls.Add(pnlTopLine);
 
             int currentY = 40;
@@ -63,9 +67,9 @@ namespace ITP4915M_Group11
             // 品牌 Logo 與標題
             Label lblBrandLogo = new Label { Text = "🛋️", Font = new Font("Segoe UI", 36F), Location = new Point(0, currentY), Size = new Size(440, 60), TextAlign = ContentAlignment.MiddleCenter };
             currentY += 65;
-            Label lblHeader = new Label { Text = "System Login", Font = new Font("Segoe UI", 22F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(0, currentY), Size = new Size(440, 45), TextAlign = ContentAlignment.MiddleCenter };
+            Label lblHeader = new Label { Text = "System Login", Font = new Font("Segoe UI", 22F, FontStyle.Bold), ForeColor = ThemeManager.PrimaryDark, Location = new Point(0, currentY), Size = new Size(440, 45), TextAlign = ContentAlignment.MiddleCenter };
             currentY += 45;
-            Label lblSubHeader = new Label { Text = "Premium Living Furniture Co. Ltd.", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(0, currentY), Size = new Size(440, 20), TextAlign = ContentAlignment.MiddleCenter };
+            Label lblSubHeader = new Label { Text = "Premium Living Furniture Co. Ltd.", Font = new Font("Microsoft JhengHei", 9.5F, FontStyle.Bold), ForeColor = ThemeManager.MutedText, Location = new Point(0, currentY), Size = new Size(440, 20), TextAlign = ContentAlignment.MiddleCenter };
             currentY += 50;
 
             pnlCard.Controls.Add(lblBrandLogo);
@@ -73,15 +77,15 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(lblSubHeader);
 
             // 帳號輸入框
-            Label lblUser = new Label { Text = "USERNAME / STAFF ID", Location = new Point(45, currentY), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtUser = new TextBox { Location = new Point(45, currentY + 20), Width = 350, Font = new Font("Segoe UI", 12F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Username or ID..." };
+            Label lblUser = new Label { Text = "USERNAME / STAFF ID", Location = new Point(45, currentY), AutoSize = true, Font = new Font("Microsoft JhengHei", 8.5F, FontStyle.Bold), ForeColor = ThemeManager.MutedText };
+            txtUser = new TextBox { Location = new Point(45, currentY + 20), Width = 350, Font = new Font("Microsoft JhengHei", 12F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Username or ID..." };
             SetupPlaceholder(txtUser, "Enter Username or ID...", false);
             pnlCard.Controls.Add(lblUser); pnlCard.Controls.Add(txtUser);
             currentY += 75;
 
             // 密碼輸入框
-            Label lblPass = new Label { Text = "PASSWORD", Location = new Point(45, currentY), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            txtPass = new TextBox { Location = new Point(45, currentY + 20), Width = 350, Font = new Font("Segoe UI", 12F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Password..." };
+            Label lblPass = new Label { Text = "PASSWORD", Location = new Point(45, currentY), AutoSize = true, Font = new Font("Microsoft JhengHei", 8.5F, FontStyle.Bold), ForeColor = ThemeManager.MutedText };
+            txtPass = new TextBox { Location = new Point(45, currentY + 20), Width = 350, Font = new Font("Microsoft JhengHei", 12F), BorderStyle = BorderStyle.FixedSingle, ForeColor = Color.Gray, Text = "Enter Password..." };
             SetupPlaceholder(txtPass, "Enter Password...", true);
             pnlCard.Controls.Add(lblPass); pnlCard.Controls.Add(txtPass);
             currentY += 75;

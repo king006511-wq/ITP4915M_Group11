@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class MainDashboard : Form
+    public partial class MainDashboard : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private Form activeForm = null;
@@ -18,7 +18,11 @@ namespace ITP4915M_Group11
 
         public MainDashboard()
         {
-            InitializePremiumContainerUI();
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                ThemeManager.ApplyTheme(this);
+                InitializePremiumContainerUI();
+            }
         }
 
         private void InitializePremiumContainerUI()
@@ -28,17 +32,17 @@ namespace ITP4915M_Group11
             this.Size = new Size(1300, 850);
             this.WindowState = FormWindowState.Maximized;
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(243, 244, 246);
+            this.BackColor = ThemeManager.PrimaryBackground;
             this.FormBorderStyle = FormBorderStyle.Sizable;
 
-            pnlLeftNav = new Panel { Dock = DockStyle.Left, Width = 260, BackColor = Color.FromArgb(15, 23, 42), Padding = new Padding(0, 20, 0, 0) };
+            pnlLeftNav = new Panel { Dock = DockStyle.Left, Width = 260, BackColor = ThemeManager.PrimaryDark, Padding = new Padding(0, 20, 0, 0) };
             Label lblLogo = new Label { Text = "PREMIUM\nLIVING", ForeColor = Color.White, Font = new Font("Segoe UI Black", 18F, FontStyle.Bold), AutoSize = false, Width = 260, Height = 80, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Top };
             pnlLeftNav.Controls.Add(lblLogo);
 
             flpNavMenu = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(10, 20, 0, 20) };
             pnlLeftNav.Controls.Add(flpNavMenu);
 
-            pnlContent = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(243, 244, 246), AutoScroll = true };
+            pnlContent = new Panel { Dock = DockStyle.Fill, BackColor = ThemeManager.PrimaryBackground, AutoScroll = true };
             pnlContent.Resize += PnlContent_Resize;
             this.Controls.Add(pnlContent);
             this.Controls.Add(pnlLeftNav);

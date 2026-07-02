@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class SalesQuotationForm : Form
+    public partial class SalesQuotationForm : BaseForm
     {
         // 🔒 Database Configuration
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
@@ -61,7 +61,7 @@ namespace ITP4915M_Group11
         private void SetupModernUI()
         {
             this.Controls.Clear();
-            this.BackColor = Color.FromArgb(243, 244, 246); // 淺灰底色
+            this.BackColor = ThemeManager.PrimaryBackground;
             this.FormBorderStyle = FormBorderStyle.None;
             this.Dock = DockStyle.Fill;
 

@@ -20,7 +20,7 @@ namespace ITP4915M_Group11
         public string DisplayText => $"[{ID}] {Name}";
     }
 
-    public partial class ProductCreationBOMForm : Form
+    public partial class ProductCreationBOMForm : BaseForm
     {
         // 🔗 Callback delegate to notify parent form to switch views
         public Action OnNavigationBack { get; set; }
@@ -43,6 +43,7 @@ namespace ITP4915M_Group11
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 InitializeComponentDataCart();
                 SetupPremiumCreationUI();
                 LoadRawMaterialsToCombo();
@@ -69,15 +70,15 @@ namespace ITP4915M_Group11
             this.Text = "Premium Living Furniture - Product R&D & BOM Design";
             this.Size = new Size(1150, 720);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            this.BackColor = ThemeManager.PrimaryBackground;
+            this.Font = ThemeManager.DefaultFont;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
 
             Panel pnlMain = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Padding = new Padding(25) };
             this.Controls.Add(pnlMain);
 
-            Label lblHeader = new Label { Text = "✨ Product Development & BOM Setup", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(25, 20), AutoSize = true };
+            Label lblHeader = new Label { Text = "✨ Product Development & BOM Setup", Font = new Font("Microsoft JhengHei", 18F, FontStyle.Bold), ForeColor = ThemeManager.PrimaryDark, Location = new Point(25, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
             // --- 1. Left Panel: Product Profile & Mode Selection ---

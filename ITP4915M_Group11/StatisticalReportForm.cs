@@ -9,7 +9,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class StatisticalReportForm : Form
+    public partial class StatisticalReportForm : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
@@ -25,6 +25,7 @@ namespace ITP4915M_Group11
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 SetupPremiumDashboardUI();
                 EnforceSecurityGatekeeper();
                 LoadAllStatistics();
@@ -53,7 +54,7 @@ namespace ITP4915M_Group11
         {
             this.Controls.Clear();
             this.Text = "Premium Living - Executive Statistical Dashboard";
-            this.BackColor = Color.FromArgb(248, 250, 252); // 採用現代輕奢 Slate 50 背景色
+            this.BackColor = ThemeManager.PrimaryBackground;
             this.FormBorderStyle = FormBorderStyle.None;
             this.Dock = DockStyle.Fill;
 

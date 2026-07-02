@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class GoodsReceivedForm : Form
+    public partial class GoodsReceivedForm : BaseForm
     {
         // ==========================================
         // 🔒 Database Configuration

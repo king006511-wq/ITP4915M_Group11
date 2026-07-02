@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class EmployeeManagement : Form
+    public partial class EmployeeManagement : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
@@ -18,6 +18,7 @@ namespace ITP4915M_Group11
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 InitializeUI();
                 LoadData();
                 ClearForm(); // 載入後自動進入「新增」模式並獲取最新 ID
@@ -29,9 +30,9 @@ namespace ITP4915M_Group11
             this.Controls.Clear();
             this.Text = "Premium Living - Staff Master Data";
             this.Size = new Size(1180, 750);
-            this.BackColor = Color.FromArgb(249, 250, 251);
+            this.BackColor = ThemeManager.PrimaryBackground;
             this.FormBorderStyle = FormBorderStyle.None;
-            this.Font = new Font("Segoe UI", 10F);
+            this.Font = ThemeManager.DefaultFont;
 
             // 權限檢查：只有 Manager 同 Admin 睇到呢版
             AuthorizationHelper.EnforceRole(this, "Manager", "Administrator");

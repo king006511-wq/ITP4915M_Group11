@@ -14,7 +14,7 @@ namespace ITP4915M_Group11
         public decimal StandardCost { get; set; }
     }
 
-    public partial class RawMaterialRequestForm : Form
+    public partial class RawMaterialRequestForm : BaseForm
     {
         // ==========================================
         // 🔒 Database Configuration & Configuration
