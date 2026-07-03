@@ -138,6 +138,10 @@ namespace ITP4915M_Group11
         private void Login_Load(object sender, EventArgs e)
         {
         }
+
+        private void Login_Load_1(object sender, EventArgs e)
+        {
+        }
         #endregion
 
         #region 🌌 日夜交替全螢幕重繪引擎
@@ -181,23 +185,31 @@ namespace ITP4915M_Group11
             int centerY = this.Height + 200; // 降低圓心，擴大拱形拋物線
             int orbitRadius = this.Width / 2 + 150;
 
-            // ☀️ 繪製太陽 (Sun Glow)
+            // ☀️ 繪製太陽 (Sun Glow + Core)
             float sunAngle = timeOffset;
             int sunX = centerX - (int)(Math.Cos(sunAngle) * orbitRadius);
             int sunY = centerY - (int)(Math.Sin(sunAngle) * orbitRadius);
 
-            int sunAlpha = (int)(180 * (1 - ratio));
+            // 提高最高 Alpha 值 (由 180 升至 255)，令太陽更奪目
+            int sunAlpha = (int)(255 * (1 - ratio));
             if (sunAlpha > 0)
             {
+                // 1. 繪製外圍光暈 (擴大範圍至 800px，並調亮顏色)
                 using (GraphicsPath path = new GraphicsPath())
                 {
-                    path.AddEllipse(sunX - 350, sunY - 350, 700, 700); // 放大光暈範圍至 700px 迎合大螢幕
+                    path.AddEllipse(sunX - 400, sunY - 400, 800, 800);
                     using (PathGradientBrush pgb = new PathGradientBrush(path))
                     {
-                        pgb.CenterColor = Color.FromArgb(sunAlpha, 245, 158, 11);
+                        pgb.CenterColor = Color.FromArgb(sunAlpha, 255, 180, 50); // 更明亮嘅琥珀橙金
                         pgb.SurroundColors = new Color[] { Color.Transparent };
                         g.FillPath(pgb, path);
                     }
+                }
+
+                // 2. 繪製實體太陽核心 (令太陽形狀更明顯)
+                using (SolidBrush sunCore = new SolidBrush(Color.FromArgb((int)(sunAlpha * 0.85), 255, 230, 100)))
+                {
+                    g.FillEllipse(sunCore, sunX - 50, sunY - 50, 100, 100);
                 }
             }
 
@@ -211,7 +223,7 @@ namespace ITP4915M_Group11
             {
                 using (GraphicsPath path = new GraphicsPath())
                 {
-                    path.AddEllipse(moonX - 300, moonY - 300, 600, 600); // 放大光暈範圍至 600px
+                    path.AddEllipse(moonX - 300, moonY - 300, 600, 600);
                     using (PathGradientBrush pgb = new PathGradientBrush(path))
                     {
                         pgb.CenterColor = Color.FromArgb(moonAlpha, 186, 230, 253);
@@ -224,7 +236,7 @@ namespace ITP4915M_Group11
         #endregion
 
         // ==========================================
-        // 🚀 Core Enterprise Security Authentication (已融合第一段的高階邏輯)
+        // 🚀 Core Enterprise Security Authentication
         // ==========================================
         private void btnLogin_Click(object sender, EventArgs e)
         {
@@ -245,7 +257,7 @@ namespace ITP4915M_Group11
                 {
                     conn.Open();
 
-                    // 🌟 完美優化：加上 Department 欄位一併抽出 (來自 V1)
+                    // 🌟 保持讀取 Department 欄位一併抽出 (供 Session 使用)
                     string loginQuery = "SELECT StaffID, Name, Role, Department FROM staff WHERE StaffID = @user AND Password = SHA2(@pass,256)";
 
                     using (MySqlCommand cmd = new MySqlCommand(loginQuery, conn))
@@ -261,16 +273,14 @@ namespace ITP4915M_Group11
                                 UserSession.LoggedInStaffID = reader["StaffID"].ToString();
                                 UserSession.LoggedInStaffName = reader["Name"] != DBNull.Value ? reader["Name"].ToString() : "Unknown";
                                 UserSession.LoggedInStaffRole = reader["Role"] != DBNull.Value ? reader["Role"].ToString().Trim() : "";
-
-                                // 🌟 完美優化：直接從 Database 讀取最新嘅所屬部門 (來自 V1)
                                 UserSession.LoggedInDepartment = reader["Department"] != DBNull.Value ? reader["Department"].ToString().Trim() : "General";
-
                                 UserSession.LoginTime = DateTime.Now;
 
                                 // 登入成功後停止背景動畫以節省效能
                                 if (animTimer != null) animTimer.Stop();
 
-                                MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName}\nRole: {UserSession.LoggedInStaffRole}\nDepartment: {UserSession.LoggedInDepartment}", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                // 🌟 移除 Department 顯示，只顯示名字與職位
+                                MessageBox.Show($"Authentication Success!\nWelcome back, {UserSession.LoggedInStaffName}\nRole: {UserSession.LoggedInStaffRole}", "Access Granted", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                                 // 跳轉至主控制面板
                                 MainDashboard dashboard = new MainDashboard();
@@ -290,7 +300,6 @@ namespace ITP4915M_Group11
                 }
                 catch (Exception ex)
                 {
-                    // 🌟 更詳盡嘅錯誤訊息 (來自 V1)
                     MessageBox.Show("Database Connectivity Error:\nUnable to reach the authentication server. Please contact IT Support.\n\nLogs: " + ex.Message, "System Infrastructure Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }

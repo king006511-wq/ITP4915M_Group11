@@ -12,7 +12,7 @@ namespace ITP4915M_Group11
     {
         private TextBox txtProductID;
         private TextBox txtProductName;
-        private TextBox txtDescription;
+        private TextBox txtSearch;
         private TextBox txtStockLevel;
         private TextBox txtRetailPrice;
         private DataGridView dgvProductCatalog;
@@ -138,14 +138,10 @@ namespace ITP4915M_Group11
             txtStockLevel = CreateStyledTextBox(pnlCard, ref startY, "Stock Level:", false);
             txtRetailPrice = CreateStyledTextBox(pnlCard, ref startY, "Retail Price (HKD):", false);
 
-            Label lblDesc = new Label { Text = "🔍 Live Form Search Filter keyword:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229) };
-            txtDescription = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 70, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
-            txtDescription.TextChanged += txtDescription_TextChanged;
-            pnlCard.Controls.Add(lblDesc);
-            pnlCard.Controls.Add(txtDescription);
-            startY += 105;
+            // 微調按鈕間距
+            startY += 15;
 
-            // 🎨 初始化各種操作按鈕
+            // 🎨 初始化各種操作按鈕 (已向上移緊湊排版)
             btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(20, startY), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(195, startY), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnUpdate = new Button { Text = "💾 Update", Location = new Point(20, startY + 50), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
@@ -161,7 +157,6 @@ namespace ITP4915M_Group11
             btnDelete.Click += btnDelete_Click;
 
             btnClear.Click += (s, e) => {
-                txtDescription.Clear();
                 ClearFields();
             };
 
@@ -169,9 +164,19 @@ namespace ITP4915M_Group11
             Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(440, 85), AutoSize = true };
             pnlMain.Controls.Add(lblGridTitle);
 
-            Label lblWarningLegend = new Label { Text = "🚨 Alert: Rows highlighted in RED indicate Low Stock (Below 20 units)", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), Location = new Point(440, 115), AutoSize = true };
+            // 🔍 搜尋功能組件：✅ 已移上一行與標題並排，解決撞位問題
+            Label lblSearch = new Label { Text = "🔍 Search:", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(865, 88), AutoSize = true };
+            pnlMain.Controls.Add(lblSearch);
+
+            txtSearch = new TextBox { Location = new Point(950, 85), Width = 190, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
+            txtSearch.TextChanged += txtSearch_TextChanged;
+            pnlMain.Controls.Add(txtSearch);
+
+            // 🚨 庫存警告標籤：✅ 獨佔一行，不會再與 Search 重疊
+            Label lblWarningLegend = new Label { Text = "🚨 Alert: Rows highlighted in RED indicate Low Stock (Below 20 units)", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), Location = new Point(440, 118), AutoSize = true };
             pnlMain.Controls.Add(lblWarningLegend);
 
+            // DataGridView 設置
             dgvProductCatalog = new DataGridView
             {
                 Location = new Point(440, 145),
@@ -186,7 +191,6 @@ namespace ITP4915M_Group11
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
             dgvProductCatalog.EnableHeadersVisualStyles = false;
-            // DataGrid Header 都同步改成 Indigo 主色，互相呼應
             dgvProductCatalog.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(79, 70, 229);
             dgvProductCatalog.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvProductCatalog.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
@@ -213,6 +217,28 @@ namespace ITP4915M_Group11
         #endregion
 
         #region 📦 Business Management Logic Functions
+
+        private void ApplySearchFilter()
+        {
+            if (dgvProductCatalog.DataSource is DataTable dt)
+            {
+                string keyword = txtSearch.Text.Trim().Replace("'", "''");
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    dt.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    dt.DefaultView.RowFilter = string.Format("[Product ID] LIKE '%{0}%' OR [Name] LIKE '%{0}%'", keyword);
+                }
+            }
+        }
+
+        private void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            ApplySearchFilter();
+        }
+
         private void LoadDatabaseData()
         {
             try
@@ -226,6 +252,8 @@ namespace ITP4915M_Group11
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
                         dgvProductCatalog.DataSource = dt;
+
+                        ApplySearchFilter();
                     }
                 }
             }
@@ -259,22 +287,6 @@ namespace ITP4915M_Group11
             }
         }
 
-        private void txtDescription_TextChanged(object sender, EventArgs e)
-        {
-            if (dgvProductCatalog.DataSource is DataTable dt)
-            {
-                string keyword = txtDescription.Text.Trim().Replace("'", "''");
-                if (string.IsNullOrWhiteSpace(keyword))
-                {
-                    dt.DefaultView.RowFilter = "";
-                }
-                else
-                {
-                    dt.DefaultView.RowFilter = string.Format("[Product ID] LIKE '%{0}%' OR [Name] LIKE '%{0}%'", keyword);
-                }
-            }
-        }
-
         private void dgvProductCatalog_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvProductCatalog.SelectedRows.Count > 0)
@@ -293,7 +305,6 @@ namespace ITP4915M_Group11
             }
         }
 
-        // ✨ 參考 PHP 邏輯：手動揀相 -> 自動搬運去 Folder + 自動改名 + 刪舊相
         private void btnUploadPhoto_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtProductID.Text))
@@ -305,7 +316,6 @@ namespace ITP4915M_Group11
             string productID = txtProductID.Text.Trim();
             string targetFolder = Path.Combine(Application.StartupPath, "ProductImages");
 
-            // 確保目標資料夾存在
             if (!Directory.Exists(targetFolder))
             {
                 Directory.CreateDirectory(targetFolder);
@@ -320,15 +330,13 @@ namespace ITP4915M_Group11
                 {
                     try
                     {
-                        // 1. 搵出目標資料夾入面，所有同呢個 Product ID 撞名嘅舊相，然後刪除 (對應 PHP 嘅 glob + unlink)
                         string[] oldFiles = Directory.GetFiles(targetFolder, $"{productID}.*");
                         foreach (string oldFile in oldFiles)
                         {
                             File.Delete(oldFile);
                         }
 
-                        // 2. 將 User 揀嘅新相，複製去目標資料夾，並自動改名做 ProductID
-                        string extension = Path.GetExtension(ofd.FileName); // 拎返原本副檔名 (例如 .jpg)
+                        string extension = Path.GetExtension(ofd.FileName);
                         string newFilePath = Path.Combine(targetFolder, $"{productID}{extension}");
 
                         File.Copy(ofd.FileName, newFilePath);
@@ -343,7 +351,6 @@ namespace ITP4915M_Group11
             }
         }
 
-        // ✨ View Photo 功能更新：對應 PHP 嘅 glob，自動 Scan 任何副檔名嘅相
         private void btnViewPhoto_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtProductID.Text))
@@ -377,14 +384,12 @@ namespace ITP4915M_Group11
 
                 if (Directory.Exists(folderPath))
                 {
-                    // 參考 PHP glob：喺 Folder 度搵任何開頭係 ProductID 嘅檔案，唔理佢係 jpg 定 png
                     string[] matchingFiles = Directory.GetFiles(folderPath, $"{productID}.*");
 
                     if (matchingFiles.Length > 0)
                     {
                         try
                         {
-                            // Load 第一張搵到嘅相
                             byte[] bytes = File.ReadAllBytes(matchingFiles[0]);
                             using (MemoryStream ms = new MemoryStream(bytes))
                             {
@@ -472,7 +477,6 @@ namespace ITP4915M_Group11
                         int dynamicRows = cmd.ExecuteNonQuery();
                         if (dynamicRows > 0)
                         {
-                            // ✨ 同步刪除埋張相 (對應 PHP 嘅 unlink)
                             string targetFolder = Path.Combine(Application.StartupPath, "ProductImages");
                             if (Directory.Exists(targetFolder))
                             {

@@ -32,6 +32,10 @@ namespace ITP4915M_Group11
         private DataGridView custom_dgvRawMaterialStock;
         private Button custom_btnCalculate, custom_btnManufacture, custom_btnClear;
 
+        // 🔍 搜尋區塊 UI 變數
+        private TextBox custom_txtSearch;
+        private Label custom_lblSearch;
+
         public ProductManufacturingForm()
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
@@ -145,6 +149,14 @@ namespace ITP4915M_Group11
             Label lblGridTitle = new Label { Name = "lblGridTitle", Text = "📦 Raw Material Inventory Monitor", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(lblGridTitle);
 
+            // 🔍 新增：搜尋標籤與輸入框
+            custom_lblSearch = new Label { Name = "lblSearch", Text = "🔍 Search Material:", Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), AutoSize = true };
+            custom_txtSearch = new TextBox { Name = "txtSearch", Width = 300, Font = new Font("Segoe UI", 11F), BorderStyle = BorderStyle.FixedSingle };
+            custom_txtSearch.TextChanged += custom_txtSearch_TextChanged; // 綁定搜尋事件
+
+            this.Controls.Add(custom_lblSearch);
+            this.Controls.Add(custom_txtSearch);
+
             custom_dgvRawMaterialStock = new DataGridView
             {
                 Name = "dgvStock",
@@ -189,10 +201,17 @@ namespace ITP4915M_Group11
 
             if (rightWidth > 100)
             {
+                // 標題位置
                 this.Controls["lblGridTitle"].Location = new Point(rightStartX, 20);
+
+                // 🔍 更新搜尋框位置 (動態根據 Label 嘅 Right 屬性計算，防止撞位)
+                custom_lblSearch.Location = new Point(rightStartX, 58);
+                custom_txtSearch.Location = new Point(custom_lblSearch.Right + 10, 55);
+
+                // 更新 DataGridView 位置與大小，預留空間給搜尋框
                 DataGridView dgvStock = (DataGridView)this.Controls["dgvStock"];
-                dgvStock.Location = new Point(rightStartX, 55);
-                dgvStock.Size = new Size(rightWidth, this.Height - 75);
+                dgvStock.Location = new Point(rightStartX, 95);
+                dgvStock.Size = new Size(rightWidth, this.Height - 115);
             }
             this.ResumeLayout(false);
         }
@@ -211,6 +230,35 @@ namespace ITP4915M_Group11
                         custom_dgvRawMaterialStock.Rows[e.RowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(185, 28, 28);
                         custom_dgvRawMaterialStock.Rows[e.RowIndex].DefaultCellStyle.Font = new Font(custom_dgvRawMaterialStock.Font, FontStyle.Bold);
                     }
+                }
+            }
+        }
+        #endregion
+
+        #region 🔍 搜尋邏輯
+        private void custom_txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            // 確保 DataGridView 有資料且綁定的是 DataTable
+            if (custom_dgvRawMaterialStock.DataSource is DataTable dt)
+            {
+                // 1. 過濾單引號避免 SQL Injection / 語法錯誤
+                string keyword = custom_txtSearch.Text.Trim().Replace("'", "''");
+
+                // 2. 過濾 RowFilter 保留字元 (防彈修正，避免 Crash)
+                keyword = keyword.Replace("[", "[[]")
+                                 .Replace("]", "[]]")
+                                 .Replace("*", "[*]")
+                                 .Replace("%", "[%]");
+
+                if (string.IsNullOrEmpty(keyword))
+                {
+                    // 清空搜尋時顯示全部
+                    dt.DefaultView.RowFilter = string.Empty;
+                }
+                else
+                {
+                    // 支援用 Material ID 或 Material Name 進行模糊搜尋 (LIKE)
+                    dt.DefaultView.RowFilter = $"Convert([Material ID], 'System.String') LIKE '%{keyword}%' OR [Material Name] LIKE '%{keyword}%'";
                 }
             }
         }
@@ -265,6 +313,9 @@ namespace ITP4915M_Group11
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
                         custom_dgvRawMaterialStock.DataSource = dt;
+
+                        // 若搜尋框已有文字，重新載入庫存時套用目前的搜尋條件
+                        custom_txtSearch_TextChanged(null, null);
                     }
                 }
                 catch (Exception ex)
@@ -433,6 +484,7 @@ namespace ITP4915M_Group11
             custom_dgvBOMRequirements.DataSource = null;
             custom_btnManufacture.Enabled = false;
             custom_btnManufacture.BackColor = Color.LightGray;
+            custom_txtSearch.Clear(); // 清空搜尋框
         }
         #endregion
     }

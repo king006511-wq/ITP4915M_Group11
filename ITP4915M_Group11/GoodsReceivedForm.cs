@@ -24,6 +24,10 @@ namespace ITP4915M_Group11
         private Panel pnlLeftCard;
         private Label lblGridTitle;
 
+        // 🔍 新增搜尋控制項 (統一為 Live Search)
+        private TextBox txtSearch;
+        private Label lblSearch;
+
         public GoodsReceivedForm()
         {
             InitializeComponent();
@@ -67,7 +71,7 @@ namespace ITP4915M_Group11
         {
             this.Controls.Clear();
             this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular); // 全局字體調整為標準大細
+            this.Font = new Font("Segoe UI", 10.5F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.None;
             this.TopLevel = false;
             this.Dock = DockStyle.Fill;
@@ -88,7 +92,7 @@ namespace ITP4915M_Group11
             pnlLeftCard.Controls.Add(lblCardTitle);
 
             int startY = 65;
-            int inputWidth = 350; // 輸入框微調
+            int inputWidth = 350;
 
             txtGRNID = CreateStyledTextBox(pnlLeftCard, ref startY, "GRN Document ID:", true, inputWidth);
             txtPOID = CreateStyledTextBox(pnlLeftCard, ref startY, "Purchase Order ID:", true, inputWidth);
@@ -107,10 +111,19 @@ namespace ITP4915M_Group11
             pnlLeftCard.Controls.Add(btnConfirmReceive); pnlLeftCard.Controls.Add(btnClear);
 
             // =========================================================
-            // 【右側】數據表格與標題 (精緻商務化)
+            // 【右側】數據表格與標題 (精緻商務化) + Live Search 功能
             // =========================================================
             lblGridTitle = new Label { Text = "📥 Pending Purchase Orders (Incoming)", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(lblGridTitle);
+
+            // --- 🔍 統一 Live Search UI ---
+            lblSearch = new Label { Text = "🔍 Live Search (PO / Material):", Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), AutoSize = true };
+            txtSearch = new TextBox { Width = 350, Font = new Font("Segoe UI", 11F), BorderStyle = BorderStyle.FixedSingle };
+            txtSearch.TextChanged += TxtSearch_TextChanged; // 綁定即時搜尋事件
+
+            this.Controls.Add(lblSearch);
+            this.Controls.Add(txtSearch);
+            // --- 搜尋 UI 完結 ---
 
             dgvPOItems = new DataGridView
             {
@@ -130,15 +143,15 @@ namespace ITP4915M_Group11
             // 📉 縮減大細：打造俐落舒適嘅閱讀感
             dgvPOItems.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             dgvPOItems.DefaultCellStyle.Padding = new Padding(8);
-            dgvPOItems.DefaultCellStyle.Font = new Font("Segoe UI", 11F, FontStyle.Regular); // 調整為 11pt
-            dgvPOItems.RowTemplate.Height = 36; // 行高由 55px 修正為標準黃金比例 36px
+            dgvPOItems.DefaultCellStyle.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
+            dgvPOItems.RowTemplate.Height = 36;
 
             dgvPOItems.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             dgvPOItems.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvPOItems.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvPOItems.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold); // 表頭微調
+            dgvPOItems.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold);
             dgvPOItems.ColumnHeadersDefaultCellStyle.Padding = new Padding(8);
-            dgvPOItems.ColumnHeadersHeight = 42; // 表頭厚度調整至 42px
+            dgvPOItems.ColumnHeadersHeight = 42;
 
             dgvPOItems.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
             dgvPOItems.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
@@ -153,7 +166,7 @@ namespace ITP4915M_Group11
             TextBox txt = new TextBox { Location = new Point(22, topY + 24), Width = width, Font = new Font("Segoe UI", 11F), BorderStyle = BorderStyle.FixedSingle };
             if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
             container.Controls.Add(lbl); container.Controls.Add(txt);
-            topY += 75; // 元件間距由 85 縮窄到 75，介面更緊湊
+            topY += 75;
             return txt;
         }
 
@@ -163,7 +176,7 @@ namespace ITP4915M_Group11
         }
 
         /// <summary>
-        /// 🛠️ 鋼鐵動態佈局：不依賴 Dock，完全用像素公式精確定位
+        /// 🛠️ 鋼鐵動態佈局：動態精確定位，防止 Search Bar 同 Emoji 撞埋一齊
         /// </summary>
         private void RecalculateCustomLayout()
         {
@@ -184,11 +197,21 @@ namespace ITP4915M_Group11
                 // 3. 固定標題
                 lblGridTitle.Location = new Point(rightStartX, 20);
 
-                // 4. 右側表格動態拉大填滿，精準漂亮
-                dgvPOItems.Location = new Point(rightStartX, 55);
-                dgvPOItems.Size = new Size(rightWidth, this.Height - 75);
+                // 4. 固定 Live Search UI 位置 (完美避開重疊)
+                if (txtSearch != null && lblSearch != null)
+                {
+                    int searchY = 60;
+                    lblSearch.Location = new Point(rightStartX, searchY + 3);
+                    // 根據 Label 嘅實際闊度，將 TextBox 擺喺佢右邊 10px 距離
+                    txtSearch.Location = new Point(lblSearch.Right + 10, searchY);
+                }
 
-                // 5. 自動平分欄位
+                // 5. 右側表格動態拉大填滿，預留位畀 Search Bar
+                int dgvStartY = 100;
+                dgvPOItems.Location = new Point(rightStartX, dgvStartY);
+                dgvPOItems.Size = new Size(rightWidth, this.Height - dgvStartY - 20);
+
+                // 6. 自動平分欄位
                 if (dgvPOItems.Columns.Count > 0)
                 {
                     dgvPOItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
@@ -198,11 +221,6 @@ namespace ITP4915M_Group11
 
             this.ResumeLayout(false);
         }
-
-        private void GoodsReceivedForm_Load_1(object sender, EventArgs e)
-        {
-
-        }
         #endregion
 
         #region 💾 資料庫連線與核心邏輯
@@ -211,6 +229,7 @@ namespace ITP4915M_Group11
             txtGRNID.Text = "GRN" + DateTime.Now.ToString("MMddHHmmss");
         }
 
+        // 🌟 移除咗複雜嘅參數，統一 Load 晒 Data 入 DataTable 再畀 Search Bar 過濾
         private void LoadActivePurchaseOrders()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -231,7 +250,8 @@ namespace ITP4915M_Group11
                         WHERE po.Status != 'Received'
                         ORDER BY po.PODate DESC";
 
-                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
                     {
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
@@ -250,6 +270,12 @@ namespace ITP4915M_Group11
                             dgvPOItems.Columns["Material Name"].MinimumWidth = 180;
                         }
 
+                        // 如果載入完 Data 發現 Search Box 有字，即刻行一次過濾
+                        if (txtSearch != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
+                        {
+                            TxtSearch_TextChanged(null, null);
+                        }
+
                         RecalculateCustomLayout();
                         dgvPOItems.ClearSelection();
                     }
@@ -257,6 +283,25 @@ namespace ITP4915M_Group11
                 catch (Exception ex)
                 {
                     MessageBox.Show("Failed to load PO data:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        // 🌟 新增 Live Search 過濾邏輯
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvPOItems.DataSource is DataTable dt)
+            {
+                string keyword = txtSearch.Text.Trim().Replace("'", "''"); // 防止 SQL 單引號報錯
+
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    dt.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    // 根據表格顯示嘅欄位名稱做過濾
+                    dt.DefaultView.RowFilter = $"[PO Number] LIKE '%{keyword}%' OR [Material ID] LIKE '%{keyword}%' OR [Material Name] LIKE '%{keyword}%'";
                 }
             }
         }
@@ -335,6 +380,7 @@ namespace ITP4915M_Group11
                             MessageBox.Show($"Inventory ingestion transaction committed successfully!\n\nGRN ID: {grnID}\nMaterial ID [{materialID}] stock level successfully increased by {qty} units.", "Ingestion Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                             ClearFields();
+                            // 重新載入，TextBox 嗰邊如果有字會自動經 TextChanged 再 Filter 過
                             LoadActivePurchaseOrders();
                         }
                         catch (Exception ex)

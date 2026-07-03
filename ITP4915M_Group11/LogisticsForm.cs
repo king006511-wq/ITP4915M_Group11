@@ -11,11 +11,12 @@ namespace ITP4915M_Group11
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private string currentStaffID;
+
         private DataGridView dgvPendingOrders;
         private TextBox txtOrderID, txtCustomerID, txtDeliveryAddress, txtCurrentStatus;
         private ComboBox cboDeliveryStaff;
         private DateTimePicker dtpScheduleDate;
-        private Button btnAssignDelivery, btnUpdateStatus, btnGenerateNote, btnClearFields;
+        private TextBox txtSearch;
 
         public LogisticsForm()
         {
@@ -24,178 +25,138 @@ namespace ITP4915M_Group11
 
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                InitializePremiumModernUI();
+                InitializeUI();
                 LoadDeliveryStaff();
-                RefreshPendingOrdersGrid();
-
-                bool isLogistics = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.LogisticsDriver);
-                bool isAdminOrManager = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Administrator);
-
-                btnAssignDelivery.Enabled = isLogistics || isAdminOrManager;
-                btnUpdateStatus.Enabled = isLogistics || isAdminOrManager;
-                btnGenerateNote.Enabled = isLogistics || isAdminOrManager;
+                LoadData();
+                ClearForm();
             }
         }
 
-        private void InitializePremiumModernUI()
+        private void InitializeUI()
         {
             this.Controls.Clear();
-            this.BackColor = Color.FromArgb(241, 245, 249);
+            this.Text = "Premium Living - Logistics Management";
+            this.Size = new Size(1180, 750);
+            this.BackColor = Color.FromArgb(249, 250, 251);
             this.FormBorderStyle = FormBorderStyle.None;
+            this.Font = new Font("Segoe UI", 10F);
 
-            TableLayoutPanel mainTable = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-                BackColor = Color.Transparent
-            };
-            mainTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
-            mainTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            this.Controls.Add(mainTable);
+            // 標題
+            Label lblHeader = new Label { Text = "🚚 Logistics Dispatch & Delivery Management", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
+            this.Controls.Add(lblHeader);
 
-            Panel pnlHeader = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
-            Label lblModuleTitle = new Label
-            {
-                Text = "Logistics Dispatch & Delivery Management",
-                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(20, 20),
-                AutoSize = true
-            };
-            pnlHeader.Controls.Add(lblModuleTitle);
-            mainTable.Controls.Add(pnlHeader, 0, 0);
+            // 左側卡片 
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 600), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            this.Controls.Add(pnlCard);
 
-            TableLayoutPanel contentTable = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 1,
-                Margin = new Padding(20, 0, 20, 20)
-            };
-            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 360F));
-            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
-            contentTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            mainTable.Controls.Add(contentTable, 0, 1);
+            int startY = 20;
 
-            Panel pnlInputs = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, AutoScroll = true, Padding = new Padding(20) };
-            pnlInputs.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlInputs.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
-            contentTable.Controls.Add(pnlInputs, 0, 0);
+            // 表單輸入區
+            txtOrderID = CreateReadOnlyInput(pnlCard, ref startY, "Target Order ID:");
+            txtCustomerID = CreateReadOnlyInput(pnlCard, ref startY, "Customer ID:");
 
-            dgvPendingOrders = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AllowUserToAddRows = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                Font = new Font("Segoe UI", 9.5F),
-                ReadOnly = true
-            };
-            dgvPendingOrders.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
-            dgvPendingOrders.SelectionChanged += dgvPendingOrders_SelectionChanged;
-            contentTable.Controls.Add(dgvPendingOrders, 2, 0);
+            Label lblAddress = new Label { Text = "Destination Address:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            txtDeliveryAddress = new TextBox { Location = new Point(20, startY + 22), Width = 335, Height = 60, Multiline = true, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, ReadOnly = true, BackColor = Color.FromArgb(241, 245, 249) };
+            pnlCard.Controls.Add(lblAddress); pnlCard.Controls.Add(txtDeliveryAddress);
+            startY += 95;
 
-            int currentY = 15;
-            int inputWidth = 300;
+            txtCurrentStatus = CreateReadOnlyInput(pnlCard, ref startY, "Current State:");
 
-            Label lblOrderID = new Label { Text = "Target Order ID", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, currentY), AutoSize = true };
-            txtOrderID = new TextBox { Location = new Point(15, currentY + 25), Size = new Size(inputWidth, 30), Font = new Font("Segoe UI", 10F), ReadOnly = true, BackColor = Color.FromArgb(241, 245, 249) };
-            pnlInputs.Controls.Add(lblOrderID);
-            pnlInputs.Controls.Add(txtOrderID);
-            currentY += 65;
+            Label lblStaff = new Label { Text = "Assign Delivery Team *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboDeliveryStaff = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
+            pnlCard.Controls.Add(lblStaff); pnlCard.Controls.Add(cboDeliveryStaff);
+            startY += 70;
 
-            Label lblCust = new Label { Text = "Customer ID", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, currentY), AutoSize = true };
-            txtCustomerID = new TextBox { Location = new Point(15, currentY + 25), Size = new Size(inputWidth, 30), Font = new Font("Segoe UI", 10F), ReadOnly = true, BackColor = Color.White };
-            pnlInputs.Controls.Add(lblCust);
-            pnlInputs.Controls.Add(txtCustomerID);
-            currentY += 65;
+            // 🌟 修正運送時間：改為今日起就可以運送 (MinDate = DateTime.Today)
+            Label lblDate = new Label { Text = "Scheduled Date *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            dtpScheduleDate = new DateTimePicker { Location = new Point(20, startY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), Format = DateTimePickerFormat.Short, MinDate = DateTime.Today };
+            pnlCard.Controls.Add(lblDate); pnlCard.Controls.Add(dtpScheduleDate);
+            startY += 70;
 
-            Label lblAddress = new Label { Text = "Destination Address", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, currentY), AutoSize = true };
-            txtDeliveryAddress = new TextBox { Location = new Point(15, currentY + 25), Size = new Size(inputWidth, 55), Font = new Font("Segoe UI", 10F), Multiline = true, ReadOnly = true, BackColor = Color.White };
-            pnlInputs.Controls.Add(lblAddress);
-            pnlInputs.Controls.Add(txtDeliveryAddress);
-            currentY += 95;
+            // 按鈕權限控制
+            bool isLogistics = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.LogisticsDriver);
+            bool isAdminOrManager = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Administrator) || AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager);
+            bool actionEnabled = isLogistics || isAdminOrManager;
 
-            Label lblStatus = new Label { Text = "Current State", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, currentY), AutoSize = true };
-            txtCurrentStatus = new TextBox { Location = new Point(15, currentY + 25), Size = new Size(inputWidth, 30), Font = new Font("Segoe UI", 10F), ReadOnly = true, BackColor = Color.FromArgb(241, 245, 249) };
-            pnlInputs.Controls.Add(lblStatus);
-            pnlInputs.Controls.Add(txtCurrentStatus);
-            currentY += 65;
+            Button btnAssignDelivery = new Button { Text = "📦 Dispatch Order", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(14, 165, 233), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Enabled = actionEnabled, Cursor = Cursors.Hand };
+            Button btnUpdateStatus = new Button { Text = "✅ Mark Delivered", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Enabled = actionEnabled, Cursor = Cursors.Hand };
+            Button btnGenerateNote = new Button { Text = "📄 Generate Note & Reply Slip", Location = new Point(20, startY + 50), Size = new Size(335, 40), BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Enabled = actionEnabled, Cursor = Cursors.Hand };
+            Button btnClearFields = new Button { Text = "🧹 Reset Form", Location = new Point(20, startY + 100), Size = new Size(335, 40), BackColor = Color.FromArgb(100, 116, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
 
-            Label lblStaff = new Label { Text = "Assign Delivery Team *", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, currentY), AutoSize = true };
-            cboDeliveryStaff = new ComboBox { Location = new Point(15, currentY + 25), Size = new Size(inputWidth, 30), Font = new Font("Segoe UI", 10F), DropDownStyle = ComboBoxStyle.DropDownList };
-            pnlInputs.Controls.Add(lblStaff);
-            pnlInputs.Controls.Add(cboDeliveryStaff);
-            currentY += 65;
+            foreach (Button b in new Button[] { btnAssignDelivery, btnUpdateStatus, btnGenerateNote, btnClearFields }) b.FlatAppearance.BorderSize = 0;
 
-            Label lblDate = new Label { Text = "Scheduled Date *", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(15, currentY), AutoSize = true };
-
-            // 【修改位置：加入 MinDate = DateTime.Today 限制使用者無法選擇過去的日期】
-            dtpScheduleDate = new DateTimePicker
-            {
-                Location = new Point(15, currentY + 25),
-                Size = new Size(inputWidth, 30),
-                Font = new Font("Segoe UI", 10F),
-                Format = DateTimePickerFormat.Short,
-                MinDate = DateTime.Today
-            };
-            pnlInputs.Controls.Add(lblDate);
-            pnlInputs.Controls.Add(dtpScheduleDate);
-            currentY += 75;
-
-            btnAssignDelivery = new Button { Text = "Dispatch Order", Location = new Point(15, currentY), Size = new Size(140, 35), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(14, 165, 233), Cursor = Cursors.Hand };
-            btnAssignDelivery.FlatAppearance.BorderSize = 0;
             btnAssignDelivery.Click += btnAssignDelivery_Click;
-
-            btnUpdateStatus = new Button { Text = "Mark Delivered", Location = new Point(175, currentY), Size = new Size(140, 35), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(16, 185, 129), Cursor = Cursors.Hand };
-            btnUpdateStatus.FlatAppearance.BorderSize = 0;
             btnUpdateStatus.Click += btnUpdateStatus_Click;
-            currentY += 45;
-
-            btnGenerateNote = new Button { Text = "✨ Generate Note & Reply Slip", Location = new Point(15, currentY), Size = new Size(300, 40), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(79, 70, 229), Cursor = Cursors.Hand };
-            btnGenerateNote.FlatAppearance.BorderSize = 0;
             btnGenerateNote.Click += btnGenerateNote_Click;
-            currentY += 50;
+            btnClearFields.Click += (s, e) => ClearForm();
 
-            btnClearFields = new Button { Text = "Reset Form", Location = new Point(15, currentY), Size = new Size(300, 35), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), BackColor = Color.FromArgb(226, 232, 240), Cursor = Cursors.Hand };
-            btnClearFields.FlatAppearance.BorderSize = 0;
-            btnClearFields.Click += (s, e) => ClearLogisticsFields();
+            pnlCard.Controls.AddRange(new Control[] { btnAssignDelivery, btnUpdateStatus, btnGenerateNote, btnClearFields });
 
-            pnlInputs.Controls.Add(btnAssignDelivery);
-            pnlInputs.Controls.Add(btnUpdateStatus);
-            pnlInputs.Controls.Add(btnGenerateNote);
-            pnlInputs.Controls.Add(btnClearFields);
+            // 🌟 修正排版：將 txtSearch 移過少少 (X 由 680 改為 710)，闊度縮少少 (460 改為 430)，避免同 Label 重疊
+            Label lblSearch = new Label { Text = "🔍 Live Search (Order / Customer):", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(440, 52), AutoSize = true };
+            txtSearch = new TextBox { Location = new Point(710, 48), Width = 430, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            txtSearch.TextChanged += TxtSearch_TextChanged;
+            this.Controls.Add(lblSearch);
+            this.Controls.Add(txtSearch);
+
+            // 右側 DataGridView
+            dgvPendingOrders = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 600), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            dgvPendingOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
+            dgvPendingOrders.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvPendingOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvPendingOrders.RowsDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+
+            dgvPendingOrders.SelectionChanged += dgvPendingOrders_SelectionChanged;
+            this.Controls.Add(dgvPendingOrders);
+        }
+
+        private TextBox CreateReadOnlyInput(Panel container, ref int y, string label)
+        {
+            Label lbl = new Label { Text = label, Location = new Point(20, y), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(20, y + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle, ReadOnly = true, BackColor = Color.FromArgb(241, 245, 249) };
+            container.Controls.Add(lbl); container.Controls.Add(txt);
+            y += 65; return txt;
+        }
+
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvPendingOrders.DataSource is DataTable dt)
+            {
+                string keyword = txtSearch.Text.Trim().Replace("'", "''");
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    dt.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    dt.DefaultView.RowFilter = $"[Order ID] LIKE '%{keyword}%' OR [Customer] LIKE '%{keyword}%'";
+                }
+            }
         }
 
         private void LoadDeliveryStaff()
         {
             cboDeliveryStaff.Items.Clear();
-            cboDeliveryStaff.Items.Add("Team A - John Doe");
-            cboDeliveryStaff.Items.Add("Team B - Michael Smith");
-            cboDeliveryStaff.Items.Add("Team C - David Wong");
-            cboDeliveryStaff.Items.Add("Outsource - SF Express");
+            cboDeliveryStaff.Items.AddRange(new string[] { "Team A - John Doe", "Team B - Michael Smith", "Team C - David Wong", "Outsource - SF Express" });
         }
 
-        private void RefreshPendingOrdersGrid()
+        private void LoadData()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string query;
+                    string query = "";
                     var role = UserSession.LoggedInStaffRoleEnum;
 
                     if (role == AuthorizationHelper.UserRoleEnum.LogisticsDriver)
                     {
-                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status='Ready for Dispatch' ORDER BY OrderDate DESC";
+                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status = 'Ready for Dispatch' ORDER BY OrderDate DESC";
                     }
                     else
                     {
-                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status IN ('Ready for Dispatch','Dispatched') ORDER BY OrderDate DESC";
+                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status IN ('Ready for Dispatch', 'Dispatched') ORDER BY OrderDate DESC";
                     }
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
@@ -203,9 +164,17 @@ namespace ITP4915M_Group11
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
                         dgvPendingOrders.DataSource = dt;
+
+                        if (txtSearch != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
+                        {
+                            TxtSearch_TextChanged(null, null);
+                        }
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error loading orders: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -248,6 +217,7 @@ namespace ITP4915M_Group11
                 MessageBox.Show("Please select an Order and assign a Delivery Team first.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
             if (txtCurrentStatus.Text == "Dispatched")
             {
                 MessageBox.Show("This order has already been dispatched!", "Action Denied", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -272,6 +242,7 @@ namespace ITP4915M_Group11
 
                             string dnID = "DN-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
                             string insertDnSql = "INSERT INTO delivery_note (DeliveryNoteID, OrderID, DeliveryDate, DeliveryAddress) VALUES (@dnID, @oID, @dDate, @addr)";
+
                             using (MySqlCommand cmd = new MySqlCommand(insertDnSql, conn, trans))
                             {
                                 cmd.Parameters.AddWithValue("@dnID", dnID);
@@ -283,8 +254,9 @@ namespace ITP4915M_Group11
 
                             trans.Commit();
                             MessageBox.Show($"Order [{orderID}] has been successfully dispatched!\nDelivery Note: {dnID}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            ClearLogisticsFields();
-                            RefreshPendingOrdersGrid();
+
+                            LoadData();
+                            ClearForm();
                         }
                         catch (Exception ex)
                         {
@@ -298,6 +270,11 @@ namespace ITP4915M_Group11
                     MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private void LogisticsForm_Load(object sender, EventArgs e)
+        {
+
         }
 
         private void btnUpdateStatus_Click(object sender, EventArgs e)
@@ -322,8 +299,9 @@ namespace ITP4915M_Group11
                         cmd.Parameters.AddWithValue("@OrderID", orderID);
                         cmd.ExecuteNonQuery();
                         MessageBox.Show($"Order [{orderID}] marked as delivered.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        ClearLogisticsFields();
-                        RefreshPendingOrdersGrid();
+
+                        LoadData();
+                        ClearForm();
                     }
                 }
                 catch (Exception ex)
@@ -347,17 +325,7 @@ namespace ITP4915M_Group11
             string customerID = txtCustomerID.Text.Trim();
             string address = txtDeliveryAddress.Text.Trim();
 
-            Form previewForm = new Form
-            {
-                Text = "Premium Invoice & Slip Hub",
-                Size = new Size(620, 800),
-                StartPosition = FormStartPosition.CenterParent,
-                BackColor = Color.FromArgb(248, 250, 252),
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false,
-                MinimizeBox = false
-            };
-
+            Form previewForm = new Form { Text = "Premium Invoice & Slip Hub", Size = new Size(620, 800), StartPosition = FormStartPosition.CenterParent, BackColor = Color.FromArgb(248, 250, 252), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false };
             Panel scrollContainer = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(25, 15, 25, 90) };
             previewForm.Controls.Add(scrollContainer);
 
@@ -366,8 +334,7 @@ namespace ITP4915M_Group11
 
             Label lblBrand = new Label { Text = "PREMIUM LIVING FURNITURE", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(30, 30), AutoSize = true };
             Label lblDocType1 = new Label { Text = "DELIVERY NOTE", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(30, 60), AutoSize = true };
-            docSheet.Controls.Add(lblBrand);
-            docSheet.Controls.Add(lblDocType1);
+            docSheet.Controls.Add(lblBrand); docSheet.Controls.Add(lblDocType1);
 
             int currentMetaY = 100;
             string[] metadataLabels = { "Order Identifier:", "Client Code:", "Target Address:", "Execution Date:", "Logistic Operator:" };
@@ -377,8 +344,7 @@ namespace ITP4915M_Group11
             {
                 Label lblMeta = new Label { Text = metadataLabels[i], Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(30, currentMetaY), AutoSize = true };
                 Label lblVal = new Label { Text = metadataValues[i], Font = new Font("Segoe UI", 9.5F, FontStyle.Regular), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(170, currentMetaY), AutoSize = true };
-                docSheet.Controls.Add(lblMeta);
-                docSheet.Controls.Add(lblVal);
+                docSheet.Controls.Add(lblMeta); docSheet.Controls.Add(lblVal);
                 currentMetaY += 28;
             }
 
@@ -390,8 +356,7 @@ namespace ITP4915M_Group11
 
             Label lblSlipTitle = new Label { Text = "CUSTOMER REPLY SLIP (GOODS CONFIRMATION)", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(20, 20), AutoSize = true };
             Label lblSlipDesc = new Label { Text = $"I hereby acknowledge that all package contents tied to Order ID [{orderID}] have arrived intact without visible structural defects.", Font = new Font("Segoe UI", 9F), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(20, 50), Size = new Size(440, 45), AutoSize = false };
-            pnlReplySlipCard.Controls.Add(lblSlipTitle);
-            pnlReplySlipCard.Controls.Add(lblSlipDesc);
+            pnlReplySlipCard.Controls.Add(lblSlipTitle); pnlReplySlipCard.Controls.Add(lblSlipDesc);
 
             int sigY = 130;
             string[] sigFields = { "Customer Signature", "Authorized Date", "Carrier Validation" };
@@ -399,21 +364,17 @@ namespace ITP4915M_Group11
             {
                 Label lblLine = new Label { Text = "_____________________________________", Font = new Font("Segoe UI", 9F), ForeColor = Color.FromArgb(203, 213, 225), Location = new Point(20, sigY), AutoSize = true };
                 Label lblField = new Label { Text = sigFields[i], Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(20, sigY + 20), AutoSize = true };
-                pnlReplySlipCard.Controls.Add(lblLine);
-                pnlReplySlipCard.Controls.Add(lblField);
+                pnlReplySlipCard.Controls.Add(lblLine); pnlReplySlipCard.Controls.Add(lblField);
                 sigY += 60;
             }
 
             Panel pnlActionDock = new Panel { Size = new Size(620, 80), Location = new Point(0, 685), BackColor = Color.White, BorderStyle = BorderStyle.None };
-            previewForm.Controls.Add(pnlActionDock);
-            pnlActionDock.BringToFront();
-
+            previewForm.Controls.Add(pnlActionDock); pnlActionDock.BringToFront();
             Panel pnlTopLine = new Panel { Size = new Size(620, 1), Location = new Point(0, 0), BackColor = Color.FromArgb(226, 232, 240) };
             pnlActionDock.Controls.Add(pnlTopLine);
 
             Button btnExport = new Button { Text = "🖨️ Export / Save as Document", Location = new Point(25, 18), Size = new Size(380, 44), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnExport.FlatAppearance.BorderSize = 0;
-
             Button btnCancel = new Button { Text = "Dismiss", Location = new Point(425, 18), Size = new Size(150, 44), BackColor = Color.FromArgb(241, 245, 249), ForeColor = Color.FromArgb(100, 116, 139), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnCancel.FlatAppearance.BorderSize = 0;
 
@@ -442,6 +403,7 @@ namespace ITP4915M_Group11
                             File.WriteAllText(sfd.FileName, fileContent, System.Text.Encoding.UTF8);
                             MessageBox.Show($"File successfully pipeline-routed and stored at:\n{sfd.FileName}", "System Confirmation", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
+
                             previewForm.Close();
                         }
                         catch (Exception ex)
@@ -453,24 +415,22 @@ namespace ITP4915M_Group11
             };
 
             btnCancel.Click += (src, args) => previewForm.Close();
-            pnlActionDock.Controls.Add(btnExport);
-            pnlActionDock.Controls.Add(btnCancel);
+            pnlActionDock.Controls.Add(btnExport); pnlActionDock.Controls.Add(btnCancel);
             previewForm.ShowDialog();
         }
 
-        private void ClearLogisticsFields()
+        private void ClearForm()
         {
             txtOrderID.Clear();
             txtCustomerID.Clear();
             txtDeliveryAddress.Clear();
             txtCurrentStatus.Clear();
             if (cboDeliveryStaff.Items.Count > 0) cboDeliveryStaff.SelectedIndex = -1;
-            dtpScheduleDate.Value = DateTime.Now;
-            dgvPendingOrders.ClearSelection();
-        }
 
-        private void LogisticsForm_Load(object sender, EventArgs e)
-        {
+            // 🌟 確保 Clear Form 時預設日期係今日 (DateTime.Today)
+            dtpScheduleDate.Value = DateTime.Today;
+
+            dgvPendingOrders.ClearSelection();
         }
     }
 }

@@ -14,6 +14,9 @@ namespace ITP4915M_Group11
         private ComboBox cboRole;
         private DataGridView dgvStaff;
 
+        // ⭐ 新增 Search TextBox
+        private TextBox txtSearch;
+
         public EmployeeManagement()
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
@@ -76,7 +79,14 @@ namespace ITP4915M_Group11
 
             pnlCard.Controls.AddRange(new Control[] { btnAdd, btnUpdate, btnDelete, btnClear, btnResetPwd });
 
-            dgvStaff = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 600), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            // ⭐ 補返 Search Box UI (放喺 DataGridView 上面)
+            Label lblSearch = new Label { Text = "🔍 Live Search (ID / Name / Role):", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(440, 52), AutoSize = true };
+            txtSearch = new TextBox { Location = new Point(680, 48), Width = 460, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            txtSearch.TextChanged += TxtSearch_TextChanged; // 綁定即時搜尋 Event
+            this.Controls.Add(lblSearch);
+            this.Controls.Add(txtSearch);
+
+            dgvStaff = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 560), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvStaff.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvStaff.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvStaff.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題粗體
@@ -84,6 +94,26 @@ namespace ITP4915M_Group11
 
             dgvStaff.SelectionChanged += DgvStaff_SelectionChanged;
             this.Controls.Add(dgvStaff);
+        }
+
+        // ⭐ 新增 Search Event 邏輯
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvStaff.DataSource is DataTable dt)
+            {
+                // 用 Replace 防止用家入單引號 (') 導致 SQL Syntax Error
+                string keyword = txtSearch.Text.Trim().Replace("'", "''");
+
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    dt.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    // 可以同時 Search StaffID, Name 同 Role
+                    dt.DefaultView.RowFilter = $"[StaffID] LIKE '%{keyword}%' OR [Name] LIKE '%{keyword}%' OR [Role] LIKE '%{keyword}%'";
+                }
+            }
         }
 
         private TextBox CreateInput(Panel container, ref int y, string label)
@@ -142,6 +172,12 @@ namespace ITP4915M_Group11
                     {
                         DataTable dt = new DataTable(); da.Fill(dt);
                         dgvStaff.DataSource = dt;
+
+                        // ⭐ 重置/套用搜尋字眼（確保 Reload 資料後唔會卡住）
+                        if (txtSearch != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
+                        {
+                            TxtSearch_TextChanged(null, null);
+                        }
                     }
                 }
                 catch (Exception ex) { MessageBox.Show("Error loading data: " + ex.Message); }
@@ -271,6 +307,11 @@ namespace ITP4915M_Group11
                     catch (Exception) { MessageBox.Show("Cannot delete staff. They might be linked to existing orders or records."); }
                 }
             }
+        }
+
+        private void EmployeeManagement_Load(object sender, EventArgs e)
+        {
+
         }
 
         private void ClearForm()

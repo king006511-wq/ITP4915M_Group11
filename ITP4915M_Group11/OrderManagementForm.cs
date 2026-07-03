@@ -16,7 +16,6 @@ namespace ITP4915M_Group11
         public string Name { get; set; }
         public decimal Price { get; set; }
     }
-
     public class OrderCustomerItem
     {
         public string ID { get; set; }
@@ -39,6 +38,9 @@ namespace ITP4915M_Group11
         private Label lblTotalAmountDisplay;
         private decimal globalOrderTotal = 0;
         private Button btnAddItem, btnRemoveItem;
+
+        // 🔍 新增：搜尋功能變數
+        private TextBox txtSearch;
 
         public OrderManagementForm() : this(UserSession.LoggedInStaffID ?? "S001") { }
 
@@ -98,7 +100,6 @@ namespace ITP4915M_Group11
             Panel pnlHeader = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
             Label lblHeader = new Label { Text = "Sales Order Drafting (Front-End)", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(20, 20), AutoSize = true };
             pnlHeader.Controls.Add(lblHeader);
-
             Label lblStaff = new Label { Text = $"👤 Sales Rep: {currentStaffID}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(13, 148, 136), Location = new Point(480, 26), AutoSize = true };
             pnlHeader.Controls.Add(lblStaff);
             mainTable.Controls.Add(pnlHeader, 0, 0);
@@ -113,22 +114,58 @@ namespace ITP4915M_Group11
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             contentTable.Controls.Add(pnlCard, 0, 0);
 
-            TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0) };
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
-            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            // -------------------------------------------------------------
+            // 📊 右側網格面板 (加入搜尋欄)
+            // -------------------------------------------------------------
+            TableLayoutPanel rightTable = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = new Padding(0) };
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F)); // 標題
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F)); // 搜尋區塊
+            rightTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // DataGridView
 
             Label lblGridTitle = new Label { Text = "📊 Order Status Tracking", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true, Dock = DockStyle.Bottom };
             rightTable.Controls.Add(lblGridTitle, 0, 0);
 
+            // 🔍 搜尋區塊 UI (修正：改用 FlowLayoutPanel 自動防撞位)
+            FlowLayoutPanel pnlSearch = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0),
+                Padding = new Padding(0, 5, 0, 0),
+                WrapContents = false
+            };
+            Label lblSearch = new Label
+            {
+                Text = "🔍 Search (Order / Customer):",
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                AutoSize = true,
+                Margin = new Padding(0, 3, 10, 0) // 右邊預留 10px 空間
+            };
+            txtSearch = new TextBox
+            {
+                Width = 250,
+                Font = new Font("Segoe UI", 10.5F),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            txtSearch.TextChanged += txtSearch_TextChanged;
+
+            pnlSearch.Controls.Add(lblSearch);
+            pnlSearch.Controls.Add(txtSearch);
+            rightTable.Controls.Add(pnlSearch, 0, 1);
+
             dgvOrders = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvOrders.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題保持粗體
-            dgvOrders.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular); // 資料變回正常字體
+            dgvOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvOrders.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             dgvOrders.SelectionChanged += dgvOrders_SelectionChanged;
-            rightTable.Controls.Add(dgvOrders, 0, 1);
+            rightTable.Controls.Add(dgvOrders, 0, 2);
+
             contentTable.Controls.Add(rightTable, 2, 0);
 
+            // -------------------------------------------------------------
+            // 📝 左側表單面板 UI
+            // -------------------------------------------------------------
             Label lblCardTitle = new Label { Text = "📝 Draft New Customer Order", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(37, 99, 235), Location = new Point(20, 15), AutoSize = true };
             pnlCard.Controls.Add(lblCardTitle);
 
@@ -155,7 +192,6 @@ namespace ITP4915M_Group11
 
             txtUnitPrice = CreateStyledTextBox(pnlCard, ref startY, "Unit Price ($):", true, 130);
             startY -= 65;
-
             txtQty = CreateStyledTextBox(pnlCard, ref startY, "Qty:", false, 80, 160);
             startY -= 65;
 
@@ -182,8 +218,8 @@ namespace ITP4915M_Group11
             dgvCart = new DataGridView { Location = new Point(20, startY), Size = new Size(450, 160), DataSource = cartTable, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, BackgroundColor = Color.White, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(71, 85, 105);
             dgvCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題保持粗體
-            dgvCart.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular); // 資料變回正常字體
+            dgvCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvCart.DefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             pnlCard.Controls.Add(dgvCart);
             startY += 175;
 
@@ -236,6 +272,32 @@ namespace ITP4915M_Group11
             container.Controls.Add(txt);
             topY += 65;
             return txt;
+        }
+
+        // -------------------------------------------------------------
+        // 🔍 實時搜尋過濾邏輯 (修正：簡化 RowFilter)
+        // -------------------------------------------------------------
+        private void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (dgvOrders.DataSource is DataTable dt)
+            {
+                // 進行防彈處理，過濾特殊字元避免 DataView RowFilter Crash
+                string keyword = txtSearch.Text.Trim().Replace("'", "''")
+                                         .Replace("[", "[[]")
+                                         .Replace("]", "[]]")
+                                         .Replace("*", "[*]")
+                                         .Replace("%", "[%]");
+
+                if (string.IsNullOrEmpty(keyword))
+                {
+                    dt.DefaultView.RowFilter = string.Empty;
+                }
+                else
+                {
+                    // 修正：直接用 LIKE 搜尋，避免 Convert 報錯
+                    dt.DefaultView.RowFilter = $"[Order ID] LIKE '%{keyword}%' OR [Customer ID] LIKE '%{keyword}%'";
+                }
+            }
         }
 
         private void LoadCustomersToCombo()
@@ -335,7 +397,6 @@ namespace ITP4915M_Group11
                     break;
                 }
             }
-
             if (!exists)
                 cartTable.Rows.Add(prod.ID, prod.Name, qty, prod.Price, prod.Price * qty);
 
@@ -349,8 +410,7 @@ namespace ITP4915M_Group11
             {
                 foreach (DataGridViewRow row in dgvCart.SelectedRows)
                 {
-                    if (!row.IsNewRow)
-                        dgvCart.Rows.Remove(row);
+                    if (!row.IsNewRow) dgvCart.Rows.Remove(row);
                 }
                 UpdateGlobalOrderTotal();
             }
@@ -400,15 +460,13 @@ namespace ITP4915M_Group11
                                     if (reader["DeliveryDate"] != DBNull.Value)
                                     {
                                         DateTime delDate = Convert.ToDateTime(reader["DeliveryDate"]);
-                                        if (delDate >= dtpDeliveryDate.MinDate)
-                                            dtpDeliveryDate.Value = delDate;
+                                        if (delDate >= dtpDeliveryDate.MinDate) dtpDeliveryDate.Value = delDate;
                                     }
                                 }
                                 catch { }
                             }
                         }
                     }
-
                     using (MySqlCommand cmdLines = new MySqlCommand("SELECT l.ProductID,p.ProductName,l.Quantity,l.UnitPrice FROM order_lineitem l JOIN product p ON l.ProductID=p.ProductID WHERE l.OrderID=@OID", conn))
                     {
                         cmdLines.Parameters.AddWithValue("@OID", selectedOrderID);
@@ -465,7 +523,6 @@ namespace ITP4915M_Group11
                 MessageBox.Show("Customer/Cart cannot be empty.", "Validation Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
             string orderID = txtOrderID.Text.Trim();
             string orderStatus = chkRequireDelivery.Checked ? "Awaiting Approval-D" : "Awaiting Approval-P";
 
@@ -483,7 +540,6 @@ namespace ITP4915M_Group11
                             return;
                         }
                     }
-
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
@@ -498,7 +554,6 @@ namespace ITP4915M_Group11
                                 cmdOrder.Parameters.AddWithValue("@DelDate", chkRequireDelivery.Checked ? (object)dtpDeliveryDate.Value.Date : DBNull.Value);
                                 cmdOrder.ExecuteNonQuery();
                             }
-
                             using (MySqlCommand cmdLine = new MySqlCommand("INSERT INTO order_lineitem (OrderID,ProductID,Quantity,UnitPrice) VALUES (@OID,@ProductID,@Qty,@Price)", conn, trans))
                             {
                                 foreach (DataRow row in cartTable.Rows)
@@ -552,7 +607,6 @@ namespace ITP4915M_Group11
                         }
                         currentStatus = res.ToString();
                     }
-
                     if (!currentStatus.StartsWith("Awaiting Approval") && currentStatus != "Rejected")
                     {
                         MessageBox.Show("🔒 This order has already been Approved, Processed, or Completed!\n\nYou cannot modify a locked order.", "Order System Locked", MessageBoxButtons.OK, MessageBoxIcon.Stop);
@@ -560,7 +614,6 @@ namespace ITP4915M_Group11
                     }
 
                     string orderStatus = chkRequireDelivery.Checked ? "Awaiting Approval-D" : "Awaiting Approval-P";
-
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
                         try
@@ -570,7 +623,6 @@ namespace ITP4915M_Group11
                                 cmdDel.Parameters.AddWithValue("@OID", orderID);
                                 cmdDel.ExecuteNonQuery();
                             }
-
                             using (MySqlCommand cmdLine = new MySqlCommand("INSERT INTO order_lineitem (OrderID,ProductID,Quantity,UnitPrice) VALUES (@OID,@ProductID,@Qty,@Price)", conn, trans))
                             {
                                 foreach (DataRow row in cartTable.Rows)
@@ -583,7 +635,6 @@ namespace ITP4915M_Group11
                                     cmdLine.ExecuteNonQuery();
                                 }
                             }
-
                             using (MySqlCommand cmdOrder = new MySqlCommand("UPDATE orders SET CustomerID=@CID,TotalAmount=@Total,Status=@Status,DeliveryDate=@DelDate WHERE OrderID=@OID", conn, trans))
                             {
                                 cmdOrder.Parameters.AddWithValue("@CID", ((OrderCustomerItem)cboCustomers.SelectedItem).ID);
@@ -593,7 +644,6 @@ namespace ITP4915M_Group11
                                 cmdOrder.Parameters.AddWithValue("@OID", orderID);
                                 cmdOrder.ExecuteNonQuery();
                             }
-
                             trans.Commit();
                             MessageBox.Show($"Order Updated Successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             ClearFields();
@@ -617,7 +667,6 @@ namespace ITP4915M_Group11
         {
             string orderID = txtOrderID.Text.Trim();
             if (string.IsNullOrEmpty(orderID) || cartTable.Rows.Count == 0) return;
-
             if (chkRequireDelivery.Checked)
             {
                 MessageBox.Show("This is a Delivery order. It cannot be marked as Pickup Completed here (hand over to Logistics).", "Invalid Action", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -699,6 +748,9 @@ namespace ITP4915M_Group11
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
                         dgvOrders.DataSource = dt;
+
+                        // 確保如果搜尋欄有字，重新整理時都會套用過濾
+                        txtSearch_TextChanged(null, null);
                     }
                 }
                 catch (Exception ex)
@@ -715,6 +767,7 @@ namespace ITP4915M_Group11
             if (cboProducts.Items.Count > 0) cboProducts.SelectedIndex = -1;
             txtQty.Clear();
             txtUnitPrice.Clear();
+            txtSearch.Clear(); // 🧹 清除搜尋字眼
             cartTable.Clear();
             chkRequireDelivery.Checked = true;
             dtpDeliveryDate.Value = dtpDeliveryDate.MinDate;
