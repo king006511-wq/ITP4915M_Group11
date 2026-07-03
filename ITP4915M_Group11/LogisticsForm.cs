@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class LogisticsForm : Form
+    public partial class LogisticsForm : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private string currentStaffID;
@@ -25,7 +25,7 @@ namespace ITP4915M_Group11
 
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
-                InitializeUI();
+                InitializePremiumModernUI();
                 LoadDeliveryStaff();
                 LoadData();
                 ClearForm();

@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class SalesActivityLogForm : Form
+    public partial class SalesActivityLogForm : BaseForm
     {
         // 🔒 Database Configuration
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
@@ -57,7 +57,7 @@ namespace ITP4915M_Group11
         #region 🎨 UI Setup
         private void SetupUI()
         {
-            this.BackColor = Color.FromArgb(243, 244, 246);
+            this.BackColor = ThemeManager.PrimaryBackground;
             this.FormBorderStyle = FormBorderStyle.None;
             this.Dock = DockStyle.Fill;
 

@@ -22,7 +22,7 @@ namespace ITP4915M_Group11
         public string Name { get; set; }
     }
 
-    public partial class OrderManagementForm : Form
+    public partial class OrderManagementForm : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private decimal currentUnitPrice = 0;
@@ -49,6 +49,7 @@ namespace ITP4915M_Group11
             this.currentStaffID = loggedInStaffID;
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 InitializePremiumModernUI();
             }
         }

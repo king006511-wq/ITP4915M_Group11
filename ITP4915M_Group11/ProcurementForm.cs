@@ -14,7 +14,7 @@ namespace ITP4915M_Group11
         public string Name { get; set; }
     }
 
-    public partial class ProcurementForm : Form
+    public partial class ProcurementForm : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
@@ -33,6 +33,7 @@ namespace ITP4915M_Group11
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 SetupCustomSleekUI();
                 LoadPendingRequests();
                 LoadPOHistory();
@@ -60,8 +61,8 @@ namespace ITP4915M_Group11
         private void SetupCustomSleekUI()
         {
             this.Controls.Clear();
-            this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10F);
+            this.BackColor = ThemeManager.PrimaryBackground;
+            this.Font = ThemeManager.DefaultFont;
             this.FormBorderStyle = FormBorderStyle.None;
             this.TopLevel = false;
             this.Dock = DockStyle.Fill;

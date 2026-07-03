@@ -15,7 +15,7 @@ namespace ITP4915M_Group11
         public string DisplayText => ID == "UNASSIGNED" ? "--- Unassigned ---" : ID;
     }
 
-    public partial class SupplierAndMaterialCreationForm : Form
+    public partial class SupplierAndMaterialCreationForm : BaseForm
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private string editingSupplierID = null;
@@ -40,6 +40,7 @@ namespace ITP4915M_Group11
         {
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                ThemeManager.ApplyTheme(this);
                 SetupPremiumUI();
                 LoadExistingSuppliers();
                 RefreshSupplierGrid();
@@ -52,8 +53,8 @@ namespace ITP4915M_Group11
             this.Text = "Premium Living Furniture - Material & Procurement Hub";
             this.Size = new Size(1100, 690);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(249, 250, 251);
-            this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            this.BackColor = ThemeManager.PrimaryBackground;
+            this.Font = ThemeManager.DefaultFont;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
 
@@ -63,9 +64,7 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "🏭 Material Procurement & Supplier Management Hub", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(25, 15), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            // ==========================================
-            // 左上：Supplier Panel
-            // ==========================================
+            // ================= STEP 1: Supplier =================
             Panel pnlSupplier = new Panel { Location = new Point(25, 70), Size = new Size(420, 240), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             pnlSupplier.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlSupplier.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlSupplier);

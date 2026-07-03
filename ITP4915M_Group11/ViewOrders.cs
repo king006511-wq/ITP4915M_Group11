@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace ITP4915M_Group11
 {
-    public partial class ViewOrders : Form
+    public partial class ViewOrders : BaseForm
     {
         public ViewOrders()
         {

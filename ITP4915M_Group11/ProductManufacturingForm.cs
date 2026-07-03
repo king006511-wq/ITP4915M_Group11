@@ -13,7 +13,7 @@ namespace ITP4915M_Group11
         public string Name { get; set; }
     }
 
-    public partial class ProductManufacturingForm : Form
+    public partial class ProductManufacturingForm : BaseForm
     {
         // ==========================================
         // 🔒 Database Configuration & Settings

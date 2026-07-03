@@ -106,6 +106,9 @@
       <DependentUpon>AfterServiceForm.cs</DependentUpon>
     </Compile>
     <Compile Include="AuthorizationHelper.cs" />
+    <Compile Include="BaseForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="CustomerManagement.cs">
       <SubType>Form</SubType>
     </Compile>
