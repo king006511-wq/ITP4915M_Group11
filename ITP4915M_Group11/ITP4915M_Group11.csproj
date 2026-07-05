@@ -229,6 +229,9 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="RawMaterialManagementForm.resx">
+      <DependentUpon>RawMaterialManagementForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="RawMaterialRequestForm.resx">
       <DependentUpon>RawMaterialRequestForm.cs</DependentUpon>
     </EmbeddedResource>

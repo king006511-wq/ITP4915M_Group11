@@ -257,5 +257,23 @@ namespace ITP4915M_Group11
             }
         }
         #endregion
+
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+            // 
+            // RawMaterialManagementForm
+            // 
+            this.ClientSize = new System.Drawing.Size(278, 244);
+            this.Name = "RawMaterialManagementForm";
+            this.Load += new System.EventHandler(this.RawMaterialManagementForm_Load);
+            this.ResumeLayout(false);
+
+        }
+
+        private void RawMaterialManagementForm_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

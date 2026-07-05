@@ -290,5 +290,23 @@ namespace ITP4915M_Group11
             }
         }
         #endregion
+
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+            // 
+            // SalesActivityLogForm
+            // 
+            this.ClientSize = new System.Drawing.Size(278, 244);
+            this.Name = "SalesActivityLogForm";
+            this.Load += new System.EventHandler(this.SalesActivityLogForm_Load);
+            this.ResumeLayout(false);
+
+        }
+
+        private void SalesActivityLogForm_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }
