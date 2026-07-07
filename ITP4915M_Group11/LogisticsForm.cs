@@ -11,6 +11,7 @@ namespace ITP4915M_Group11
     {
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
         private string currentStaffID;
+        private string currentStaffRegion = "Hong Kong"; // 預設地區
 
         private DataGridView dgvPendingOrders;
         private TextBox txtOrderID, txtCustomerID, txtDeliveryAddress, txtCurrentStatus;
@@ -20,15 +21,51 @@ namespace ITP4915M_Group11
 
         public LogisticsForm()
         {
-            AuthorizationHelper.EnforceRole(this, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.LogisticsDriver, AuthorizationHelper.Roles.WarehouseSpecialist);
+            AuthorizationHelper.EnforceRole(this, AuthorizationHelper.Roles.Administrator, AuthorizationHelper.Roles.Manager, AuthorizationHelper.Roles.LogisticsDriver, AuthorizationHelper.Roles.WarehouseSpecialist);
             this.currentStaffID = string.IsNullOrEmpty(UserSession.LoggedInStaffID) ? "S001" : UserSession.LoggedInStaffID;
 
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                DetermineUserRegion();
                 InitializeUI();
-                LoadDeliveryStaff();
                 LoadData();
                 ClearForm();
+            }
+        }
+
+        // 🌟 解析訂單所屬城市
+        private string ExtractRegion(string status)
+        {
+            if (string.IsNullOrEmpty(status)) return "Hong Kong";
+            string lowerStatus = status.ToLower();
+
+            if (lowerStatus.Contains("tokyo")) return "Tokyo";
+            if (lowerStatus.Contains("singapore")) return "Singapore";
+            if (lowerStatus.Contains("new york") || lowerStatus.Contains("ny")) return "New York";
+            if (lowerStatus.Contains("london")) return "London";
+
+            return "Hong Kong"; // 預設為香港
+        }
+
+        // 🌟 獲取登入員工所屬地區
+        private void DetermineUserRegion()
+        {
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT Region FROM staff WHERE StaffID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", currentStaffID);
+                        object res = cmd.ExecuteScalar();
+                        if (res != null && res != DBNull.Value)
+                        {
+                            currentStaffRegion = res.ToString();
+                        }
+                    }
+                }
+                catch { currentStaffRegion = "Hong Kong"; }
             }
         }
 
@@ -41,17 +78,17 @@ namespace ITP4915M_Group11
             this.FormBorderStyle = FormBorderStyle.None;
             this.Font = new Font("Segoe UI", 10F);
 
-            // 標題
-            Label lblHeader = new Label { Text = "🚚 Logistics Dispatch & Delivery Management", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
+            bool isAdmin = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Administrator);
+            string headerText = isAdmin ? "🚚 Global Logistics Dispatch Management" : $"🚚 Logistics Dispatch ({currentStaffRegion})";
+
+            Label lblHeader = new Label { Text = headerText, Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             this.Controls.Add(lblHeader);
 
-            // 左側卡片 
             Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 600), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             this.Controls.Add(pnlCard);
 
             int startY = 20;
 
-            // 表單輸入區
             txtOrderID = CreateReadOnlyInput(pnlCard, ref startY, "Target Order ID:");
             txtCustomerID = CreateReadOnlyInput(pnlCard, ref startY, "Customer ID:");
 
@@ -67,16 +104,12 @@ namespace ITP4915M_Group11
             pnlCard.Controls.Add(lblStaff); pnlCard.Controls.Add(cboDeliveryStaff);
             startY += 70;
 
-            // 🌟 修正運送時間：改為今日起就可以運送 (MinDate = DateTime.Today)
             Label lblDate = new Label { Text = "Scheduled Date *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             dtpScheduleDate = new DateTimePicker { Location = new Point(20, startY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), Format = DateTimePickerFormat.Short, MinDate = DateTime.Today };
             pnlCard.Controls.Add(lblDate); pnlCard.Controls.Add(dtpScheduleDate);
             startY += 70;
 
-            // 按鈕權限控制
-            bool isLogistics = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.LogisticsDriver);
-            bool isAdminOrManager = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Administrator) || AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager);
-            bool actionEnabled = isLogistics || isAdminOrManager;
+            bool actionEnabled = true;
 
             Button btnAssignDelivery = new Button { Text = "📦 Dispatch Order", Location = new Point(20, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(14, 165, 233), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Enabled = actionEnabled, Cursor = Cursors.Hand };
             Button btnUpdateStatus = new Button { Text = "✅ Mark Delivered", Location = new Point(195, startY), Size = new Size(160, 40), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Enabled = actionEnabled, Cursor = Cursors.Hand };
@@ -92,14 +125,12 @@ namespace ITP4915M_Group11
 
             pnlCard.Controls.AddRange(new Control[] { btnAssignDelivery, btnUpdateStatus, btnGenerateNote, btnClearFields });
 
-            // 🌟 修正排版：將 txtSearch 移過少少 (X 由 680 改為 710)，闊度縮少少 (460 改為 430)，避免同 Label 重疊
             Label lblSearch = new Label { Text = "🔍 Live Search (Order / Customer):", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(440, 52), AutoSize = true };
             txtSearch = new TextBox { Location = new Point(710, 48), Width = 430, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             txtSearch.TextChanged += TxtSearch_TextChanged;
             this.Controls.Add(lblSearch);
             this.Controls.Add(txtSearch);
 
-            // 右側 DataGridView
             dgvPendingOrders = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 600), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvPendingOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvPendingOrders.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
@@ -134,10 +165,37 @@ namespace ITP4915M_Group11
             }
         }
 
-        private void LoadDeliveryStaff()
+        // 🌟 新邏輯：根據「訂單嘅城市」讀取嗰個城市專屬嘅物流司機名單
+        private void LoadDeliveryStaff(string targetRegion)
         {
             cboDeliveryStaff.Items.Clear();
-            cboDeliveryStaff.Items.AddRange(new string[] { "Team A - John Doe", "Team B - Michael Smith", "Team C - David Wong", "Outsource - SF Express" });
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "SELECT StaffID, Name FROM staff WHERE Role = 'Logistics Driver' AND Region = @Region";
+
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Region", targetRegion);
+
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                cboDeliveryStaff.Items.Add($"{reader["StaffID"]} - {reader["Name"]}");
+                            }
+                        }
+                    }
+                    // 加入全球通用外判物流
+                    cboDeliveryStaff.Items.Add("Outsource - DHL Global Forwarding");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error loading driver list: " + ex.Message);
+                }
+            }
         }
 
         private void LoadData()
@@ -147,27 +205,41 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = "";
-                    var role = UserSession.LoggedInStaffRoleEnum;
+                    bool isAdmin = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Administrator) || AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager);
+                    string query;
 
-                    if (role == AuthorizationHelper.UserRoleEnum.LogisticsDriver)
+                    if (isAdmin)
                     {
-                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status = 'Ready for Dispatch' ORDER BY OrderDate DESC";
+                        // Admin / Manager 睇晒全世界所有 Dispatch 訂單
+                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status LIKE 'Ready for Dispatch%' OR Status LIKE 'Dispatched%' ORDER BY OrderDate DESC";
                     }
                     else
                     {
-                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status IN ('Ready for Dispatch', 'Dispatched') ORDER BY OrderDate DESC";
+                        // 普通員工只睇自己城市嘅訂單
+                        query = @"SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' 
+                                  FROM orders 
+                                  WHERE (Status = @StatusDispatch OR Status = @StatusDispatched) 
+                                  ORDER BY OrderDate DESC";
                     }
 
-                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
+                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
                     {
-                        DataTable dt = new DataTable();
-                        adapter.Fill(dt);
-                        dgvPendingOrders.DataSource = dt;
-
-                        if (txtSearch != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
+                        if (!isAdmin)
                         {
-                            TxtSearch_TextChanged(null, null);
+                            cmd.Parameters.AddWithValue("@StatusDispatch", $"Ready for Dispatch [{currentStaffRegion}]");
+                            cmd.Parameters.AddWithValue("@StatusDispatched", $"Dispatched [{currentStaffRegion}]");
+                        }
+
+                        using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                        {
+                            DataTable dt = new DataTable();
+                            adapter.Fill(dt);
+                            dgvPendingOrders.DataSource = dt;
+
+                            if (txtSearch != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
+                            {
+                                TxtSearch_TextChanged(null, null);
+                            }
                         }
                     }
                 }
@@ -186,6 +258,10 @@ namespace ITP4915M_Group11
                 txtOrderID.Text = row.Cells["Order ID"].Value?.ToString() ?? "";
                 txtCustomerID.Text = row.Cells["Customer"].Value?.ToString() ?? "";
                 txtCurrentStatus.Text = row.Cells["Status"].Value?.ToString() ?? "";
+
+                // 🌟 當你點擊一張訂單，系統會解析訂單所在城市，並刷新 ComboBox 嘅司機名單！
+                string orderRegion = ExtractRegion(txtCurrentStatus.Text);
+                LoadDeliveryStaff(orderRegion);
 
                 try
                 {
@@ -211,6 +287,7 @@ namespace ITP4915M_Group11
         {
             string orderID = txtOrderID.Text.Trim();
             string address = txtDeliveryAddress.Text.Trim();
+            string oldStatus = txtCurrentStatus.Text.Trim();
 
             if (string.IsNullOrEmpty(orderID) || cboDeliveryStaff.SelectedIndex == -1)
             {
@@ -218,11 +295,14 @@ namespace ITP4915M_Group11
                 return;
             }
 
-            if (txtCurrentStatus.Text == "Dispatched")
+            if (oldStatus.StartsWith("Dispatched"))
             {
                 MessageBox.Show("This order has already been dispatched!", "Action Denied", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+
+            string orderRegion = ExtractRegion(oldStatus);
+            string newStatus = $"Dispatched [{orderRegion}]";
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
@@ -233,9 +313,10 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            string updateSql = "UPDATE orders SET Status='Dispatched' WHERE OrderID=@OrderID";
+                            string updateSql = "UPDATE orders SET Status=@NewStatus WHERE OrderID=@OrderID";
                             using (MySqlCommand cmd = new MySqlCommand(updateSql, conn, trans))
                             {
+                                cmd.Parameters.AddWithValue("@NewStatus", newStatus);
                                 cmd.Parameters.AddWithValue("@OrderID", orderID);
                                 cmd.ExecuteNonQuery();
                             }
@@ -272,30 +353,31 @@ namespace ITP4915M_Group11
             }
         }
 
-        private void LogisticsForm_Load(object sender, EventArgs e)
-        {
-
-        }
-
         private void btnUpdateStatus_Click(object sender, EventArgs e)
         {
             string orderID = txtOrderID.Text.Trim();
             if (string.IsNullOrEmpty(orderID)) return;
 
-            if (txtCurrentStatus.Text != "Dispatched")
+            string oldStatus = txtCurrentStatus.Text.Trim();
+
+            if (!oldStatus.StartsWith("Dispatched"))
             {
                 MessageBox.Show("Only 'Dispatched' orders can be marked as Delivery Completed.", "Action Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            string orderRegion = ExtractRegion(oldStatus);
+            string finalStatus = $"Delivery Completed [{orderRegion}]";
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string updateSql = "UPDATE orders SET Status='Delivery Completed' WHERE OrderID=@OrderID";
+                    string updateSql = "UPDATE orders SET Status=@FinalStatus WHERE OrderID=@OrderID";
                     using (MySqlCommand cmd = new MySqlCommand(updateSql, conn))
                     {
+                        cmd.Parameters.AddWithValue("@FinalStatus", finalStatus);
                         cmd.Parameters.AddWithValue("@OrderID", orderID);
                         cmd.ExecuteNonQuery();
                         MessageBox.Show($"Order [{orderID}] marked as delivered.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -425,9 +507,8 @@ namespace ITP4915M_Group11
             txtCustomerID.Clear();
             txtDeliveryAddress.Clear();
             txtCurrentStatus.Clear();
-            if (cboDeliveryStaff.Items.Count > 0) cboDeliveryStaff.SelectedIndex = -1;
+            if (cboDeliveryStaff.Items.Count > 0) cboDeliveryStaff.Items.Clear(); // 🌟 清空下拉選單
 
-            // 🌟 確保 Clear Form 時預設日期係今日 (DateTime.Today)
             dtpScheduleDate.Value = DateTime.Today;
 
             dgvPendingOrders.ClearSelection();

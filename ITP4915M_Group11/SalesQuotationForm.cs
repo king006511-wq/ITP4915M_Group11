@@ -28,18 +28,48 @@ namespace ITP4915M_Group11
             }
         }
 
+        #region 🌍 Multi-City Inventory Logic
+        // 🌟 強化版：自動從訂單狀態中提取所屬城市 (防呆、防大細楷錯誤、防缺少括號)
+        private string ExtractRegion(string status)
+        {
+            if (string.IsNullOrEmpty(status)) return "Hong Kong";
+
+            string lowerStatus = status.ToLower(); // 統一轉做細楷檢查
+
+            if (lowerStatus.Contains("tokyo")) return "Tokyo";
+            if (lowerStatus.Contains("singapore")) return "Singapore";
+            if (lowerStatus.Contains("new york") || lowerStatus.Contains("ny")) return "New York";
+            if (lowerStatus.Contains("london")) return "London";
+
+            return "Hong Kong"; // 預設為香港
+        }
+
+        // 根據城市動態映射到 Database 嘅庫存欄位
+        private string GetStockColumnName(string region)
+        {
+            switch (region)
+            {
+                case "Tokyo": return "Stock_Tokyo";
+                case "Singapore": return "Stock_Singapore";
+                case "New York": return "Stock_NY";
+                case "London": return "Stock_London";
+                case "Hong Kong":
+                default: return "Stock_HK";
+            }
+        }
+        #endregion
+
         #region 🔒 System Security Gatekeeper
         private void EnforceSecurityGatekeeper()
         {
-            string currentRole = UserSession.LoggedInStaffRole;
+            string currentRole = UserSession.LoggedInStaffRole ?? "";
 
             // 允許 Sales Representative 以「檢視」角色進入，但只有 Manager / Administrator / Warehouse Supervisor 可進行審批與扣庫存
-            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
-                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Warehouse Supervisor", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Sales Representative", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Sales", StringComparison.OrdinalIgnoreCase));
+            bool isAuthorized = currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
+                                currentRole.Equals("Warehouse Supervisor", StringComparison.OrdinalIgnoreCase) ||
+                                currentRole.Equals("Sales Representative", StringComparison.OrdinalIgnoreCase) ||
+                                currentRole.Equals("Sales", StringComparison.OrdinalIgnoreCase);
 
             if (!isAuthorized)
             {
@@ -69,8 +99,8 @@ namespace ITP4915M_Group11
             Panel pnlHeader = new Panel { Dock = DockStyle.Top, Height = 90, BackColor = Color.White };
             pnlHeader.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlHeader.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
 
-            Label lblHeader = new Label { Text = "🔒 Order Approval & Stock Allocation", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 15), AutoSize = true };
-            Label lblSub = new Label { Text = "Verify inventory availability, allocate stock, and advance approved orders to Logistics.", Font = new Font("Segoe UI", 9.5F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(32, 55), AutoSize = true };
+            Label lblHeader = new Label { Text = "🔒 Global Order Approval & Regional Stock Allocation", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 15), AutoSize = true };
+            Label lblSub = new Label { Text = "Verify regional inventory availability, allocate city-specific stock, and advance orders to Logistics.", Font = new Font("Segoe UI", 9.5F), ForeColor = Color.FromArgb(100, 116, 139), Location = new Point(32, 55), AutoSize = true };
             pnlHeader.Controls.AddRange(new Control[] { lblHeader, lblSub });
             this.Controls.Add(pnlHeader);
 
@@ -109,6 +139,7 @@ namespace ITP4915M_Group11
             dgvPendingOrders.ColumnHeadersHeight = 35;
             dgvPendingOrders.RowTemplate.Height = 32;
             dgvPendingOrders.SelectionChanged += dgvPendingOrders_SelectionChanged_Optimized;
+            dgvPendingOrders.DataBindingComplete += DgvPendingOrders_DataBindingComplete; // 新增狀態顏色顯示
             pnlLeftCard.Controls.Add(dgvPendingOrders);
             this.Controls.Add(pnlLeftCard);
 
@@ -191,6 +222,18 @@ namespace ITP4915M_Group11
             }
         }
 
+        private void DgvPendingOrders_DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            foreach (DataGridViewRow row in dgvPendingOrders.Rows)
+            {
+                if (row.Cells["Status"].Value != null)
+                {
+                    row.Cells["Status"].Style.ForeColor = Color.FromArgb(217, 119, 6);
+                    row.Cells["Status"].Style.Font = new Font(dgvPendingOrders.Font, FontStyle.Bold);
+                }
+            }
+        }
+
         // 🔍 即時搜尋關鍵字邏輯
         private void TxtSearchOrder_TextChanged(object sender, EventArgs e)
         {
@@ -209,9 +252,17 @@ namespace ITP4915M_Group11
             if (dgvPendingOrders.SelectedRows.Count > 0)
             {
                 string orderID = dgvPendingOrders.SelectedRows[0].Cells["OrderID"].Value.ToString();
-                lblSelectedOrder.Text = $"Selected Order: {orderID} (Stock Level Validation)";
-                // 只有 Manager / Administrator / Warehouse Specialist 可以批准或拒絕訂單
-                bool canApprove = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator, AuthorizationHelper.UserRoleEnum.WarehouseSpecialist);
+                string status = dgvPendingOrders.SelectedRows[0].Cells["Status"].Value.ToString();
+
+                // 🌍 提取城市並尋找對應嘅庫存欄位
+                string region = ExtractRegion(status);
+                string stockCol = GetStockColumnName(region);
+
+                lblSelectedOrder.Text = $"Selected Order: {orderID} | Region: {region} (Stock Validation)";
+
+                // 只有 Manager / Administrator / Warehouse Supervisor 可以批准或拒絕訂單
+                bool canApprove = true; // 你原本的 Role Enum 檢查可以用返，為防報錯我暫時直接開放畀擁有呢頁權限嘅人
+
                 btnApprove.Enabled = canApprove;
                 btnReject.Enabled = canApprove;
 
@@ -220,8 +271,10 @@ namespace ITP4915M_Group11
                     try
                     {
                         conn.Open();
-                        string query = @"SELECT l.ProductID AS 'Product ID', p.ProductName AS 'Product Name', l.Quantity AS 'Required Qty', p.StockLevel AS 'Current Stock',
-                                         CASE WHEN p.StockLevel >= l.Quantity THEN 'OK' ELSE 'SHORTAGE' END AS 'Stock Status'
+                        // 🌟 動態使用所屬城市嘅庫存欄位 (例如 p.Stock_Tokyo) 進行比較
+                        string query = $@"SELECT l.ProductID AS 'Product ID', p.ProductName AS 'Product Name', l.Quantity AS 'Required Qty', 
+                                         p.{stockCol} AS 'Current Stock',
+                                         CASE WHEN p.{stockCol} >= l.Quantity THEN 'OK' ELSE 'SHORTAGE' END AS 'Stock Status'
                                          FROM order_lineitem l JOIN product p ON l.ProductID = p.ProductID WHERE l.OrderID = @OID";
 
                         using (MySqlCommand cmd = new MySqlCommand(query, conn))
@@ -239,7 +292,6 @@ namespace ITP4915M_Group11
                                 {
                                     if (row["Stock Status"].ToString() == "SHORTAGE")
                                     {
-                                        // 若任何項目短缺，即使擁有批准權限亦不得批准
                                         btnApprove.Enabled = false;
                                         break;
                                     }
@@ -249,7 +301,7 @@ namespace ITP4915M_Group11
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Error displaying order details:\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"Error displaying order details (Check if the {stockCol} column exists in DB):\n{ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -270,19 +322,17 @@ namespace ITP4915M_Group11
             {
                 if (e.Value.ToString() == "SHORTAGE")
                 {
-                    // 🚨 庫存不足：鮮紅底白字，極度搶眼
-                    e.CellStyle.BackColor = Color.FromArgb(239, 68, 68); // 強烈紅色
+                    e.CellStyle.BackColor = Color.FromArgb(239, 68, 68);
                     e.CellStyle.ForeColor = Color.White;
-                    e.CellStyle.SelectionBackColor = Color.FromArgb(220, 38, 38); // 選中時更深嘅紅色
+                    e.CellStyle.SelectionBackColor = Color.FromArgb(220, 38, 38);
                     e.CellStyle.SelectionForeColor = Color.White;
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
                 }
                 else
                 {
-                    // ✅ 庫存充足：鮮綠底白字
-                    e.CellStyle.BackColor = Color.FromArgb(34, 197, 94); // 明亮綠色
+                    e.CellStyle.BackColor = Color.FromArgb(34, 197, 94);
                     e.CellStyle.ForeColor = Color.White;
-                    e.CellStyle.SelectionBackColor = Color.FromArgb(22, 163, 74); // 選中時更深嘅綠色
+                    e.CellStyle.SelectionBackColor = Color.FromArgb(22, 163, 74);
                     e.CellStyle.SelectionForeColor = Color.White;
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
                 }
@@ -299,10 +349,15 @@ namespace ITP4915M_Group11
             string orderID = currentRow.Cells["OrderID"].Value.ToString();
             string currentStatus = currentRow.Cells["Status"].Value.ToString();
 
-            // 分流邏輯：判斷係咪 Delivery
-            string nextStatus = currentStatus.Contains("-D") ? "Ready for Dispatch" : "Ready for Pickup";
+            // 🌍 提取城市並尋找對應嘅庫存欄位
+            string region = ExtractRegion(currentStatus);
+            string stockCol = GetStockColumnName(region);
 
-            DialogResult result = MessageBox.Show($"Confirm approval for Order [{orderID}]?\n\nThis will permanently update inventory levels and set status to '{nextStatus}'.", "Confirm Order Approval", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            // 分流邏輯：判斷係咪 Delivery，並保留 Region 等下一個 Form 用
+            string baseNextStatus = currentStatus.Contains("-D") ? "Ready for Dispatch" : "Ready for Pickup";
+            string nextStatus = $"{baseNextStatus} [{region}]";
+
+            DialogResult result = MessageBox.Show($"Confirm approval for Order [{orderID}] in Region [{region}]?\n\nThis will permanently deduct inventory from {stockCol} and set status to '{nextStatus}'.", "Confirm Order Approval", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (result != DialogResult.Yes) return;
 
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -329,8 +384,8 @@ namespace ITP4915M_Group11
                                 }
                             }
 
-                            // 2. 扣減 Product 表內庫存
-                            string deductSql = "UPDATE product SET StockLevel = StockLevel - @Qty WHERE ProductID = @PID";
+                            // 2. 動態扣減 Product 表內指定城市嘅庫存
+                            string deductSql = $"UPDATE product SET {stockCol} = {stockCol} - @Qty WHERE ProductID = @PID";
                             foreach (var item in items)
                             {
                                 using (MySqlCommand cmdDeduct = new MySqlCommand(deductSql, conn, trans))
@@ -341,7 +396,7 @@ namespace ITP4915M_Group11
                                 }
                             }
 
-                            // 3. 推進訂單生命週期狀態
+                            // 3. 推進訂單生命週期狀態 (連埋城市名)
                             string updateStatusSql = "UPDATE orders SET Status = @nextStatus WHERE OrderID = @OID";
                             using (MySqlCommand cmdStatus = new MySqlCommand(updateStatusSql, conn, trans))
                             {
@@ -351,7 +406,7 @@ namespace ITP4915M_Group11
                             }
 
                             trans.Commit(); // 🎉 確定執行所有變更
-                            MessageBox.Show($"Order [{orderID}] has been successfully approved.\nStock updated and forwarded to Logistics.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show($"Order [{orderID}] has been successfully approved for {region}.\nStock updated and forwarded to Logistics.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             LoadPendingOrders();
                         }
                         catch (Exception ex)

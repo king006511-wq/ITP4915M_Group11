@@ -40,6 +40,35 @@ namespace ITP4915M_Group11
             }
         }
 
+        #region 🌍 Multi-City Inventory Helpers
+        // 🌟 自動從訂單狀態中提取所屬城市
+        private string ExtractRegion(string status)
+        {
+            if (string.IsNullOrEmpty(status)) return "Hong Kong";
+            string lowerStatus = status.ToLower();
+
+            if (lowerStatus.Contains("tokyo")) return "Tokyo";
+            if (lowerStatus.Contains("singapore")) return "Singapore";
+            if (lowerStatus.Contains("new york") || lowerStatus.Contains("ny")) return "New York";
+            if (lowerStatus.Contains("london")) return "London";
+
+            return "Hong Kong"; // 預設為香港
+        }
+
+        // 🌟 根據城市動態映射到 Database 嘅庫存欄位
+        private string GetStockColumnName(string region)
+        {
+            switch (region)
+            {
+                case "Tokyo": return "Stock_Tokyo";
+                case "Singapore": return "Stock_Singapore";
+                case "New York": return "Stock_NY";
+                case "London": return "Stock_London";
+                default: return "Stock_HK";
+            }
+        }
+        #endregion
+
         private void InitializeEnterpriseHelpdeskUI()
         {
             this.Controls.Clear();
@@ -112,7 +141,7 @@ namespace ITP4915M_Group11
             dgvComplaints.SelectionChanged += dgvComplaints_SelectionChanged;
             dgvComplaints.CellFormatting += DgvComplaints_CellFormatting;
             this.Controls.Add(dgvComplaints);
-            StyleGridHeader(dgvComplaints, colorRoyalBlue); // 初始化皇家藍樣式
+            StyleGridHeader(dgvComplaints, colorRoyalBlue);
 
             lblItemsTitle = new Label { Text = "🛍️ Order Item Details", Font = new Font("Microsoft JhengHei", 20F, FontStyle.Bold), ForeColor = ThemeManager.PrimaryDark, AutoSize = true };
             this.Controls.Add(lblItemsTitle);
@@ -122,7 +151,7 @@ namespace ITP4915M_Group11
 
             dgvOrderItems = CreateCleanGrid();
             this.Controls.Add(dgvOrderItems);
-            StyleGridHeader(dgvOrderItems, colorTealBlue); // 初始化湖水藍樣式
+            StyleGridHeader(dgvOrderItems, colorTealBlue);
         }
 
         private DataGridView CreateCleanGrid()
@@ -146,23 +175,15 @@ namespace ITP4915M_Group11
             return dgv;
         }
 
-        // 🛠️ 核心修正：強制覆蓋作業系統硬解樣式嘅鋼鐵級函數
         private void StyleGridHeader(DataGridView dgv, Color headerColor)
         {
-            dgv.EnableHeadersVisualStyles = false; // 關閉預設樣式
-
-            // 設定背景色與「選取時的背景色」（防止點擊/滑鼠懸停時打回原形）
+            dgv.EnableHeadersVisualStyles = false;
             dgv.ColumnHeadersDefaultCellStyle.BackColor = headerColor;
             dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = headerColor;
-
-            // 設定高對比純白文字
             dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgv.ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.White;
-
             dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             dgv.ColumnHeadersHeight = 40;
-
-            // 刷新表格渲染
             dgv.Refresh();
         }
 
@@ -212,7 +233,8 @@ namespace ITP4915M_Group11
         private void SetupDropdowns()
         {
             cboRequestType.Items.AddRange(new[] { "General Complaint", "Return & Refund", "Product Replacement", "Partial Refund" });
-            cboStatus.Items.AddRange(new[] { "Pending Investigation", "In Progress", "Resolved", "Refunded", "Closed" });
+            // 🌟 加入咗 "Defective Item" 做壞貨選項
+            cboStatus.Items.AddRange(new[] { "Pending Investigation", "In Progress", "Resolved", "Refunded", "Defective Item", "Closed" });
         }
 
         private void GenerateNewTicketID() => txtComplaintID.Text = "TKT-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
@@ -265,10 +287,7 @@ namespace ITP4915M_Group11
             else { dgvOrderItems.DataSource = null; lblOrderSummary.Text = "💳 Total Paid: $0.00"; }
         }
 
-        private void AfterServiceForm_Load_1(object sender, EventArgs e)
-        {
-
-        }
+        private void AfterServiceForm_Load_1(object sender, EventArgs e) { }
 
         private void LoadOrderContextItems(string orderId)
         {
@@ -290,7 +309,6 @@ namespace ITP4915M_Group11
                         dgvOrderItems.DataSource = dt;
                     }
 
-                    // ⚠️ 重點：數據加載完畢後，再次補刷 Header 樣式，免被 DataBinding 洗走
                     StyleGridHeader(dgvOrderItems, colorTealBlue);
                 }
                 catch { dgvOrderItems.DataSource = null; }
@@ -333,7 +351,6 @@ namespace ITP4915M_Group11
                     if (dgvComplaints.Columns.Contains("Refund HKD")) dgvComplaints.Columns["Refund HKD"].DefaultCellStyle.Format = "N2";
                     dgvComplaints.ClearSelection();
 
-                    // ⚠️ 重點：數據加載完畢後，再次補刷 Header 樣式，免被 DataBinding 洗走
                     StyleGridHeader(dgvComplaints, colorRoyalBlue);
                 }
                 catch (Exception ex) { MessageBox.Show("Database Load Error: " + ex.Message); }
@@ -347,6 +364,9 @@ namespace ITP4915M_Group11
                 string s = e.Value.ToString();
                 if (s.Contains("Pending") || s.Contains("In Progress")) e.CellStyle.ForeColor = Color.FromArgb(234, 88, 12);
                 else if (s == "Resolved" || s == "Refunded") e.CellStyle.ForeColor = Color.FromArgb(16, 185, 129);
+                // 🌟 新增：Defective Item 會顯示為搶眼嘅紅色警告
+                else if (s == "Defective Item") e.CellStyle.ForeColor = Color.FromArgb(239, 68, 68);
+
                 e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
             }
         }
@@ -429,7 +449,26 @@ namespace ITP4915M_Group11
                         if (res != null && res != DBNull.Value) isStockAlreadyReturned = Convert.ToBoolean(res);
                     }
 
-                    bool shouldReturnStock = (!isStockAlreadyReturned && reqType == "Return & Refund" && (status == "Refunded" || status == "Resolved") && !string.IsNullOrWhiteSpace(orderID));
+                    // 🌟 退貨條件判斷：
+                    // 如果 RequestType 係 Refund，而狀態係 Refunded 或 Resolved，先會退庫存。
+                    // ⚠️ 如果 Status 係 "Defective Item" (壞貨)，退庫存條件就會被判定為 false，阻止壞貨回歸庫存！
+                    bool shouldReturnStock = (!isStockAlreadyReturned && reqType == "Return & Refund" && (status == "Refunded" || status == "Resolved") && status != "Defective Item" && !string.IsNullOrWhiteSpace(orderID));
+
+                    // 🌟 動態尋找訂單屬於邊個城市嘅庫存
+                    string stockCol = "Stock_HK";
+                    if (shouldReturnStock && !string.IsNullOrWhiteSpace(orderID))
+                    {
+                        using (MySqlCommand cmdOrder = new MySqlCommand("SELECT Status FROM orders WHERE OrderID = @OID", conn))
+                        {
+                            cmdOrder.Parameters.AddWithValue("@OID", orderID);
+                            object orderStatusObj = cmdOrder.ExecuteScalar();
+                            if (orderStatusObj != null)
+                            {
+                                string orderRegion = ExtractRegion(orderStatusObj.ToString());
+                                stockCol = GetStockColumnName(orderRegion);
+                            }
+                        }
+                    }
 
                     using (MySqlTransaction trans = conn.BeginTransaction())
                     {
@@ -445,9 +484,11 @@ namespace ITP4915M_Group11
                                         List<Tuple<string, int>> items = new List<Tuple<string, int>>();
                                         while (reader.Read()) items.Add(new Tuple<string, int>(reader["ProductID"].ToString(), Convert.ToInt32(reader["Quantity"])));
                                         reader.Close();
+
                                         foreach (var item in items)
                                         {
-                                            using (MySqlCommand upd = new MySqlCommand("UPDATE product SET StockLevel = StockLevel + @qty WHERE ProductID = @pid", conn, trans))
+                                            // 🌟 核心修復：退貨時準確加返落城市專屬庫存欄位 (例如 Stock_NY)，而唔再用死 StockLevel
+                                            using (MySqlCommand upd = new MySqlCommand($"UPDATE product SET {stockCol} = {stockCol} + @qty WHERE ProductID = @pid", conn, trans))
                                             {
                                                 upd.Parameters.AddWithValue("@qty", item.Item2);
                                                 upd.Parameters.AddWithValue("@pid", item.Item1);
@@ -478,7 +519,8 @@ namespace ITP4915M_Group11
 
                             trans.Commit();
                             string msg = "Support Ticket successfully saved!";
-                            if (shouldReturnStock) msg += "\n\n📦 Inventory rollback successful.";
+                            if (shouldReturnStock) msg += $"\n\n📦 Inventory rollback to [{stockCol}] successful.";
+                            else if (status == "Defective Item") msg += "\n\n⚠️ Ticket recorded as Defective. NO stock was added back to inventory.";
                             MessageBox.Show(msg, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                             ClearFields();

@@ -2,6 +2,7 @@
 using System;
 using System.Data;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace ITP4915M_Group11
@@ -16,7 +17,7 @@ namespace ITP4915M_Group11
         // ==========================================
         // 🎨 UI Element Variables
         // ==========================================
-        private TextBox txtGRNID, txtPOID, txtMaterialID, txtQty, txtStaffResource;
+        private TextBox txtGRNID, txtPOID, txtMaterialID, txtQty, txtStaffResource, txtTargetWarehouse;
         private DataGridView dgvPOItems;
         private Button btnConfirmReceive, btnClear;
 
@@ -28,15 +29,21 @@ namespace ITP4915M_Group11
         private TextBox txtSearch;
         private Label lblSearch;
 
+        // 👨‍💼 權限與地區動態變數
+        private bool isAdminOrManager = false;
+        private string staffRegion = "Hong Kong"; // 預設城市名稱
+        private string staffWarehouseID = "W001";  // 預設對應倉庫 ID
+
         public GoodsReceivedForm()
         {
             InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 ThemeManager.ApplyTheme(this);
-                InitializeSleekModernUI(); // 🚀 啟動精緻收身版排版
+                DetermineUserAccessLevel();   // 🛡️ 步驟 1：查核員工權限與負責城市，並映射倉庫 ID
+                InitializeSleekModernUI();    // 🚀 啟動精緻收身版排版
                 GenerateGRNID();
-                LoadActivePurchaseOrders();
+                LoadActivePurchaseOrders();  // 📥 根據權限載入 PO 數據
 
                 this.Load += GoodsReceivedForm_Load;
 
@@ -46,15 +53,56 @@ namespace ITP4915M_Group11
             }
         }
 
-        #region 🔒 權限驗證
+        #region 🔒 權限驗證 與 地區動態映射
+        private void DetermineUserAccessLevel()
+        {
+            string currentRole = UserSession.LoggedInStaffRole;
+
+            // 判斷是否為進階管理層 (Admin/Manager)
+            isAdminOrManager = !string.IsNullOrEmpty(currentRole) &&
+                               (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+
+            // 查詢當前登入員工所負責的城市 Region
+            using (MySqlConnection conn = new MySqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT Region FROM staff WHERE StaffID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", UserSession.LoggedInStaffID ?? "");
+                        object res = cmd.ExecuteScalar();
+                        if (res != null && res != DBNull.Value)
+                        {
+                            staffRegion = res.ToString();
+                        }
+                    }
+                }
+                catch { staffRegion = "Hong Kong"; }
+            }
+
+            // 將文字城市動態映射到你資料庫真實的 WarehouseID (W001 - W005)
+            staffWarehouseID = GetWarehouseIDFromRegion(staffRegion);
+        }
+
+        private string GetWarehouseIDFromRegion(string region)
+        {
+            if (string.IsNullOrEmpty(region)) return "W001";
+            if (region.IndexOf("Tokyo", StringComparison.OrdinalIgnoreCase) >= 0) return "W002";
+            if (region.IndexOf("Singapore", StringComparison.OrdinalIgnoreCase) >= 0) return "W003";
+            if (region.IndexOf("New York", StringComparison.OrdinalIgnoreCase) >= 0 || region.IndexOf("NY", StringComparison.OrdinalIgnoreCase) >= 0) return "W004";
+            if (region.IndexOf("London", StringComparison.OrdinalIgnoreCase) >= 0) return "W005";
+            return "W001"; // 預設為香港 W001
+        }
+
         private void GoodsReceivedForm_Load(object sender, EventArgs e)
         {
             txtStaffResource.Text = UserSession.LoggedInStaffID ?? "S001";
 
             string currentRole = UserSession.LoggedInStaffRole;
             bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
-                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
+                                (isAdminOrManager ||
                                  currentRole.Equals("Warehouse Specialist", StringComparison.OrdinalIgnoreCase) ||
                                  currentRole.Equals("Procurement Officer", StringComparison.OrdinalIgnoreCase));
 
@@ -88,7 +136,9 @@ namespace ITP4915M_Group11
             pnlLeftCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlLeftCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             this.Controls.Add(pnlLeftCard);
 
-            Label lblCardTitle = new Label { Text = "📦 Goods Receiving (GRN)", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(22, 18), AutoSize = true };
+            // 根據權限動態更改標題
+            string leftTitle = isAdminOrManager ? "📦 Goods Receiving (Global GRN)" : $"📦 Goods Receiving ({staffRegion} - {staffWarehouseID})";
+            Label lblCardTitle = new Label { Text = leftTitle, Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(22, 18), AutoSize = true };
             pnlLeftCard.Controls.Add(lblCardTitle);
 
             int startY = 65;
@@ -98,6 +148,7 @@ namespace ITP4915M_Group11
             txtPOID = CreateStyledTextBox(pnlLeftCard, ref startY, "Purchase Order ID:", true, inputWidth);
             txtMaterialID = CreateStyledTextBox(pnlLeftCard, ref startY, "Raw Material ID:", true, inputWidth);
             txtQty = CreateStyledTextBox(pnlLeftCard, ref startY, "Received Quantity:", true, inputWidth);
+            txtTargetWarehouse = CreateStyledTextBox(pnlLeftCard, ref startY, "Destination Warehouse:", true, inputWidth);
             txtStaffResource = CreateStyledTextBox(pnlLeftCard, ref startY, "Processed By (Staff ID):", true, inputWidth);
 
             int btnWidth = 170;
@@ -113,17 +164,17 @@ namespace ITP4915M_Group11
             // =========================================================
             // 【右側】數據表格與標題 (精緻商務化) + Live Search 功能
             // =========================================================
-            lblGridTitle = new Label { Text = "📥 Pending Purchase Orders (Incoming)", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
+            string rightTitle = isAdminOrManager ? "📥 Pending Purchase Orders (All Cities)" : $"📥 Pending Purchase Orders ({staffRegion} Branch)";
+            lblGridTitle = new Label { Text = rightTitle, Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), AutoSize = true };
             this.Controls.Add(lblGridTitle);
 
             // --- 🔍 統一 Live Search UI ---
-            lblSearch = new Label { Text = "🔍 Live Search (PO / Material):", Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), AutoSize = true };
+            lblSearch = new Label { Text = "🔍 Live Search (PO / Material / Destination):", Font = new Font("Segoe UI", 10.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), AutoSize = true };
             txtSearch = new TextBox { Width = 350, Font = new Font("Segoe UI", 11F), BorderStyle = BorderStyle.FixedSingle };
             txtSearch.TextChanged += TxtSearch_TextChanged; // 綁定即時搜尋事件
 
             this.Controls.Add(lblSearch);
             this.Controls.Add(txtSearch);
-            // --- 搜尋 UI 完結 ---
 
             dgvPOItems = new DataGridView
             {
@@ -140,7 +191,6 @@ namespace ITP4915M_Group11
                 EnableHeadersVisualStyles = false
             };
 
-            // 📉 縮減大細：打造俐落舒適嘅閱讀感
             dgvPOItems.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             dgvPOItems.DefaultCellStyle.Padding = new Padding(8);
             dgvPOItems.DefaultCellStyle.Font = new Font("Segoe UI", 11F, FontStyle.Regular);
@@ -170,66 +220,51 @@ namespace ITP4915M_Group11
             return txt;
         }
 
-        private void GoodsReceivedForm_SizeChanged(object sender, EventArgs e)
-        {
-            RecalculateCustomLayout();
-        }
+        private void GoodsReceivedForm_SizeChanged(object sender, EventArgs e) { RecalculateCustomLayout(); }
 
-        /// <summary>
-        /// 🛠️ 鋼鐵動態佈局：動態精確定位，防止 Search Bar 同 Emoji 撞埋一齊
-        /// </summary>
         private void RecalculateCustomLayout()
         {
             if (this.Width < 200 || this.Height < 200) return;
-
             this.SuspendLayout();
 
-            // 1. 指定左側卡片位置 (固定 400px 闊度)
             pnlLeftCard.Location = new Point(20, 20);
             pnlLeftCard.Size = new Size(400, this.Height - 40);
 
-            // 2. 計算右側對齊錨點
             int rightStartX = pnlLeftCard.Right + 20;
             int rightWidth = this.Width - rightStartX - 20;
 
             if (rightWidth > 100)
             {
-                // 3. 固定標題
                 lblGridTitle.Location = new Point(rightStartX, 20);
 
-                // 4. 固定 Live Search UI 位置 (完美避開重疊)
                 if (txtSearch != null && lblSearch != null)
                 {
                     int searchY = 60;
                     lblSearch.Location = new Point(rightStartX, searchY + 3);
-                    // 根據 Label 嘅實際闊度，將 TextBox 擺喺佢右邊 10px 距離
                     txtSearch.Location = new Point(lblSearch.Right + 10, searchY);
                 }
 
-                // 5. 右側表格動態拉大填滿，預留位畀 Search Bar
                 int dgvStartY = 100;
                 dgvPOItems.Location = new Point(rightStartX, dgvStartY);
                 dgvPOItems.Size = new Size(rightWidth, this.Height - dgvStartY - 20);
 
-                // 6. 自動平分欄位
                 if (dgvPOItems.Columns.Count > 0)
                 {
                     dgvPOItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
                     dgvPOItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
                 }
             }
-
             this.ResumeLayout(false);
         }
         #endregion
 
-        #region 💾 資料庫連線與核心邏輯
+        #region 💾 資料庫連線與核心邏輯 (權限過濾與分倉庫存寫入)
         private void GenerateGRNID()
         {
             txtGRNID.Text = "GRN" + DateTime.Now.ToString("MMddHHmmss");
         }
 
-        // 🌟 移除咗複雜嘅參數，統一 Load 晒 Data 入 DataTable 再畀 Search Bar 過濾
+        // 🌟 核心修改：結合權限動態過濾
         private void LoadActivePurchaseOrders()
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
@@ -237,47 +272,75 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    string query = @"
-                        SELECT 
-                            po.PO_ID AS 'PO Number', 
-                            pol.MaterialID AS 'Material ID', 
-                            rm.MaterialName AS 'Material Name', 
-                            pol.Quantity AS 'Order Qty', 
-                            po.Status 
-                        FROM purchase_order po
-                        JOIN po_lineitem pol ON po.PO_ID = pol.PO_ID
-                        JOIN raw_material rm ON pol.MaterialID = rm.MaterialID
-                        WHERE po.Status != 'Received'
-                        ORDER BY po.PODate DESC";
+                    string query;
+
+                    // 🌟 如果是 Admin 顯示全球訂單與目的地城市；如果是一般專員，使用 WHERE 鎖死所屬倉庫
+                    if (isAdminOrManager)
+                    {
+                        query = @"
+                            SELECT 
+                                po.PO_ID AS 'PO Number', 
+                                pol.MaterialID AS 'Material ID', 
+                                rm.MaterialName AS 'Material Name', 
+                                pol.Quantity AS 'Order Qty', 
+                                po.WarehouseID AS 'Warehouse ID',
+                                COALESCE(w.City, 'Unassigned') AS 'Destination',
+                                po.Status 
+                            FROM purchase_order po
+                            JOIN po_lineitem pol ON po.PO_ID = pol.PO_ID
+                            JOIN raw_material rm ON pol.MaterialID = rm.MaterialID
+                            LEFT JOIN warehouse w ON po.WarehouseID = w.WarehouseID
+                            WHERE po.Status != 'Received'
+                            ORDER BY po.PODate DESC";
+                    }
+                    else
+                    {
+                        query = @"
+                            SELECT 
+                                po.PO_ID AS 'PO Number', 
+                                pol.MaterialID AS 'Material ID', 
+                                rm.MaterialName AS 'Material Name', 
+                                pol.Quantity AS 'Order Qty', 
+                                po.WarehouseID AS 'Warehouse ID',
+                                w.City AS 'Destination',
+                                po.Status 
+                            FROM purchase_order po
+                            JOIN po_lineitem pol ON po.PO_ID = pol.PO_ID
+                            JOIN raw_material rm ON pol.MaterialID = rm.MaterialID
+                            LEFT JOIN warehouse w ON po.WarehouseID = w.WarehouseID
+                            WHERE po.Status != 'Received' AND po.WarehouseID = @whID
+                            ORDER BY po.PODate DESC";
+                    }
 
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
                     {
-                        DataTable dt = new DataTable();
-                        adapter.Fill(dt);
-
-                        dgvPOItems.DataSource = null;
-                        dgvPOItems.DataSource = dt;
-
-                        // 設定最小防禦欄寬，防止內容擠壓
-                        foreach (DataGridViewColumn col in dgvPOItems.Columns)
+                        if (!isAdminOrManager)
                         {
-                            col.MinimumWidth = 110;
+                            cmd.Parameters.AddWithValue("@whID", staffWarehouseID);
                         }
 
-                        if (dgvPOItems.Columns.Contains("Material Name"))
+                        using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
                         {
-                            dgvPOItems.Columns["Material Name"].MinimumWidth = 180;
-                        }
+                            DataTable dt = new DataTable();
+                            adapter.Fill(dt);
 
-                        // 如果載入完 Data 發現 Search Box 有字，即刻行一次過濾
-                        if (txtSearch != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
-                        {
-                            TxtSearch_TextChanged(null, null);
-                        }
+                            dgvPOItems.DataSource = null;
+                            dgvPOItems.DataSource = dt;
 
-                        RecalculateCustomLayout();
-                        dgvPOItems.ClearSelection();
+                            foreach (DataGridViewColumn col in dgvPOItems.Columns)
+                            {
+                                col.MinimumWidth = 100;
+                            }
+                            if (dgvPOItems.Columns.Contains("Material Name")) dgvPOItems.Columns["Material Name"].MinimumWidth = 150;
+
+                            if (txtSearch != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
+                            {
+                                TxtSearch_TextChanged(null, null);
+                            }
+
+                            RecalculateCustomLayout();
+                            dgvPOItems.ClearSelection();
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -287,12 +350,12 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🌟 新增 Live Search 過濾邏輯
+        // 🌟 Live Search 同步增強過濾
         private void TxtSearch_TextChanged(object sender, EventArgs e)
         {
             if (dgvPOItems.DataSource is DataTable dt)
             {
-                string keyword = txtSearch.Text.Trim().Replace("'", "''"); // 防止 SQL 單引號報錯
+                string keyword = txtSearch.Text.Trim().Replace("'", "''");
 
                 if (string.IsNullOrWhiteSpace(keyword))
                 {
@@ -300,8 +363,7 @@ namespace ITP4915M_Group11
                 }
                 else
                 {
-                    // 根據表格顯示嘅欄位名稱做過濾
-                    dt.DefaultView.RowFilter = $"[PO Number] LIKE '%{keyword}%' OR [Material ID] LIKE '%{keyword}%' OR [Material Name] LIKE '%{keyword}%'";
+                    dt.DefaultView.RowFilter = $"[PO Number] LIKE '%{keyword}%' OR [Material ID] LIKE '%{keyword}%' OR [Material Name] LIKE '%{keyword}%' OR [Destination] LIKE '%{keyword}%'";
                 }
             }
         }
@@ -314,6 +376,11 @@ namespace ITP4915M_Group11
                 txtPOID.Text = row.Cells["PO Number"].Value?.ToString() ?? "";
                 txtMaterialID.Text = row.Cells["Material ID"].Value?.ToString() ?? "";
                 txtQty.Text = row.Cells["Order Qty"].Value?.ToString() ?? "";
+
+                // 🌟 同步顯示這筆訂單的目的地倉庫 (例如: W001 - Hong Kong)
+                string whID = row.Cells["Warehouse ID"].Value?.ToString() ?? "";
+                string destCity = row.Cells["Destination"].Value?.ToString() ?? "";
+                txtTargetWarehouse.Text = $"{whID} - {destCity}";
             }
         }
 
@@ -325,11 +392,15 @@ namespace ITP4915M_Group11
             string grnID = txtGRNID.Text.Trim();
             string staffID = txtStaffResource.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(poID) || string.IsNullOrWhiteSpace(materialID) || string.IsNullOrWhiteSpace(qtyStr))
+            if (string.IsNullOrWhiteSpace(poID) || string.IsNullOrWhiteSpace(materialID) || dgvPOItems.SelectedRows.Count == 0)
             {
                 MessageBox.Show("Please select a pending Purchase Order from the grid first.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            // 🌟 獲取選取訂單實際歸屬的 WarehouseID 
+            string targetWHID = dgvPOItems.SelectedRows[0].Cells["Warehouse ID"].Value.ToString();
+            string targetCity = dgvPOItems.SelectedRows[0].Cells["Destination"].Value.ToString();
 
             if (!int.TryParse(qtyStr, out int qty) || qty <= 0)
             {
@@ -338,7 +409,12 @@ namespace ITP4915M_Group11
             }
 
             DialogResult confirm = MessageBox.Show(
-                $"Are you sure you want to receive this shipment?\n\nPO Number: {poID}\nMaterial ID: {materialID}\nQuantity: {qty}\n\nThis will permanently update warehouse stock levels.",
+                $"Are you sure you want to receive this shipment?\n\n" +
+                $"PO Number: {poID}\n" +
+                $"Material ID: {materialID}\n" +
+                $"Quantity: {qty}\n" +
+                $"Target Warehouse: [{targetWHID} - {targetCity}]\n\n" +
+                $"This will permanently increase the stock level for {targetCity.ToUpper()} warehouse.",
                 "Confirm Receiving", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             if (confirm == DialogResult.No) return;
@@ -352,6 +428,7 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
+                            // 1. 寫入收貨單紀錄
                             string queryGRN = "INSERT INTO goods_received_note (GRN_ID, PO_ID, StaffID, ReceivedDate) VALUES (@grnID, @poID, @staffID, NOW())";
                             using (MySqlCommand cmdGRN = new MySqlCommand(queryGRN, conn, trans))
                             {
@@ -361,14 +438,21 @@ namespace ITP4915M_Group11
                                 cmdGRN.ExecuteNonQuery();
                             }
 
-                            string queryStock = "UPDATE raw_material SET StockLevel = StockLevel + @qty WHERE MaterialID = @matID";
+                            // 2. 🌟 核心修正：將貨物數量增加到該訂單指定的城市「地區庫存關聯表 (inventory)」內！
+                            string queryStock = @"
+                                INSERT INTO inventory (WarehouseID, MaterialID, StockLevel) 
+                                VALUES (@whID, @matID, @qty)
+                                ON DUPLICATE KEY UPDATE StockLevel = StockLevel + @qty";
+
                             using (MySqlCommand cmdStock = new MySqlCommand(queryStock, conn, trans))
                             {
                                 cmdStock.Parameters.AddWithValue("@qty", qty);
                                 cmdStock.Parameters.AddWithValue("@matID", materialID);
+                                cmdStock.Parameters.AddWithValue("@whID", targetWHID);
                                 cmdStock.ExecuteNonQuery();
                             }
 
+                            // 3. 更新採購單狀態為已收貨
                             string queryPO = "UPDATE purchase_order SET Status = 'Received' WHERE PO_ID = @poID";
                             using (MySqlCommand cmdPO = new MySqlCommand(queryPO, conn, trans))
                             {
@@ -377,11 +461,10 @@ namespace ITP4915M_Group11
                             }
 
                             trans.Commit();
-                            MessageBox.Show($"Inventory ingestion transaction committed successfully!\n\nGRN ID: {grnID}\nMaterial ID [{materialID}] stock level successfully increased by {qty} units.", "Ingestion Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show($"Inventory ingestion transaction committed successfully!\n\nGRN ID: {grnID}\nMaterial ID [{materialID}] has been safely added into [{targetCity}] warehouse stock (+{qty} units).", "Ingestion Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                             ClearFields();
-                            // 重新載入，TextBox 嗰邊如果有字會自動經 TextChanged 再 Filter 過
-                            LoadActivePurchaseOrders();
+                            LoadActivePurchaseOrders(); // 即時重整右側列表
                         }
                         catch (Exception ex)
                         {
@@ -402,6 +485,7 @@ namespace ITP4915M_Group11
             txtPOID.Clear();
             txtMaterialID.Clear();
             txtQty.Clear();
+            txtTargetWarehouse.Clear();
             dgvPOItems.ClearSelection();
             GenerateGRNID();
         }

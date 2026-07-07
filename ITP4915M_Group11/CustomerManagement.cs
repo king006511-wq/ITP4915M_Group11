@@ -11,7 +11,7 @@ namespace ITP4915M_Group11
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         private TextBox txtCustomerID, txtName, txtPhone, txtAddress, txtSearch;
-        private ComboBox cboType;
+        private ComboBox cboType, cboRegion; // 🌟 加入了 cboRegion
         private DataGridView dgvCustomers, dgvRecentOrders;
         private Label lblTotalOrders, lblTotalSpent;
 
@@ -43,7 +43,8 @@ namespace ITP4915M_Group11
             this.Controls.Add(lblHeader);
 
             // --- Left Panel: Customer Profile & Metrics ---
-            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 620), BackColor = ThemeManager.CardBackground, BorderStyle = BorderStyle.FixedSingle };
+            // 🌟 稍微加高 Panel 到 685 確保裝得落所有欄位
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 685), BackColor = ThemeManager.CardBackground, BorderStyle = BorderStyle.FixedSingle };
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, ThemeManager.BorderColor, ButtonBorderStyle.Solid);
             this.Controls.Add(pnlCard);
 
@@ -61,6 +62,16 @@ namespace ITP4915M_Group11
             startY += 65;
 
             txtPhone = CreateInput(pnlCard, ref startY, "Contact Number:", false);
+
+            // 🌟 新增：國際化地區選擇 (Region/City)
+            Label lblRegion = new Label { Text = "Region / City:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboRegion = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
+            cboRegion.Items.AddRange(new string[] { "Hong Kong", "Tokyo", "Singapore", "New York", "London" });
+            cboRegion.SelectedIndex = 0; // 預設為香港
+            pnlCard.Controls.Add(lblRegion);
+            pnlCard.Controls.Add(cboRegion);
+            startY += 65;
+
             txtAddress = CreateInput(pnlCard, ref startY, "Billing/Delivery Address:", false);
 
             // 🌟 企業級 Metrics (Customer Lifetime Value)
@@ -168,7 +179,7 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🌟 當選擇客戶時，自動拉取該客戶嘅 360 度訂單資訊
+        // 🌟 當選擇客戶時，自動拉取該客戶嘅 360 度訂單資訊，並拆解出 Region 同真實 Address
         private void DgvCustomers_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvCustomers.SelectedRows.Count > 0)
@@ -180,7 +191,29 @@ namespace ITP4915M_Group11
                 txtName.Text = r.Cells["Name"].Value.ToString();
                 cboType.Text = r.Cells["Type"].Value.ToString() == "B2B" ? "B2B (Corporate)" : (r.Cells["Type"].Value.ToString() == "B2C" ? "B2C (Retail)" : r.Cells["Type"].Value.ToString());
                 txtPhone.Text = r.Cells["Phone"].Value.ToString();
-                txtAddress.Text = r.Cells["Address"].Value.ToString();
+
+                string fullAddress = r.Cells["Address"].Value.ToString();
+
+                // 🌟 自動拆解出地區與真實地址
+                bool regionMatched = false;
+                foreach (string city in cboRegion.Items)
+                {
+                    string prefix = $"[{city}] ";
+                    if (fullAddress.StartsWith(prefix))
+                    {
+                        cboRegion.Text = city;
+                        txtAddress.Text = fullAddress.Substring(prefix.Length);
+                        regionMatched = true;
+                        break;
+                    }
+                }
+
+                // 如果係舊記錄 (冇前綴)，就預設為香港
+                if (!regionMatched)
+                {
+                    cboRegion.SelectedIndex = 0;
+                    txtAddress.Text = fullAddress;
+                }
 
                 LoadCustomer360Data(cid);
             }
@@ -244,6 +277,9 @@ namespace ITP4915M_Group11
             if (string.IsNullOrWhiteSpace(txtCustomerID.Text) || string.IsNullOrWhiteSpace(txtName.Text)) { MessageBox.Show("ID and Name are required!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             string dbType = cboType.Text.Contains("B2B") ? "B2B" : "B2C";
 
+            // 🌟 儲存前：將下拉選單嘅地區加到地址前面
+            string formattedAddress = $"[{cboRegion.Text}] {txtAddress.Text.Trim()}";
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
@@ -256,7 +292,7 @@ namespace ITP4915M_Group11
                         cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
                         cmd.Parameters.AddWithValue("@t", dbType);
                         cmd.Parameters.AddWithValue("@p", txtPhone.Text.Trim());
-                        cmd.Parameters.AddWithValue("@a", txtAddress.Text.Trim());
+                        cmd.Parameters.AddWithValue("@a", formattedAddress); // 儲存合併後嘅地址
                         cmd.ExecuteNonQuery();
                     }
                     MessageBox.Show("New customer profile created successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -271,6 +307,9 @@ namespace ITP4915M_Group11
             if (string.IsNullOrWhiteSpace(txtCustomerID.Text)) return;
             string dbType = cboType.Text.Contains("B2B") ? "B2B" : "B2C";
 
+            // 🌟 更新時：同樣將下拉選單嘅地區加到地址前面
+            string formattedAddress = $"[{cboRegion.Text}] {txtAddress.Text.Trim()}";
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
@@ -283,7 +322,7 @@ namespace ITP4915M_Group11
                         cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
                         cmd.Parameters.AddWithValue("@t", dbType);
                         cmd.Parameters.AddWithValue("@p", txtPhone.Text.Trim());
-                        cmd.Parameters.AddWithValue("@a", txtAddress.Text.Trim());
+                        cmd.Parameters.AddWithValue("@a", formattedAddress); // 更新為合併後嘅地址
                         cmd.ExecuteNonQuery();
                     }
                     MessageBox.Show("Customer profile updated.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -318,6 +357,7 @@ namespace ITP4915M_Group11
         private void ClearForm()
         {
             txtName.Clear(); txtPhone.Clear(); txtAddress.Clear(); cboType.SelectedIndex = -1;
+            cboRegion.SelectedIndex = 0; // 🌟 清除表單時，將地區重設為預設值(香港)
             lblTotalOrders.Text = "Lifetime Orders: 0";
             lblTotalSpent.Text = "Total Spent: $0.00";
             dgvRecentOrders.DataSource = null;

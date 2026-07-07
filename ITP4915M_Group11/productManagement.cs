@@ -10,23 +10,23 @@ namespace ITP4915M_Group11
 {
     public partial class ProductManagement : BaseForm
     {
-        private TextBox txtProductID;
-        private TextBox txtProductName;
-        private TextBox txtSearch;
-        private TextBox txtStockLevel;
-        private TextBox txtRetailPrice;
+        private TextBox txtProductID, txtProductName, txtRetailPrice, txtSearch;
+        private Label lblRetailPrice;
+
+        // 🌍 各地區獨立庫存 TextBoxes
+        private TextBox txtStock_HK, txtStock_Tokyo, txtStock_Singapore, txtStock_NY, txtStock_London;
+        private Label lblStock_HK, lblStock_Tokyo, lblStock_Singapore, lblStock_NY, lblStock_London;
+
         private DataGridView dgvProductCatalog;
 
-        // 宣告 Button 為類別變數，方便後續強制上色 (防止被 ThemeManager 覆寫)
-        private Button btnBackHome;
-        private Button btnViewPhoto;
-        private Button btnUploadPhoto;
-        private Button btnUpdate;
-        private Button btnDelete;
-        private Button btnClear;
+        private Button btnBackHome, btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear;
 
         // 🔒 Centralized Database Connection String
         private readonly string connectionString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
+
+        // 👨‍💼 權限與地區變數
+        private bool isAdminOrManager = false;
+        private string staffRegion = "Hong Kong"; // 預設
 
         public ProductManagement()
         {
@@ -34,64 +34,71 @@ namespace ITP4915M_Group11
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
                 ThemeManager.ApplyTheme(this);
-                // 先建立 UI，再套用主題
+                DetermineUserAccessLevel(); // 查核員工權限及地區
                 InitializePremiumModernUI();
-
-                // 強制套用專屬按鈕顏色，蓋過 ThemeManager 的單一設定
                 ApplyButtonColors();
-
                 LoadDatabaseData();
+
+                // 🌟 新增：跨視窗同步核心邏輯 (VisibleChanged 事件)
+                // 當你喺主畫面切換 Panel / Tab，令到呢個庫存畫面重新「顯現」出嚟嘅時候，
+                // 佢就會自動觸發 LoadDatabaseData() 去 Database 爬最新嘅庫存數據！
+                this.VisibleChanged += (s, e) => {
+                    if (this.Visible)
+                    {
+                        LoadDatabaseData();
+                    }
+                };
             }
         }
 
-        #region 🎨 強制按鈕上色 (防止 ThemeManager 覆寫)
-        private void ApplyButtonColors()
+        #region 🔒 System Security & Role Management
+        private void DetermineUserAccessLevel()
         {
-            if (btnBackHome != null) { btnBackHome.BackColor = Color.FromArgb(99, 102, 241); btnBackHome.ForeColor = Color.White; }
-            if (btnViewPhoto != null) { btnViewPhoto.BackColor = Color.FromArgb(14, 165, 233); btnViewPhoto.ForeColor = Color.White; }
-            if (btnUploadPhoto != null) { btnUploadPhoto.BackColor = Color.FromArgb(245, 158, 11); btnUploadPhoto.ForeColor = Color.White; }
-            if (btnUpdate != null) { btnUpdate.BackColor = Color.FromArgb(34, 197, 94); btnUpdate.ForeColor = Color.White; }
-            if (btnDelete != null) { btnDelete.BackColor = Color.FromArgb(239, 68, 68); btnDelete.ForeColor = Color.White; }
-            if (btnClear != null) { btnClear.BackColor = Color.FromArgb(100, 116, 139); btnClear.ForeColor = Color.White; }
-        }
-        #endregion
+            string currentRole = UserSession.LoggedInStaffRole;
 
-        #region 🔒 System Security Gatekeeper Enforcement
+            // 決定是否為管理層
+            isAdminOrManager = !string.IsNullOrEmpty(currentRole) &&
+                               (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                                currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+
+            // 尋找該員工負責的城市 Region
+            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    using (MySqlCommand cmd = new MySqlCommand("SELECT Region FROM staff WHERE StaffID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", UserSession.LoggedInStaffID ?? "");
+                        object res = cmd.ExecuteScalar();
+                        if (res != null && res != DBNull.Value)
+                        {
+                            staffRegion = res.ToString();
+                        }
+                    }
+                }
+                catch { /* 若出錯則保持預設 Hong Kong */ }
+            }
+        }
+
         private void ProductManagement_Load(object sender, EventArgs e)
         {
             string currentRole = UserSession.LoggedInStaffRole;
-            string currentStaffID = UserSession.LoggedInStaffID;
-
-            // 允許 Warehouse Specialist 檢視此頁面，但只有 Manager/Administrator 可以編輯
-            bool isAuthorized = !string.IsNullOrEmpty(currentRole) &&
-                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase) ||
-                                 currentRole.Equals("Warehouse Specialist", StringComparison.OrdinalIgnoreCase));
+            bool isAuthorized = isAdminOrManager || (!string.IsNullOrEmpty(currentRole) && currentRole.Equals("Warehouse Specialist", StringComparison.OrdinalIgnoreCase));
 
             if (!isAuthorized)
             {
-                MessageBox.Show(
-                    $"[SECURITY ALERT] Access Denied!\n\n" +
-                    $"Logged In Staff ID: {(string.IsNullOrEmpty(currentStaffID) ? "Unknown" : currentStaffID)}\n" +
-                    $"Your Account Role is: \"{(string.IsNullOrEmpty(currentRole) ? "None" : currentRole)}\"\n\n" +
-                    $"Only a Manager or Administrator is authorized to access Product Maintenance settings.",
-                    "System Security Guard",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Stop
-                );
-
+                MessageBox.Show($"[SECURITY ALERT] Access Denied!\n\nYour Role is not authorized to manage Inventory.", "System Security Guard", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 this.Shown += (s2, e2) => this.Close();
                 return;
             }
 
-            bool canEdit = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager, AuthorizationHelper.UserRoleEnum.Administrator);
             foreach (Control c in this.Controls)
             {
                 if (c is Button b && (b.Text.Contains("Update") || b.Text.Contains("Delete") || b.Text.Contains("Upload")))
                 {
-                    b.Enabled = canEdit;
-                    // 如果冇權限，先變灰；有權限就保持現有顏色
-                    b.BackColor = canEdit ? b.BackColor : Color.LightGray;
+                    b.Enabled = isAdminOrManager || currentRole.Equals("Warehouse Specialist", StringComparison.OrdinalIgnoreCase);
+                    b.BackColor = b.Enabled ? b.BackColor : Color.LightGray;
                 }
             }
         }
@@ -107,80 +114,64 @@ namespace ITP4915M_Group11
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
 
             this.Load += ProductManagement_Load;
 
-            // Workspace Controller Panel Area
             Panel pnlMain = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
             this.Controls.Add(pnlMain);
 
             Label lblHeader = new Label { Text = "Finished Goods Inventory Maintenance", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            // 🎨 按鈕 1: Go Back
-            btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(1015, 22), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand, Visible = true };
+            btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(1015, 22), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { try { this.Close(); } catch { this.Hide(); } };
             pnlMain.Controls.Add(btnBackHome);
 
-            // Input Details Dashboard Card
-            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 630), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            // 🌟 將 Card 寬度由 380 增加到 420，容納更闊嘅 TextBox
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(420, 660), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = false };
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlCard);
 
-            Label lblCardTitle = new Label { Text = "📦 Finished Product Details", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 15), AutoSize = true };
+            Label lblCardTitle = new Label { Text = isAdminOrManager ? "📦 Global Product Details" : $"📦 Product Details ({staffRegion})", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 15), AutoSize = true };
             pnlCard.Controls.Add(lblCardTitle);
 
+            // 🌟 重新調整間距：由每次 +65 改為 +55，縮短組件之間嘅距離避免撞落按鈕度
             int startY = 60;
-            txtProductID = CreateStyledTextBox(pnlCard, ref startY, "Product ID *:", false);
-            txtProductName = CreateStyledTextBox(pnlCard, ref startY, "Product Name *:", false);
-            txtStockLevel = CreateStyledTextBox(pnlCard, ref startY, "Stock Level:", false);
-            txtRetailPrice = CreateStyledTextBox(pnlCard, ref startY, "Retail Price (HKD):", false);
+            txtProductID = CreateStyledTextBox(pnlCard, ref startY, "Product ID *:", false, out _);
+            txtProductName = CreateStyledTextBox(pnlCard, ref startY, "Product Name *:", false, out _);
 
-            // 微調按鈕間距
-            startY += 15;
+            // 🌍 動態生成 5 個地區庫存框 (只顯示城市名)
+            txtStock_HK = CreateStyledTextBox(pnlCard, ref startY, "Hong Kong:", false, out lblStock_HK);
+            txtStock_Tokyo = CreateStyledTextBox(pnlCard, ref startY, "Tokyo:", false, out lblStock_Tokyo);
+            txtStock_Singapore = CreateStyledTextBox(pnlCard, ref startY, "Singapore:", false, out lblStock_Singapore);
+            txtStock_NY = CreateStyledTextBox(pnlCard, ref startY, "New York:", false, out lblStock_NY);
+            txtStock_London = CreateStyledTextBox(pnlCard, ref startY, "London:", false, out lblStock_London);
 
-            // 🎨 初始化各種操作按鈕 (已向上移緊湊排版)
-            btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(20, startY), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(195, startY), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnUpdate = new Button { Text = "💾 Update", Location = new Point(20, startY + 50), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(195, startY + 50), Size = new Size(160, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(20, startY + 100), Size = new Size(335, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            txtRetailPrice = CreateStyledTextBox(pnlCard, ref startY, "Retail Price (HKD):", false, out lblRetailPrice);
 
-            foreach (var b in new Button[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear }) b.FlatAppearance.BorderSize = 0;
-            pnlCard.Controls.AddRange(new Control[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear });
-
-            btnViewPhoto.Click += btnViewPhoto_Click;
-            btnUploadPhoto.Click += btnUploadPhoto_Click;
-            btnUpdate.Click += btnUpdate_Click;
-            btnDelete.Click += btnDelete_Click;
-
-            btnClear.Click += (s, e) => {
-                ClearFields();
-            };
+            // 根據身份隱藏不需要的欄位，並動態推上按鈕
+            ArrangeDynamicUI(pnlCard);
 
             // Data Grid Component
-            Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(440, 85), AutoSize = true };
+            Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(470, 85), AutoSize = true };
             pnlMain.Controls.Add(lblGridTitle);
 
-            // 🔍 搜尋功能組件：✅ 已移上一行與標題並排，解決撞位問題
-            Label lblSearch = new Label { Text = "🔍 Search:", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(865, 88), AutoSize = true };
+            Label lblSearch = new Label { Text = "🔍 Search:", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(810, 88), AutoSize = true };
             pnlMain.Controls.Add(lblSearch);
 
-            txtSearch = new TextBox { Location = new Point(950, 85), Width = 190, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
+            txtSearch = new TextBox { Location = new Point(890, 85), Width = 250, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
             txtSearch.TextChanged += txtSearch_TextChanged;
             pnlMain.Controls.Add(txtSearch);
 
-            // 🚨 庫存警告標籤：✅ 獨佔一行，不會再與 Search 重疊
-            Label lblWarningLegend = new Label { Text = "🚨 Alert: Rows highlighted in RED indicate Low Stock (Below 20 units)", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), Location = new Point(440, 118), AutoSize = true };
+            Label lblWarningLegend = new Label { Text = "🚨 Alert: Rows highlighted in RED indicate Low Stock (Below 20 units)", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), Location = new Point(470, 118), AutoSize = true };
             pnlMain.Controls.Add(lblWarningLegend);
 
-            // DataGridView 設置
+            // Grid 位置往右移配合闊咗嘅 Card
             dgvProductCatalog = new DataGridView
             {
-                Location = new Point(440, 145),
-                Size = new Size(700, 570),
+                Location = new Point(470, 145),
+                Size = new Size(670, 600),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
@@ -205,220 +196,192 @@ namespace ITP4915M_Group11
             pnlMain.Controls.Add(dgvProductCatalog);
         }
 
-        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly)
+        // 🌟 將 TextBox 寬度由 335 加大至 375
+        private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly, out Label createdLabel)
         {
             Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 335, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 375, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
             container.Controls.Add(lbl); container.Controls.Add(txt);
-            topY += 65;
+            topY += 55; // 🌟 收緊間距
+            createdLabel = lbl;
             return txt;
+        }
+
+        // 🌟 核心動態排版：根據角色隱藏並向上推動物件，確保唔會重疊
+        private void ArrangeDynamicUI(Panel pnlCard)
+        {
+            if (!isAdminOrManager)
+            {
+                // 先全部隱藏
+                txtStock_HK.Visible = lblStock_HK.Visible = false;
+                txtStock_Tokyo.Visible = lblStock_Tokyo.Visible = false;
+                txtStock_Singapore.Visible = lblStock_Singapore.Visible = false;
+                txtStock_NY.Visible = lblStock_NY.Visible = false;
+                txtStock_London.Visible = lblStock_London.Visible = false;
+
+                // 根據負責地區顯示對應的一個
+                TextBox activeTxt = null; Label activeLbl = null;
+                switch (staffRegion)
+                {
+                    case "Tokyo": activeTxt = txtStock_Tokyo; activeLbl = lblStock_Tokyo; break;
+                    case "Singapore": activeTxt = txtStock_Singapore; activeLbl = lblStock_Singapore; break;
+                    case "New York": activeTxt = txtStock_NY; activeLbl = lblStock_NY; break;
+                    case "London": activeTxt = txtStock_London; activeLbl = lblStock_London; break;
+                    default: activeTxt = txtStock_HK; activeLbl = lblStock_HK; break;
+                }
+
+                // 將該地區排在第 3 格 (Y=170)
+                activeTxt.Visible = activeLbl.Visible = true;
+                activeLbl.Location = new Point(20, 170);
+                activeTxt.Location = new Point(20, 192);
+
+                // 將 RetailPrice 推上去第 4 格 (Y=225)
+                lblRetailPrice.Location = new Point(20, 225);
+                txtRetailPrice.Location = new Point(20, 247);
+            }
+
+            // 決定按鈕 Y 座標 (如果有 Admin 顯示全部 5 個庫存，RetailPrice 係 445，所以 Button 安全起點係 505)
+            int buttonStartY = isAdminOrManager ? 505 : 290;
+
+            btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(20, buttonStartY), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(215, buttonStartY), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnUpdate = new Button { Text = "💾 Update", Location = new Point(20, buttonStartY + 50), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(215, buttonStartY + 50), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(20, buttonStartY + 100), Size = new Size(375, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            foreach (var b in new Button[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear }) b.FlatAppearance.BorderSize = 0;
+            pnlCard.Controls.AddRange(new Control[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear });
+
+            btnViewPhoto.Click += btnViewPhoto_Click;
+            btnUploadPhoto.Click += btnUploadPhoto_Click;
+            btnUpdate.Click += btnUpdate_Click;
+            btnDelete.Click += btnDelete_Click;
+            btnClear.Click += (s, e) => ClearFields();
+        }
+
+        private void ApplyButtonColors()
+        {
+            if (btnBackHome != null) { btnBackHome.BackColor = Color.FromArgb(99, 102, 241); btnBackHome.ForeColor = Color.White; }
+            if (btnViewPhoto != null) { btnViewPhoto.BackColor = Color.FromArgb(14, 165, 233); btnViewPhoto.ForeColor = Color.White; }
+            if (btnUploadPhoto != null) { btnUploadPhoto.BackColor = Color.FromArgb(245, 158, 11); btnUploadPhoto.ForeColor = Color.White; }
+            if (btnUpdate != null) { btnUpdate.BackColor = Color.FromArgb(34, 197, 94); btnUpdate.ForeColor = Color.White; }
+            if (btnDelete != null) { btnDelete.BackColor = Color.FromArgb(239, 68, 68); btnDelete.ForeColor = Color.White; }
+            if (btnClear != null) { btnClear.BackColor = Color.FromArgb(100, 116, 139); btnClear.ForeColor = Color.White; }
         }
         #endregion
 
         #region 📦 Business Management Logic Functions
 
-        private void ApplySearchFilter()
+        private string GetDBStockColumnName(string region)
         {
-            if (dgvProductCatalog.DataSource is DataTable dt)
+            switch (region)
             {
-                string keyword = txtSearch.Text.Trim().Replace("'", "''");
-                if (string.IsNullOrWhiteSpace(keyword))
-                {
-                    dt.DefaultView.RowFilter = "";
-                }
-                else
-                {
-                    dt.DefaultView.RowFilter = string.Format("[Product ID] LIKE '%{0}%' OR [Name] LIKE '%{0}%'", keyword);
-                }
+                case "Tokyo": return "Stock_Tokyo";
+                case "Singapore": return "Stock_Singapore";
+                case "New York": return "Stock_NY";
+                case "London": return "Stock_London";
+                default: return "Stock_HK";
             }
         }
 
-        private void txtSearch_TextChanged(object sender, EventArgs e)
-        {
-            ApplySearchFilter();
-        }
-
-        private void LoadDatabaseData()
+        // 🌟 升級：將 Method 由 private 改為 public，等出面嘅視窗有需要時可以直接叫佢 Reload
+        public void LoadDatabaseData()
         {
             try
             {
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "SELECT ProductID AS 'Product ID', ProductName AS 'Name', StockLevel AS 'Stock', RetailPrice AS 'Price HKD' FROM product";
+                    string query;
+
+                    // 🌟 改變 SQL 查詢：欄位別名(AS)直接顯示城市名稱，唔要 "Stock_"
+                    if (isAdminOrManager)
+                    {
+                        query = "SELECT ProductID, ProductName AS 'Name', Stock_HK AS 'Hong Kong', Stock_Tokyo AS 'Tokyo', Stock_Singapore AS 'Singapore', Stock_NY AS 'New York', Stock_London AS 'London', RetailPrice AS 'Price HKD' FROM product";
+                    }
+                    else
+                    {
+                        string targetStockCol = GetDBStockColumnName(staffRegion);
+                        query = $"SELECT ProductID, ProductName AS 'Name', {targetStockCol} AS '{staffRegion}', RetailPrice AS 'Price HKD' FROM product";
+                    }
+
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
                     {
                         DataTable dt = new DataTable();
                         adapter.Fill(dt);
                         dgvProductCatalog.DataSource = dt;
-
                         ApplySearchFilter();
                     }
                 }
             }
             catch (Exception ex)
             {
-                DataTable errorDt = new DataTable();
-                errorDt.Columns.Add("System Status");
-                errorDt.Rows.Add("Database Error: " + ex.Message);
-                dgvProductCatalog.DataSource = errorDt;
+                MessageBox.Show("Database Load Error: " + ex.Message);
+            }
+        }
+
+        private void txtSearch_TextChanged(object sender, EventArgs e) => ApplySearchFilter();
+
+        private void ApplySearchFilter()
+        {
+            if (dgvProductCatalog.DataSource is DataTable dt)
+            {
+                string keyword = txtSearch.Text.Trim().Replace("'", "''");
+                dt.DefaultView.RowFilter = string.IsNullOrWhiteSpace(keyword) ? "" : string.Format("ProductID LIKE '%{0}%' OR Name LIKE '%{0}%'", keyword);
             }
         }
 
         private void dgvProductCatalog_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (e.RowIndex >= 0 && dgvProductCatalog.Columns.Contains("Stock"))
+            // 🌟 判斷是否為城市庫存欄位，進行紅色警告判定
+            string[] cities = { "Hong Kong", "Tokyo", "Singapore", "New York", "London" };
+            if (e.RowIndex >= 0 && cities.Contains(dgvProductCatalog.Columns[e.ColumnIndex].Name))
             {
-                var stockCell = dgvProductCatalog.Rows[e.RowIndex].Cells["Stock"];
-                if (stockCell.Value != null && int.TryParse(stockCell.Value.ToString(), out int stockQty))
+                var cell = dgvProductCatalog.Rows[e.RowIndex].Cells[e.ColumnIndex];
+                if (cell.Value != null && int.TryParse(cell.Value.ToString(), out int qty) && qty < 20)
                 {
-                    if (stockQty < 20)
-                    {
-                        e.CellStyle.BackColor = Color.FromArgb(254, 226, 226);
-                        e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
-
-                        if (dgvProductCatalog.Columns[e.ColumnIndex].Name == "Stock")
-                        {
-                            e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
-                        }
-                    }
+                    e.CellStyle.BackColor = Color.FromArgb(254, 226, 226);
+                    e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
                 }
             }
         }
 
         private void dgvProductCatalog_SelectionChanged(object sender, EventArgs e)
         {
-            if (dgvProductCatalog.SelectedRows.Count > 0)
+            if (dgvProductCatalog.SelectedRows.Count > 0 && dgvProductCatalog.Columns.Contains("ProductID"))
             {
                 DataGridViewRow row = dgvProductCatalog.SelectedRows[0];
-                txtProductID.Text = row.Cells["Product ID"].Value?.ToString() ?? "";
+                txtProductID.Text = row.Cells["ProductID"].Value?.ToString() ?? "";
                 txtProductName.Text = row.Cells["Name"].Value?.ToString() ?? "";
-                txtStockLevel.Text = row.Cells["Stock"].Value?.ToString() ?? "";
                 txtRetailPrice.Text = row.Cells["Price HKD"].Value?.ToString() ?? "";
+
+                // 🌟 根據權限從對應的 Grid 欄位(城市名)拿取數字
+                if (isAdminOrManager)
+                {
+                    txtStock_HK.Text = row.Cells["Hong Kong"].Value?.ToString() ?? "0";
+                    txtStock_Tokyo.Text = row.Cells["Tokyo"].Value?.ToString() ?? "0";
+                    txtStock_Singapore.Text = row.Cells["Singapore"].Value?.ToString() ?? "0";
+                    txtStock_NY.Text = row.Cells["New York"].Value?.ToString() ?? "0";
+                    txtStock_London.Text = row.Cells["London"].Value?.ToString() ?? "0";
+                }
+                else
+                {
+                    string stockValue = row.Cells[staffRegion].Value?.ToString() ?? "0";
+
+                    switch (staffRegion)
+                    {
+                        case "Tokyo": txtStock_Tokyo.Text = stockValue; break;
+                        case "Singapore": txtStock_Singapore.Text = stockValue; break;
+                        case "New York": txtStock_NY.Text = stockValue; break;
+                        case "London": txtStock_London.Text = stockValue; break;
+                        default: txtStock_HK.Text = stockValue; break;
+                    }
+                }
+
                 txtProductID.ReadOnly = true;
                 txtProductID.BackColor = Color.FromArgb(241, 245, 249);
-            }
-            else
-            {
-                ClearFields();
-            }
-        }
-
-        private void btnUploadPhoto_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtProductID.Text))
-            {
-                MessageBox.Show("Please select a product first to assign a photo to it.", "No Product Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            string productID = txtProductID.Text.Trim();
-            string targetFolder = Path.Combine(Application.StartupPath, "ProductImages");
-
-            if (!Directory.Exists(targetFolder))
-            {
-                Directory.CreateDirectory(targetFolder);
-            }
-
-            using (OpenFileDialog ofd = new OpenFileDialog())
-            {
-                ofd.Title = $"Select Image for {productID}";
-                ofd.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.webp;*.bmp";
-
-                if (ofd.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        string[] oldFiles = Directory.GetFiles(targetFolder, $"{productID}.*");
-                        foreach (string oldFile in oldFiles)
-                        {
-                            File.Delete(oldFile);
-                        }
-
-                        string extension = Path.GetExtension(ofd.FileName);
-                        string newFilePath = Path.Combine(targetFolder, $"{productID}{extension}");
-
-                        File.Copy(ofd.FileName, newFilePath);
-
-                        MessageBox.Show($"Success! The image has been automatically saved and renamed to {productID}{extension}.", "Upload Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error processing the image:\n" + ex.Message, "Upload Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-
-        private void btnViewPhoto_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtProductID.Text))
-            {
-                MessageBox.Show("Please select a product from the catalog to view its photo.", "No Product Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            string productID = txtProductID.Text.Trim();
-            string productName = txtProductName.Text.Trim();
-            string folderPath = Path.Combine(Application.StartupPath, "ProductImages");
-
-            using (Form photoForm = new Form())
-            {
-                photoForm.Text = $"Product Photo - {productName} ({productID})";
-                photoForm.Size = new Size(500, 550);
-                photoForm.StartPosition = FormStartPosition.CenterParent;
-                photoForm.FormBorderStyle = FormBorderStyle.FixedDialog;
-                photoForm.MaximizeBox = false;
-                photoForm.MinimizeBox = false;
-                photoForm.BackColor = Color.White;
-
-                PictureBox pb = new PictureBox
-                {
-                    Dock = DockStyle.Fill,
-                    SizeMode = PictureBoxSizeMode.Zoom,
-                    BackColor = Color.FromArgb(249, 250, 251)
-                };
-
-                bool isImageLoaded = false;
-
-                if (Directory.Exists(folderPath))
-                {
-                    string[] matchingFiles = Directory.GetFiles(folderPath, $"{productID}.*");
-
-                    if (matchingFiles.Length > 0)
-                    {
-                        try
-                        {
-                            byte[] bytes = File.ReadAllBytes(matchingFiles[0]);
-                            using (MemoryStream ms = new MemoryStream(bytes))
-                            {
-                                pb.Image = Image.FromStream(ms);
-                                isImageLoaded = true;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Error loading image file:\n" + ex.Message, "Image Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                }
-
-                if (!isImageLoaded)
-                {
-                    Label lblNoImage = new Label
-                    {
-                        Text = $"🚫 No Photo Assigned\n\nPlease click 'Upload Photo' to add an image for this product.",
-                        Dock = DockStyle.Fill,
-                        TextAlign = ContentAlignment.MiddleCenter,
-                        Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
-                        ForeColor = Color.FromArgb(100, 116, 139)
-                    };
-                    pb.Controls.Add(lblNoImage);
-                }
-
-                photoForm.Controls.Add(pb);
-                photoForm.ShowDialog();
             }
         }
 
@@ -426,82 +389,122 @@ namespace ITP4915M_Group11
         {
             if (string.IsNullOrWhiteSpace(txtProductID.Text))
             {
-                MessageBox.Show("Please click on an active catalog item to initiate modification cycles.", "System Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please click on an active catalog item first.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
             try
             {
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "UPDATE product SET ProductName=@name, StockLevel=@stock, RetailPrice=@price WHERE ProductID=@id";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
-                        cmd.Parameters.AddWithValue("@name", txtProductName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@stock", string.IsNullOrEmpty(txtStockLevel.Text) ? 0 : Convert.ToInt32(txtStockLevel.Text.Trim()));
-                        cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtRetailPrice.Text) ? 0 : Convert.ToDecimal(txtRetailPrice.Text.Trim()));
+                    string query;
+                    MySqlCommand cmd = new MySqlCommand();
+                    cmd.Connection = conn;
 
-                        int rowCount = cmd.ExecuteNonQuery();
-                        if (rowCount > 0)
-                        {
-                            MessageBox.Show("Inventory product info has updated correctly!", "Transaction Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            LoadDatabaseData();
-                            ClearFields();
-                        }
+                    if (isAdminOrManager)
+                    {
+                        query = "UPDATE product SET ProductName=@name, Stock_HK=@shk, Stock_Tokyo=@stk, Stock_Singapore=@ssg, Stock_NY=@sny, Stock_London=@sln, RetailPrice=@price WHERE ProductID=@id";
+                        cmd.Parameters.AddWithValue("@shk", string.IsNullOrEmpty(txtStock_HK.Text) ? 0 : Convert.ToInt32(txtStock_HK.Text));
+                        cmd.Parameters.AddWithValue("@stk", string.IsNullOrEmpty(txtStock_Tokyo.Text) ? 0 : Convert.ToInt32(txtStock_Tokyo.Text));
+                        cmd.Parameters.AddWithValue("@ssg", string.IsNullOrEmpty(txtStock_Singapore.Text) ? 0 : Convert.ToInt32(txtStock_Singapore.Text));
+                        cmd.Parameters.AddWithValue("@sny", string.IsNullOrEmpty(txtStock_NY.Text) ? 0 : Convert.ToInt32(txtStock_NY.Text));
+                        cmd.Parameters.AddWithValue("@sln", string.IsNullOrEmpty(txtStock_London.Text) ? 0 : Convert.ToInt32(txtStock_London.Text));
+                    }
+                    else
+                    {
+                        string targetStockCol = GetDBStockColumnName(staffRegion);
+                        query = $"UPDATE product SET ProductName=@name, {targetStockCol}=@stock, RetailPrice=@price WHERE ProductID=@id";
+
+                        TextBox activeTxt = txtStock_HK;
+                        if (staffRegion == "Tokyo") activeTxt = txtStock_Tokyo;
+                        else if (staffRegion == "Singapore") activeTxt = txtStock_Singapore;
+                        else if (staffRegion == "New York") activeTxt = txtStock_NY;
+                        else if (staffRegion == "London") activeTxt = txtStock_London;
+
+                        cmd.Parameters.AddWithValue("@stock", string.IsNullOrEmpty(activeTxt.Text) ? 0 : Convert.ToInt32(activeTxt.Text));
+                    }
+
+                    cmd.CommandText = query;
+                    cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
+                    cmd.Parameters.AddWithValue("@name", txtProductName.Text.Trim());
+                    cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtRetailPrice.Text) ? 0 : Convert.ToDecimal(txtRetailPrice.Text.Trim()));
+
+                    if (cmd.ExecuteNonQuery() > 0)
+                    {
+                        MessageBox.Show("Inventory product info updated successfully!", "Transaction Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        LoadDatabaseData();
+                        ClearFields();
                     }
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Update Operation Failure:\n" + ex.Message, "Execution Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { MessageBox.Show("Update Failure: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        }
+
+        private void btnUploadPhoto_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtProductID.Text)) { MessageBox.Show("Select a product first.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+            string targetFolder = Path.Combine(Application.StartupPath, "ProductImages");
+            if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
+
+            using (OpenFileDialog ofd = new OpenFileDialog { Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp" })
+            {
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        foreach (string oldFile in Directory.GetFiles(targetFolder, $"{txtProductID.Text.Trim()}.*")) File.Delete(oldFile);
+                        string newPath = Path.Combine(targetFolder, $"{txtProductID.Text.Trim()}{Path.GetExtension(ofd.FileName)}");
+                        File.Copy(ofd.FileName, newPath);
+                        MessageBox.Show("Image uploaded successfully!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show("Error: " + ex.Message, "Upload Failed", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }
+            }
+        }
+
+        private void btnViewPhoto_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtProductID.Text)) return;
+            string folderPath = Path.Combine(Application.StartupPath, "ProductImages");
+            using (Form f = new Form { Text = $"Photo - {txtProductName.Text}", Size = new Size(500, 550), StartPosition = FormStartPosition.CenterParent })
+            {
+                PictureBox pb = new PictureBox { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom };
+                string[] files = Directory.Exists(folderPath) ? Directory.GetFiles(folderPath, $"{txtProductID.Text.Trim()}.*") : new string[0];
+                if (files.Length > 0) { pb.Image = Image.FromStream(new MemoryStream(File.ReadAllBytes(files[0]))); }
+                else { pb.Controls.Add(new Label { Text = "🚫 No Photo Assigned", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter }); }
+                f.Controls.Add(pb);
+                f.ShowDialog();
+            }
         }
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtProductID.Text))
-            {
-                MessageBox.Show("Select an active catalog item from the history panel to drop.", "Deletion Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            DialogResult confirm = MessageBox.Show($"Are you sure you want to permanently erase catalog item record ID [{txtProductID.Text}]?", "Confirm Erase Sequence", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (confirm == DialogResult.No) return;
-
-            try
+            if (string.IsNullOrWhiteSpace(txtProductID.Text)) return;
+            if (MessageBox.Show("Delete this item?", "Confirm", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 using (MySqlConnection conn = new MySqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "DELETE FROM product WHERE ProductID=@id";
-                    using (MySqlCommand cmd = new MySqlCommand(query, conn))
+                    using (MySqlCommand cmd = new MySqlCommand("DELETE FROM product WHERE ProductID=@id", conn))
                     {
                         cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
-                        int dynamicRows = cmd.ExecuteNonQuery();
-                        if (dynamicRows > 0)
+                        if (cmd.ExecuteNonQuery() > 0)
                         {
-                            string targetFolder = Path.Combine(Application.StartupPath, "ProductImages");
-                            if (Directory.Exists(targetFolder))
-                            {
-                                string[] oldFiles = Directory.GetFiles(targetFolder, $"{txtProductID.Text.Trim()}.*");
-                                foreach (string oldFile in oldFiles) File.Delete(oldFile);
-                            }
-
-                            MessageBox.Show("Product was dropped successfully!", "Record Deleted", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             LoadDatabaseData();
                             ClearFields();
+                            MessageBox.Show("Item Deleted.");
                         }
                     }
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Critical deletion database block caught: " + ex.Message, "Error Processing Operation", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private void ClearFields()
         {
-            txtProductID.Clear();
-            txtProductName.Clear();
-            txtStockLevel.Clear();
-            txtRetailPrice.Clear();
-            txtProductID.ReadOnly = false;
-            txtProductID.BackColor = Color.White;
+            txtProductID.Clear(); txtProductName.Clear(); txtRetailPrice.Clear();
+            txtStock_HK.Clear(); txtStock_Tokyo.Clear(); txtStock_Singapore.Clear(); txtStock_NY.Clear(); txtStock_London.Clear();
+            txtProductID.ReadOnly = false; txtProductID.BackColor = Color.White;
             dgvProductCatalog.ClearSelection();
         }
         #endregion

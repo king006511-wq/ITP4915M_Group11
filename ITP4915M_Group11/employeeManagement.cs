@@ -11,7 +11,7 @@ namespace ITP4915M_Group11
         private readonly string connString = UserSession.ConnString ?? "server=127.0.0.1;database=premium_living_db;user=root;password=;port=3306;SslMode=Disabled;";
 
         private TextBox txtStaffID, txtName;
-        private ComboBox cboRole;
+        private ComboBox cboRole, cboRegion; // ⭐ 新增 cboRegion
         private DataGridView dgvStaff;
 
         // ⭐ 新增 Search TextBox
@@ -43,7 +43,7 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "👔 Staff Master Data Maintenance", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             this.Controls.Add(lblHeader);
 
-            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 560), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(380, 620), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             this.Controls.Add(pnlCard);
 
             int startY = 20;
@@ -56,8 +56,15 @@ namespace ITP4915M_Group11
 
             Label lblRole = new Label { Text = "System Role *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
             cboRole = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
-            cboRole.Items.AddRange(new string[] { "Administrator", "Sales Representative", "Logistics Driver", "Warehouse Specialist", "Procurement Officer" });
+            cboRole.Items.AddRange(new string[] { "Administrator", "Manager", "Sales Representative", "Logistics Driver", "Warehouse Specialist", "Procurement Officer" });
             pnlCard.Controls.Add(lblRole); pnlCard.Controls.Add(cboRole);
+            startY += 75;
+
+            // ⭐ 新增：員工所屬地區 (Region/City)
+            Label lblRegion = new Label { Text = "Assigned Region / City *:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            cboRegion = new ComboBox { Location = new Point(20, startY + 22), Width = 335, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10.5F) };
+            cboRegion.Items.AddRange(new string[] { "Hong Kong", "Tokyo", "Singapore", "New York", "London" });
+            pnlCard.Controls.Add(lblRegion); pnlCard.Controls.Add(cboRegion);
             startY += 75;
 
             // 基本 CRUD 按鈕
@@ -81,13 +88,13 @@ namespace ITP4915M_Group11
             pnlCard.Controls.AddRange(new Control[] { btnAdd, btnUpdate, btnDelete, btnClear, btnResetPwd });
 
             // ⭐ 補返 Search Box UI (放喺 DataGridView 上面)
-            Label lblSearch = new Label { Text = "🔍 Live Search (ID / Name / Role):", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(440, 52), AutoSize = true };
-            txtSearch = new TextBox { Location = new Point(680, 48), Width = 460, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            Label lblSearch = new Label { Text = "🔍 Live Search (ID / Name / Role / Region):", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105), Location = new Point(440, 52), AutoSize = true };
+            txtSearch = new TextBox { Location = new Point(740, 48), Width = 400, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             txtSearch.TextChanged += TxtSearch_TextChanged; // 綁定即時搜尋 Event
             this.Controls.Add(lblSearch);
             this.Controls.Add(txtSearch);
 
-            dgvStaff = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 560), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            dgvStaff = new DataGridView { Location = new Point(440, 85), Size = new Size(700, 620), BackgroundColor = Color.White, AllowUserToAddRows = false, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
             dgvStaff.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 99, 235);
             dgvStaff.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvStaff.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold); // 標題粗體
@@ -111,8 +118,8 @@ namespace ITP4915M_Group11
                 }
                 else
                 {
-                    // 可以同時 Search StaffID, Name 同 Role
-                    dt.DefaultView.RowFilter = $"[StaffID] LIKE '%{keyword}%' OR [Name] LIKE '%{keyword}%' OR [Role] LIKE '%{keyword}%'";
+                    // 加入 Region 搜尋支援
+                    dt.DefaultView.RowFilter = $"[StaffID] LIKE '%{keyword}%' OR [Name] LIKE '%{keyword}%' OR [Role] LIKE '%{keyword}%' OR [Region] LIKE '%{keyword}%'";
                 }
             }
         }
@@ -169,7 +176,8 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT StaffID, Name, Role FROM staff", conn))
+                    // ⭐ 加入 Region 欄位讀取
+                    using (MySqlDataAdapter da = new MySqlDataAdapter("SELECT StaffID, Name, Role, Region FROM staff", conn))
                     {
                         DataTable dt = new DataTable(); da.Fill(dt);
                         dgvStaff.DataSource = dt;
@@ -193,14 +201,20 @@ namespace ITP4915M_Group11
                 txtStaffID.Text = r.Cells["StaffID"].Value.ToString();
                 txtName.Text = r.Cells["Name"].Value.ToString();
                 cboRole.Text = r.Cells["Role"].Value.ToString();
+
+                // ⭐ 綁定選擇的 Region 到 ComboBox
+                if (r.Cells["Region"].Value != DBNull.Value)
+                {
+                    cboRegion.Text = r.Cells["Region"].Value.ToString();
+                }
             }
         }
 
         private void BtnAdd_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtName.Text) || cboRole.SelectedIndex == -1)
+            if (string.IsNullOrWhiteSpace(txtName.Text) || cboRole.SelectedIndex == -1 || cboRegion.SelectedIndex == -1)
             {
-                MessageBox.Show("Name and Role are required!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Name, Role, and Region are required!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -214,17 +228,19 @@ namespace ITP4915M_Group11
                     string newStaffID = GetNextStaffID(conn);
                     string defaultPassword = newStaffID;
 
-                    string sql = "INSERT INTO staff (StaffID, Name, Password, Role) VALUES (@id, @n, SHA2(@pwd, 256), @r)";
+                    // ⭐ INSERT 語法加入 Region
+                    string sql = "INSERT INTO staff (StaffID, Name, Password, Role, Region) VALUES (@id, @n, SHA2(@pwd, 256), @r, @reg)";
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("@id", newStaffID);
                         cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
                         cmd.Parameters.AddWithValue("@pwd", defaultPassword);
                         cmd.Parameters.AddWithValue("@r", cboRole.Text);
+                        cmd.Parameters.AddWithValue("@reg", cboRegion.Text);
                         cmd.ExecuteNonQuery();
                     }
 
-                    MessageBox.Show($"Staff member added successfully!\n\nAllocated Staff ID: {newStaffID}\nThe default password is set to their Staff ID: [{defaultPassword}]", "Account Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Staff member added successfully!\n\nAllocated Staff ID: {newStaffID}\nAssigned Region: {cboRegion.Text}\nThe default password is set to their Staff ID: [{defaultPassword}]", "Account Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                     LoadData();
                     ClearForm(); // 新增完自動清空並準備下一個 ID
@@ -236,17 +252,25 @@ namespace ITP4915M_Group11
         private void BtnUpdate_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtStaffID.Text)) return;
+            if (cboRegion.SelectedIndex == -1)
+            {
+                MessageBox.Show("Region is required!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
-                    string sql = "UPDATE staff SET Name=@n, Role=@r WHERE StaffID=@id";
+                    // ⭐ UPDATE 語法加入 Region
+                    string sql = "UPDATE staff SET Name=@n, Role=@r, Region=@reg WHERE StaffID=@id";
                     using (MySqlCommand cmd = new MySqlCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("@id", txtStaffID.Text.Trim());
                         cmd.Parameters.AddWithValue("@n", txtName.Text.Trim());
                         cmd.Parameters.AddWithValue("@r", cboRole.Text);
+                        cmd.Parameters.AddWithValue("@reg", cboRegion.Text);
                         cmd.ExecuteNonQuery();
                     }
                     MessageBox.Show("Staff information updated successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information); LoadData();
@@ -319,6 +343,7 @@ namespace ITP4915M_Group11
         {
             txtName.Clear();
             cboRole.SelectedIndex = -1;
+            cboRegion.SelectedIndex = -1; // ⭐ 清空選擇嘅城市
             dgvStaff.ClearSelection();
 
             // 🌟 清空表單後，自動生成並顯示下一個可以用的 StaffID
