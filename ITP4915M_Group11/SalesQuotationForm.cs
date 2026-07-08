@@ -261,7 +261,7 @@ namespace ITP4915M_Group11
                 lblSelectedOrder.Text = $"Selected Order: {orderID} | Region: {region} (Stock Validation)";
 
                 // 只有 Manager / Administrator / Warehouse Supervisor 可以批准或拒絕訂單
-                bool canApprove = true; // 你原本的 Role Enum 檢查可以用返，為防報錯我暫時直接開放畀擁有呢頁權限嘅人
+                bool canApprove = true;
 
                 btnApprove.Enabled = canApprove;
                 btnReject.Enabled = canApprove;
@@ -285,7 +285,17 @@ namespace ITP4915M_Group11
                                 DataTable dt = new DataTable();
                                 adapter.Fill(dt);
                                 dgvOrderDetails.DataSource = dt;
+
+                                // 🌟🌟 核心修復：強制設定 FillWeight 黃金比例，避免 Status 被擠壓 🌟🌟
                                 dgvOrderDetails.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+                                if (dgvOrderDetails.Columns.Count > 0)
+                                {
+                                    dgvOrderDetails.Columns["Product ID"].FillWeight = 15;
+                                    dgvOrderDetails.Columns["Product Name"].FillWeight = 35; // 畀最闊佢
+                                    dgvOrderDetails.Columns["Required Qty"].FillWeight = 15;
+                                    dgvOrderDetails.Columns["Current Stock"].FillWeight = 15;
+                                    dgvOrderDetails.Columns["Stock Status"].FillWeight = 20; // 保證 Status 清晰可見
+                                }
 
                                 // 🛑 防呆檢查：如果有任何一件貨 SHORTAGE，就強制鎖死 Approve 掣
                                 foreach (DataRow row in dt.Rows)

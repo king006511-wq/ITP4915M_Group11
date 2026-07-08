@@ -17,6 +17,13 @@ namespace ITP4915M_Group11
         private TextBox txtStock_HK, txtStock_Tokyo, txtStock_Singapore, txtStock_NY, txtStock_London;
         private Label lblStock_HK, lblStock_Tokyo, lblStock_Singapore, lblStock_NY, lblStock_London;
 
+        // 🌟 新增：專屬警界線 Textbox
+        private TextBox txtAlertLimit;
+
+        // 🌟 折扣與還原按鈕
+        private TextBox txtDiscount;
+        private Button btnApplyDiscount, btnRestorePrice;
+
         private DataGridView dgvProductCatalog;
 
         private Button btnBackHome, btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear;
@@ -33,21 +40,34 @@ namespace ITP4915M_Group11
             InitializeComponent();
             if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
             {
+                EnsureProductSchema(); // 🌟 啟動時自動升級 Database，加入 OriginalPrice 同 AlertThreshold
                 ThemeManager.ApplyTheme(this);
-                DetermineUserAccessLevel(); // 查核員工權限及地區
+                DetermineUserAccessLevel();
                 InitializePremiumModernUI();
                 ApplyButtonColors();
                 LoadDatabaseData();
 
-                // 🌟 新增：跨視窗同步核心邏輯 (VisibleChanged 事件)
-                // 當你喺主畫面切換 Panel / Tab，令到呢個庫存畫面重新「顯現」出嚟嘅時候，
-                // 佢就會自動觸發 LoadDatabaseData() 去 Database 爬最新嘅庫存數據！
                 this.VisibleChanged += (s, e) => {
-                    if (this.Visible)
-                    {
-                        LoadDatabaseData();
-                    }
+                    if (this.Visible) LoadDatabaseData();
                 };
+            }
+        }
+
+        // 🌟 自動為 product 表加入原價與警界線欄位，防呆機制
+        private void EnsureProductSchema()
+        {
+            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    try { new MySqlCommand("ALTER TABLE product ADD COLUMN OriginalPrice DECIMAL(10,2) DEFAULT 0.00;", conn).ExecuteNonQuery(); } catch { }
+                    try { new MySqlCommand("ALTER TABLE product ADD COLUMN AlertThreshold INT DEFAULT 20;", conn).ExecuteNonQuery(); } catch { }
+
+                    // 自動將未設定過嘅原價初始化為目前的 RetailPrice
+                    try { new MySqlCommand("UPDATE product SET OriginalPrice = RetailPrice WHERE OriginalPrice = 0.00 OR OriginalPrice IS NULL;", conn).ExecuteNonQuery(); } catch { }
+                }
+                catch { }
             }
         }
 
@@ -55,13 +75,10 @@ namespace ITP4915M_Group11
         private void DetermineUserAccessLevel()
         {
             string currentRole = UserSession.LoggedInStaffRole;
-
-            // 決定是否為管理層
             isAdminOrManager = !string.IsNullOrEmpty(currentRole) &&
                                (currentRole.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
                                 currentRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
 
-            // 尋找該員工負責的城市 Region
             using (MySqlConnection conn = new MySqlConnection(connectionString))
             {
                 try
@@ -71,13 +88,10 @@ namespace ITP4915M_Group11
                     {
                         cmd.Parameters.AddWithValue("@id", UserSession.LoggedInStaffID ?? "");
                         object res = cmd.ExecuteScalar();
-                        if (res != null && res != DBNull.Value)
-                        {
-                            staffRegion = res.ToString();
-                        }
+                        if (res != null && res != DBNull.Value) staffRegion = res.ToString();
                     }
                 }
-                catch { /* 若出錯則保持預設 Hong Kong */ }
+                catch { }
             }
         }
 
@@ -101,6 +115,14 @@ namespace ITP4915M_Group11
                     b.BackColor = b.Enabled ? b.BackColor : Color.LightGray;
                 }
             }
+
+            if (btnApplyDiscount != null)
+            {
+                btnApplyDiscount.Enabled = isAdminOrManager;
+                btnApplyDiscount.BackColor = isAdminOrManager ? Color.FromArgb(16, 185, 129) : Color.LightGray;
+                btnRestorePrice.Enabled = isAdminOrManager;
+                btnRestorePrice.BackColor = isAdminOrManager ? Color.FromArgb(37, 99, 235) : Color.LightGray;
+            }
         }
         #endregion
 
@@ -109,7 +131,7 @@ namespace ITP4915M_Group11
         {
             this.Controls.Clear();
             this.Text = "Premium Living Furniture - Product Maintenance & Catalog Control";
-            this.Size = new Size(1180, 780);
+            this.Size = new Size(1280, 880);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(249, 250, 251);
             this.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
@@ -123,61 +145,82 @@ namespace ITP4915M_Group11
             Label lblHeader = new Label { Text = "Finished Goods Inventory Maintenance", Font = new Font("Segoe UI", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(30, 20), AutoSize = true };
             pnlMain.Controls.Add(lblHeader);
 
-            btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(1015, 22), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnBackHome = new Button { Text = "🔙 Go Back", Size = new Size(120, 34), Location = new Point(1115, 22), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
             btnBackHome.FlatAppearance.BorderSize = 0;
             btnBackHome.Click += (s, e) => { try { this.Close(); } catch { this.Hide(); } };
             pnlMain.Controls.Add(btnBackHome);
 
-            // 🌟 將 Card 寬度由 380 增加到 420，容納更闊嘅 TextBox
-            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(420, 660), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = false };
+            Panel pnlCard = new Panel { Location = new Point(30, 85), Size = new Size(460, 740), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, AutoScroll = true }; // 🌟 開啟自動捲動
             pnlCard.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, pnlCard.ClientRectangle, Color.FromArgb(226, 232, 240), ButtonBorderStyle.Solid);
             pnlMain.Controls.Add(pnlCard);
 
-            Label lblCardTitle = new Label { Text = isAdminOrManager ? "📦 Global Product Details" : $"📦 Product Details ({staffRegion})", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(20, 15), AutoSize = true };
+            Label lblCardTitle = new Label { Text = isAdminOrManager ? "📦 Global Product Details" : $"📦 Product Details ({staffRegion})", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(25, 15), AutoSize = true };
             pnlCard.Controls.Add(lblCardTitle);
 
-            // 🌟 重新調整間距：由每次 +65 改為 +55，縮短組件之間嘅距離避免撞落按鈕度
             int startY = 60;
             txtProductID = CreateStyledTextBox(pnlCard, ref startY, "Product ID *:", false, out _);
             txtProductName = CreateStyledTextBox(pnlCard, ref startY, "Product Name *:", false, out _);
 
-            // 🌍 動態生成 5 個地區庫存框 (只顯示城市名)
             txtStock_HK = CreateStyledTextBox(pnlCard, ref startY, "Hong Kong:", false, out lblStock_HK);
             txtStock_Tokyo = CreateStyledTextBox(pnlCard, ref startY, "Tokyo:", false, out lblStock_Tokyo);
             txtStock_Singapore = CreateStyledTextBox(pnlCard, ref startY, "Singapore:", false, out lblStock_Singapore);
             txtStock_NY = CreateStyledTextBox(pnlCard, ref startY, "New York:", false, out lblStock_NY);
             txtStock_London = CreateStyledTextBox(pnlCard, ref startY, "London:", false, out lblStock_London);
 
-            txtRetailPrice = CreateStyledTextBox(pnlCard, ref startY, "Retail Price (HKD):", false, out lblRetailPrice);
+            txtRetailPrice = CreateStyledTextBox(pnlCard, ref startY, "Current Retail Price (HKD):", false, out lblRetailPrice);
 
-            // 根據身份隱藏不需要的欄位，並動態推上按鈕
+            // 🌟 獨立專屬警界線輸入框
+            txtAlertLimit = CreateStyledTextBox(pnlCard, ref startY, "🚨 Stock Alert Threshold (Min 20):", false, out _);
+
             ArrangeDynamicUI(pnlCard);
 
-            // Data Grid Component
-            Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(470, 85), AutoSize = true };
-            pnlMain.Controls.Add(lblGridTitle);
+            // ============================================
+            // 🌟 右方面板：大量折扣與還原控制區
+            // ============================================
+            Panel pnlRightTop = new Panel { Location = new Point(510, 85), Size = new Size(730, 100), BackColor = Color.Transparent };
+            pnlMain.Controls.Add(pnlRightTop);
 
-            Label lblSearch = new Label { Text = "🔍 Search:", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(810, 88), AutoSize = true };
-            pnlMain.Controls.Add(lblSearch);
+            Label lblGridTitle = new Label { Text = "📋 Real-Time Product Catalog Records", Font = new Font("Segoe UI", 13F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(0, 0), AutoSize = true };
+            pnlRightTop.Controls.Add(lblGridTitle);
 
-            txtSearch = new TextBox { Location = new Point(890, 85), Width = 250, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
+            Label lblSearch = new Label { Text = "🔍 Search:", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(79, 70, 229), Location = new Point(380, 3), AutoSize = true };
+            pnlRightTop.Controls.Add(lblSearch);
+
+            txtSearch = new TextBox { Location = new Point(460, 0), Width = 270, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle };
             txtSearch.TextChanged += txtSearch_TextChanged;
-            pnlMain.Controls.Add(txtSearch);
+            pnlRightTop.Controls.Add(txtSearch);
 
-            Label lblWarningLegend = new Label { Text = "🚨 Alert: Rows highlighted in RED indicate Low Stock (Below 20 units)", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), Location = new Point(470, 118), AutoSize = true };
-            pnlMain.Controls.Add(lblWarningLegend);
+            Label lblWarningLegend = new Label { Text = "🚨 Alert: Rows in RED indicate Low Stock (Below the item's custom Alert Limit)", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 38, 38), Location = new Point(0, 35), AutoSize = true };
+            pnlRightTop.Controls.Add(lblWarningLegend);
 
-            // Grid 位置往右移配合闊咗嘅 Card
+            // 折扣輸入與按鈕
+            Label lblDisc = new Label { Text = "🏷️ Batch Discount (%):", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(16, 185, 129), Location = new Point(0, 70), AutoSize = true };
+            pnlRightTop.Controls.Add(lblDisc);
+
+            txtDiscount = new TextBox { Location = new Point(160, 67), Width = 50, Font = new Font("Segoe UI", 10F), BorderStyle = BorderStyle.FixedSingle, Text = "10" };
+            pnlRightTop.Controls.Add(txtDiscount);
+
+            btnApplyDiscount = new Button { Text = "Apply % Discount", Location = new Point(220, 65), Size = new Size(150, 30), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnApplyDiscount.FlatAppearance.BorderSize = 0;
+            btnApplyDiscount.Click += BtnApplyDiscount_Click;
+            pnlRightTop.Controls.Add(btnApplyDiscount);
+
+            // 🌟 還原原價按鈕
+            btnRestorePrice = new Button { Text = "🔄 Revert to Original Price", Location = new Point(380, 65), Size = new Size(200, 30), BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnRestorePrice.FlatAppearance.BorderSize = 0;
+            btnRestorePrice.Click += BtnRestorePrice_Click;
+            pnlRightTop.Controls.Add(btnRestorePrice);
+
             dgvProductCatalog = new DataGridView
             {
-                Location = new Point(470, 145),
-                Size = new Size(670, 600),
+                Location = new Point(510, 195),
+                Size = new Size(730, 630),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
+                MultiSelect = true,
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
@@ -196,31 +239,27 @@ namespace ITP4915M_Group11
             pnlMain.Controls.Add(dgvProductCatalog);
         }
 
-        // 🌟 將 TextBox 寬度由 335 加大至 375
         private TextBox CreateStyledTextBox(Panel container, ref int topY, string labelText, bool readOnly, out Label createdLabel)
         {
-            Label lbl = new Label { Text = labelText, Location = new Point(20, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
-            TextBox txt = new TextBox { Location = new Point(20, topY + 22), Width = 375, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
+            Label lbl = new Label { Text = labelText, Location = new Point(25, topY), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            TextBox txt = new TextBox { Location = new Point(25, topY + 25), Width = 390, Font = new Font("Segoe UI", 10.5F), BorderStyle = BorderStyle.FixedSingle };
             if (readOnly) { txt.ReadOnly = true; txt.BackColor = Color.FromArgb(241, 245, 249); }
             container.Controls.Add(lbl); container.Controls.Add(txt);
-            topY += 55; // 🌟 收緊間距
+            topY += 65;
             createdLabel = lbl;
             return txt;
         }
 
-        // 🌟 核心動態排版：根據角色隱藏並向上推動物件，確保唔會重疊
         private void ArrangeDynamicUI(Panel pnlCard)
         {
             if (!isAdminOrManager)
             {
-                // 先全部隱藏
                 txtStock_HK.Visible = lblStock_HK.Visible = false;
                 txtStock_Tokyo.Visible = lblStock_Tokyo.Visible = false;
                 txtStock_Singapore.Visible = lblStock_Singapore.Visible = false;
                 txtStock_NY.Visible = lblStock_NY.Visible = false;
                 txtStock_London.Visible = lblStock_London.Visible = false;
 
-                // 根據負責地區顯示對應的一個
                 TextBox activeTxt = null; Label activeLbl = null;
                 switch (staffRegion)
                 {
@@ -231,24 +270,25 @@ namespace ITP4915M_Group11
                     default: activeTxt = txtStock_HK; activeLbl = lblStock_HK; break;
                 }
 
-                // 將該地區排在第 3 格 (Y=170)
                 activeTxt.Visible = activeLbl.Visible = true;
-                activeLbl.Location = new Point(20, 170);
-                activeTxt.Location = new Point(20, 192);
+                activeLbl.Location = new Point(25, 190);
+                activeTxt.Location = new Point(25, 215);
 
-                // 將 RetailPrice 推上去第 4 格 (Y=225)
-                lblRetailPrice.Location = new Point(20, 225);
-                txtRetailPrice.Location = new Point(20, 247);
+                lblRetailPrice.Location = new Point(25, 255);
+                txtRetailPrice.Location = new Point(25, 280);
+
+                // 警界線輸入框推上少少
+                pnlCard.Controls.OfType<Label>().FirstOrDefault(l => l.Text.Contains("Alert Threshold")).Location = new Point(25, 320);
+                txtAlertLimit.Location = new Point(25, 345);
             }
 
-            // 決定按鈕 Y 座標 (如果有 Admin 顯示全部 5 個庫存，RetailPrice 係 445，所以 Button 安全起點係 505)
-            int buttonStartY = isAdminOrManager ? 505 : 290;
+            int buttonStartY = isAdminOrManager ? 640 : 410;
 
-            btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(20, buttonStartY), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(215, buttonStartY), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnUpdate = new Button { Text = "💾 Update", Location = new Point(20, buttonStartY + 50), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnDelete = new Button { Text = "🗑️ Delete", Location = new Point(215, buttonStartY + 50), Size = new Size(180, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(20, buttonStartY + 100), Size = new Size(375, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnViewPhoto = new Button { Text = "🖼️ View Photo", Location = new Point(25, buttonStartY), Size = new Size(190, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnUploadPhoto = new Button { Text = "📂 Upload Photo", Location = new Point(225, buttonStartY), Size = new Size(190, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnUpdate = new Button { Text = "💾 Update Record", Location = new Point(25, buttonStartY + 50), Size = new Size(190, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnDelete = new Button { Text = "🗑️ Delete Item", Location = new Point(225, buttonStartY + 50), Size = new Size(190, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnClear = new Button { Text = "🧹 Clear Forms", Location = new Point(25, buttonStartY + 100), Size = new Size(390, 42), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
 
             foreach (var b in new Button[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear }) b.FlatAppearance.BorderSize = 0;
             pnlCard.Controls.AddRange(new Control[] { btnViewPhoto, btnUploadPhoto, btnUpdate, btnDelete, btnClear });
@@ -285,7 +325,6 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🌟 升級：將 Method 由 private 改為 public，等出面嘅視窗有需要時可以直接叫佢 Reload
         public void LoadDatabaseData()
         {
             try
@@ -295,15 +334,15 @@ namespace ITP4915M_Group11
                     conn.Open();
                     string query;
 
-                    // 🌟 改變 SQL 查詢：欄位別名(AS)直接顯示城市名稱，唔要 "Stock_"
+                    // 🌟 載入資料時加入 OriginalPrice 同 AlertThreshold
                     if (isAdminOrManager)
                     {
-                        query = "SELECT ProductID, ProductName AS 'Name', Stock_HK AS 'Hong Kong', Stock_Tokyo AS 'Tokyo', Stock_Singapore AS 'Singapore', Stock_NY AS 'New York', Stock_London AS 'London', RetailPrice AS 'Price HKD' FROM product";
+                        query = "SELECT ProductID, ProductName AS 'Name', Stock_HK AS 'Hong Kong', Stock_Tokyo AS 'Tokyo', Stock_Singapore AS 'Singapore', Stock_NY AS 'New York', Stock_London AS 'London', RetailPrice AS 'Current Price', OriginalPrice AS 'Orig. Price', AlertThreshold AS 'Alert Limit' FROM product";
                     }
                     else
                     {
                         string targetStockCol = GetDBStockColumnName(staffRegion);
-                        query = $"SELECT ProductID, ProductName AS 'Name', {targetStockCol} AS '{staffRegion}', RetailPrice AS 'Price HKD' FROM product";
+                        query = $"SELECT ProductID, ProductName AS 'Name', {targetStockCol} AS '{staffRegion}', RetailPrice AS 'Current Price', OriginalPrice AS 'Orig. Price', AlertThreshold AS 'Alert Limit' FROM product";
                     }
 
                     using (MySqlDataAdapter adapter = new MySqlDataAdapter(query, conn))
@@ -332,18 +371,29 @@ namespace ITP4915M_Group11
             }
         }
 
+        // 🌟 獨立警界線判斷 (逐行讀取 Alert Limit)
         private void dgvProductCatalog_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            // 🌟 判斷是否為城市庫存欄位，進行紅色警告判定
             string[] cities = { "Hong Kong", "Tokyo", "Singapore", "New York", "London" };
             if (e.RowIndex >= 0 && cities.Contains(dgvProductCatalog.Columns[e.ColumnIndex].Name))
             {
                 var cell = dgvProductCatalog.Rows[e.RowIndex].Cells[e.ColumnIndex];
-                if (cell.Value != null && int.TryParse(cell.Value.ToString(), out int qty) && qty < 20)
+                if (cell.Value != null && int.TryParse(cell.Value.ToString(), out int qty))
                 {
-                    e.CellStyle.BackColor = Color.FromArgb(254, 226, 226);
-                    e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
-                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    int threshold = 20;
+                    var thresholdCell = dgvProductCatalog.Rows[e.RowIndex].Cells["Alert Limit"];
+                    if (thresholdCell != null && thresholdCell.Value != DBNull.Value)
+                    {
+                        if (int.TryParse(thresholdCell.Value.ToString(), out int parsedThreshold))
+                            threshold = Math.Max(20, parsedThreshold); // 最低底線保留 20
+                    }
+
+                    if (qty < threshold)
+                    {
+                        e.CellStyle.BackColor = Color.FromArgb(254, 226, 226);
+                        e.CellStyle.ForeColor = Color.FromArgb(220, 38, 38);
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    }
                 }
             }
         }
@@ -355,9 +405,9 @@ namespace ITP4915M_Group11
                 DataGridViewRow row = dgvProductCatalog.SelectedRows[0];
                 txtProductID.Text = row.Cells["ProductID"].Value?.ToString() ?? "";
                 txtProductName.Text = row.Cells["Name"].Value?.ToString() ?? "";
-                txtRetailPrice.Text = row.Cells["Price HKD"].Value?.ToString() ?? "";
+                txtRetailPrice.Text = row.Cells["Current Price"].Value?.ToString() ?? "";
+                txtAlertLimit.Text = row.Cells["Alert Limit"].Value?.ToString() ?? "20"; // 🌟 載入該產品的警界線
 
-                // 🌟 根據權限從對應的 Grid 欄位(城市名)拿取數字
                 if (isAdminOrManager)
                 {
                     txtStock_HK.Text = row.Cells["Hong Kong"].Value?.ToString() ?? "0";
@@ -369,7 +419,6 @@ namespace ITP4915M_Group11
                 else
                 {
                     string stockValue = row.Cells[staffRegion].Value?.ToString() ?? "0";
-
                     switch (staffRegion)
                     {
                         case "Tokyo": txtStock_Tokyo.Text = stockValue; break;
@@ -382,6 +431,106 @@ namespace ITP4915M_Group11
 
                 txtProductID.ReadOnly = true;
                 txtProductID.BackColor = Color.FromArgb(241, 245, 249);
+            }
+        }
+
+        // 🌟 批次折扣 (基於原價 OriginalPrice 進行折扣，防止越折越平)
+        private void BtnApplyDiscount_Click(object sender, EventArgs e)
+        {
+            if (dgvProductCatalog.SelectedRows.Count == 0) return;
+
+            if (!decimal.TryParse(txtDiscount.Text.Trim(), out decimal discount) || discount <= 0 || discount >= 100)
+            {
+                MessageBox.Show("Please enter a valid discount percentage (1 - 99).", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DialogResult res = MessageBox.Show($"Apply a {discount}% discount to {dgvProductCatalog.SelectedRows.Count} selected product(s)?\n\n(Discount is calculated based on each item's Original Price.)", "Confirm Mass Discount", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (res == DialogResult.Yes)
+            {
+                using (MySqlConnection conn = new MySqlConnection(connectionString))
+                {
+                    try
+                    {
+                        conn.Open();
+                        using (MySqlTransaction trans = conn.BeginTransaction())
+                        {
+                            try
+                            {
+                                foreach (DataGridViewRow row in dgvProductCatalog.SelectedRows)
+                                {
+                                    string pID = row.Cells["ProductID"].Value.ToString();
+
+                                    // 永遠用原價做計算基準
+                                    decimal origPrice = Convert.ToDecimal(row.Cells["Orig. Price"].Value);
+                                    if (origPrice <= 0) origPrice = Convert.ToDecimal(row.Cells["Current Price"].Value);
+
+                                    decimal newPrice = origPrice * (1m - (discount / 100m));
+
+                                    using (MySqlCommand cmd = new MySqlCommand("UPDATE product SET RetailPrice = @p WHERE ProductID = @id", conn, trans))
+                                    {
+                                        cmd.Parameters.AddWithValue("@p", newPrice);
+                                        cmd.Parameters.AddWithValue("@id", pID);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                                trans.Commit();
+                                MessageBox.Show("Bulk discount applied successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                LoadDatabaseData();
+                            }
+                            catch (Exception ex)
+                            {
+                                trans.Rollback();
+                                throw ex;
+                            }
+                        }
+                    }
+                    catch (Exception ex) { MessageBox.Show("Error applying discount: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }
+            }
+        }
+
+        // 🌟 新增：一鍵還原所有選中產品為原價
+        private void BtnRestorePrice_Click(object sender, EventArgs e)
+        {
+            if (dgvProductCatalog.SelectedRows.Count == 0) return;
+
+            DialogResult res = MessageBox.Show($"Revert {dgvProductCatalog.SelectedRows.Count} selected product(s) back to their Original Retail Price?", "Confirm Price Restoration", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (res == DialogResult.Yes)
+            {
+                using (MySqlConnection conn = new MySqlConnection(connectionString))
+                {
+                    try
+                    {
+                        conn.Open();
+                        using (MySqlTransaction trans = conn.BeginTransaction())
+                        {
+                            try
+                            {
+                                foreach (DataGridViewRow row in dgvProductCatalog.SelectedRows)
+                                {
+                                    string pID = row.Cells["ProductID"].Value.ToString();
+                                    using (MySqlCommand cmd = new MySqlCommand("UPDATE product SET RetailPrice = OriginalPrice WHERE ProductID = @id AND OriginalPrice > 0", conn, trans))
+                                    {
+                                        cmd.Parameters.AddWithValue("@id", pID);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                                trans.Commit();
+                                MessageBox.Show("Prices restored successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                LoadDatabaseData();
+                            }
+                            catch (Exception ex)
+                            {
+                                trans.Rollback();
+                                throw ex;
+                            }
+                        }
+                    }
+                    catch (Exception ex) { MessageBox.Show("Error restoring prices: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }
             }
         }
 
@@ -402,9 +551,10 @@ namespace ITP4915M_Group11
                     MySqlCommand cmd = new MySqlCommand();
                     cmd.Connection = conn;
 
+                    // 🌟 Update 查詢加入 AlertThreshold 儲存
                     if (isAdminOrManager)
                     {
-                        query = "UPDATE product SET ProductName=@name, Stock_HK=@shk, Stock_Tokyo=@stk, Stock_Singapore=@ssg, Stock_NY=@sny, Stock_London=@sln, RetailPrice=@price WHERE ProductID=@id";
+                        query = "UPDATE product SET ProductName=@name, Stock_HK=@shk, Stock_Tokyo=@stk, Stock_Singapore=@ssg, Stock_NY=@sny, Stock_London=@sln, RetailPrice=@price, AlertThreshold=@alert WHERE ProductID=@id";
                         cmd.Parameters.AddWithValue("@shk", string.IsNullOrEmpty(txtStock_HK.Text) ? 0 : Convert.ToInt32(txtStock_HK.Text));
                         cmd.Parameters.AddWithValue("@stk", string.IsNullOrEmpty(txtStock_Tokyo.Text) ? 0 : Convert.ToInt32(txtStock_Tokyo.Text));
                         cmd.Parameters.AddWithValue("@ssg", string.IsNullOrEmpty(txtStock_Singapore.Text) ? 0 : Convert.ToInt32(txtStock_Singapore.Text));
@@ -414,7 +564,7 @@ namespace ITP4915M_Group11
                     else
                     {
                         string targetStockCol = GetDBStockColumnName(staffRegion);
-                        query = $"UPDATE product SET ProductName=@name, {targetStockCol}=@stock, RetailPrice=@price WHERE ProductID=@id";
+                        query = $"UPDATE product SET ProductName=@name, {targetStockCol}=@stock, RetailPrice=@price, AlertThreshold=@alert WHERE ProductID=@id";
 
                         TextBox activeTxt = txtStock_HK;
                         if (staffRegion == "Tokyo") activeTxt = txtStock_Tokyo;
@@ -429,10 +579,11 @@ namespace ITP4915M_Group11
                     cmd.Parameters.AddWithValue("@id", txtProductID.Text.Trim());
                     cmd.Parameters.AddWithValue("@name", txtProductName.Text.Trim());
                     cmd.Parameters.AddWithValue("@price", string.IsNullOrEmpty(txtRetailPrice.Text) ? 0 : Convert.ToDecimal(txtRetailPrice.Text.Trim()));
+                    cmd.Parameters.AddWithValue("@alert", string.IsNullOrEmpty(txtAlertLimit.Text) ? 20 : Convert.ToInt32(txtAlertLimit.Text.Trim()));
 
                     if (cmd.ExecuteNonQuery() > 0)
                     {
-                        MessageBox.Show("Inventory product info updated successfully!", "Transaction Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("Inventory product info and Alert Limit updated successfully!", "Transaction Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         LoadDatabaseData();
                         ClearFields();
                     }
@@ -502,7 +653,7 @@ namespace ITP4915M_Group11
 
         private void ClearFields()
         {
-            txtProductID.Clear(); txtProductName.Clear(); txtRetailPrice.Clear();
+            txtProductID.Clear(); txtProductName.Clear(); txtRetailPrice.Clear(); txtAlertLimit.Clear();
             txtStock_HK.Clear(); txtStock_Tokyo.Clear(); txtStock_Singapore.Clear(); txtStock_NY.Clear(); txtStock_London.Clear();
             txtProductID.ReadOnly = false; txtProductID.BackColor = Color.White;
             dgvProductCatalog.ClearSelection();

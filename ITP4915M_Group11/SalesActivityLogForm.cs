@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
@@ -25,6 +26,35 @@ namespace ITP4915M_Group11
                 LoadData();
             }
         }
+
+        #region 🌍 Multi-City Inventory Helpers
+        // 🌟 解析訂單所屬城市
+        private string ExtractRegion(string status)
+        {
+            if (string.IsNullOrEmpty(status)) return "Hong Kong";
+            string lowerStatus = status.ToLower();
+
+            if (lowerStatus.Contains("tokyo")) return "Tokyo";
+            if (lowerStatus.Contains("singapore")) return "Singapore";
+            if (lowerStatus.Contains("new york") || lowerStatus.Contains("ny")) return "New York";
+            if (lowerStatus.Contains("london")) return "London";
+
+            return "Hong Kong"; // 預設為香港
+        }
+
+        // 🌟 根據城市動態映射到 Database 嘅庫存欄位
+        private string GetStockColumnName(string region)
+        {
+            switch (region)
+            {
+                case "Tokyo": return "Stock_Tokyo";
+                case "Singapore": return "Stock_Singapore";
+                case "New York": return "Stock_NY";
+                case "London": return "Stock_London";
+                default: return "Stock_HK";
+            }
+        }
+        #endregion
 
         #region 🔒 System Security Gatekeeper
         private void EnforceSecurityGatekeeper()
@@ -194,7 +224,7 @@ namespace ITP4915M_Group11
             }
         }
 
-        // 🔍 動態搜尋邏輯 (符合 "Search Order" 功課要求)
+        // 🔍 動態搜尋邏輯
         private void TxtSearch_TextChanged(object sender, EventArgs e)
         {
             if (dgvLogs.DataSource is DataTable dt)
@@ -213,7 +243,7 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 🚫 Cancel Order Logic (符合 "Cancel Order" 功課要求)
+        #region 🚫 Cancel Order Logic (自動還原專屬城市庫存)
         private void BtnCancelOrder_Click(object sender, EventArgs e)
         {
             if (dgvLogs.SelectedRows.Count == 0)
@@ -226,9 +256,10 @@ namespace ITP4915M_Group11
             string orderID = row.Cells["Order Ref"].Value.ToString();
             string currentStatus = row.Cells["Status"].Value.ToString();
 
-            // 防呆：防止重複取消或取消已完成的訂單
-            if (currentStatus.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ||
-                currentStatus.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+            // 防呆：防止重複取消或取消已完成的訂單 (使用 IndexOf 以防包含城市名)
+            if (currentStatus.IndexOf("Cancelled", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                currentStatus.IndexOf("Completed", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                currentStatus.IndexOf("Delivered", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 MessageBox.Show($"Order [{orderID}] cannot be cancelled because its current status is '{currentStatus}'.", "Invalid Action", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -243,16 +274,73 @@ namespace ITP4915M_Group11
                     try
                     {
                         conn.Open();
-                        string updateSql = "UPDATE orders SET Status = 'Cancelled' WHERE OrderID = @id";
-                        using (MySqlCommand cmd = new MySqlCommand(updateSql, conn))
+                        using (MySqlTransaction trans = conn.BeginTransaction())
                         {
-                            cmd.Parameters.AddWithValue("@id", orderID);
-                            int rowsAffected = cmd.ExecuteNonQuery();
-
-                            if (rowsAffected > 0)
+                            try
                             {
-                                MessageBox.Show($"Order [{orderID}] has been successfully cancelled.", "Order Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                // 🌟 1. 判斷是否需要退回庫存 
+                                // (如果單仲係 Awaiting Approval 或者 Rejected，即係根本未扣過庫存，所以唔使加返去)
+                                bool isStockDeducted = currentStatus.IndexOf("Awaiting", StringComparison.OrdinalIgnoreCase) < 0 &&
+                                                       currentStatus.IndexOf("Rejected", StringComparison.OrdinalIgnoreCase) < 0;
+
+                                string region = ExtractRegion(currentStatus);
+                                string stockCol = GetStockColumnName(region);
+                                string newStatus = $"Cancelled [{region}]";
+
+                                // 🌟 2. 更新訂單狀態
+                                string updateSql = "UPDATE orders SET Status = @newStatus WHERE OrderID = @id";
+                                using (MySqlCommand cmd = new MySqlCommand(updateSql, conn, trans))
+                                {
+                                    cmd.Parameters.AddWithValue("@newStatus", newStatus);
+                                    cmd.Parameters.AddWithValue("@id", orderID);
+                                    cmd.ExecuteNonQuery();
+                                }
+
+                                // 🌟 3. 退回庫存邏輯 (精準退回專屬城市)
+                                if (isStockDeducted)
+                                {
+                                    string getItemsSql = "SELECT ProductID, Quantity FROM order_lineitem WHERE OrderID = @id";
+                                    List<Tuple<string, int>> itemsToRestore = new List<Tuple<string, int>>();
+
+                                    using (MySqlCommand cmdItems = new MySqlCommand(getItemsSql, conn, trans))
+                                    {
+                                        cmdItems.Parameters.AddWithValue("@id", orderID);
+                                        using (MySqlDataReader reader = cmdItems.ExecuteReader())
+                                        {
+                                            while (reader.Read())
+                                            {
+                                                itemsToRestore.Add(new Tuple<string, int>(reader["ProductID"].ToString(), Convert.ToInt32(reader["Quantity"])));
+                                            }
+                                        }
+                                    }
+
+                                    foreach (var item in itemsToRestore)
+                                    {
+                                        string restoreSql = $"UPDATE product SET {stockCol} = {stockCol} + @qty WHERE ProductID = @pid";
+                                        using (MySqlCommand cmdRestore = new MySqlCommand(restoreSql, conn, trans))
+                                        {
+                                            cmdRestore.Parameters.AddWithValue("@qty", item.Item2);
+                                            cmdRestore.Parameters.AddWithValue("@pid", item.Item1);
+                                            cmdRestore.ExecuteNonQuery();
+                                        }
+                                    }
+                                }
+
+                                trans.Commit(); // 確認寫入
+
+                                string msg = $"Order [{orderID}] has been successfully cancelled.";
+                                if (isStockDeducted)
+                                {
+                                    msg += $"\n\n📦 Inventory for [{region}] has been accurately restored.";
+                                }
+
+                                MessageBox.Show(msg, "Order Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
                                 LoadData(); // 重新載入數據，刷新 Grid 狀態
+                            }
+                            catch (Exception ex)
+                            {
+                                trans.Rollback();
+                                throw ex;
                             }
                         }
                     }
@@ -272,17 +360,18 @@ namespace ITP4915M_Group11
             {
                 string status = e.Value.ToString();
 
-                if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+                // 🌟 修正：因為狀態字串尾部有城市名 (e.g. Cancelled [Hong Kong])，所以要用 IndexOf 取代 Equals
+                if (status.IndexOf("Cancelled", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     e.CellStyle.ForeColor = Color.Crimson;
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Strikeout | FontStyle.Bold);
                 }
-                else if (status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+                else if (status.IndexOf("Completed", StringComparison.OrdinalIgnoreCase) >= 0 || status.IndexOf("Delivered", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     e.CellStyle.ForeColor = Color.MediumSeaGreen;
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
                 }
-                else if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || status.Equals("Processing", StringComparison.OrdinalIgnoreCase))
+                else if (status.IndexOf("Pending", StringComparison.OrdinalIgnoreCase) >= 0 || status.IndexOf("Awaiting", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     e.CellStyle.ForeColor = Color.DarkOrange;
                     e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);

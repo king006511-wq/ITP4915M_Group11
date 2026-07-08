@@ -137,6 +137,16 @@ namespace ITP4915M_Group11
             dgvPendingOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             dgvPendingOrders.RowsDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
 
+            // 🌟 格式化日期欄位，確保無論係乜嘢日期格式都可以靚靚地顯示出嚟
+            dgvPendingOrders.CellFormatting += (s, e) => {
+                if (dgvPendingOrders.Columns[e.ColumnIndex].Name == "Delivery Date" && e.Value != null)
+                {
+                    if (DateTime.TryParse(e.Value.ToString(), out DateTime date))
+                        e.Value = date.ToString("yyyy-MM-dd");
+                    e.FormattingApplied = true;
+                }
+            };
+
             dgvPendingOrders.SelectionChanged += dgvPendingOrders_SelectionChanged;
             this.Controls.Add(dgvPendingOrders);
         }
@@ -208,18 +218,24 @@ namespace ITP4915M_Group11
                     bool isAdmin = AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Administrator) || AuthorizationHelper.IsInRoleEnum(AuthorizationHelper.UserRoleEnum.Manager);
                     string query;
 
+                    // 🌟 核心修正：將 'OrderDate' 改為 'DeliveryDate'，並用 COALESCE 防止 NULL
                     if (isAdmin)
                     {
                         // Admin / Manager 睇晒全世界所有 Dispatch 訂單
-                        query = "SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' FROM orders WHERE Status LIKE 'Ready for Dispatch%' OR Status LIKE 'Dispatched%' ORDER BY OrderDate DESC";
+                        query = @"SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, 
+                                  COALESCE(DeliveryDate, OrderDate) AS 'Delivery Date' 
+                                  FROM orders 
+                                  WHERE Status LIKE 'Ready for Dispatch%' OR Status LIKE 'Dispatched%' 
+                                  ORDER BY COALESCE(DeliveryDate, OrderDate) DESC";
                     }
                     else
                     {
                         // 普通員工只睇自己城市嘅訂單
-                        query = @"SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, OrderDate AS 'Date' 
+                        query = @"SELECT OrderID AS 'Order ID', CustomerID AS 'Customer', Status, 
+                                  COALESCE(DeliveryDate, OrderDate) AS 'Delivery Date' 
                                   FROM orders 
                                   WHERE (Status = @StatusDispatch OR Status = @StatusDispatched) 
-                                  ORDER BY OrderDate DESC";
+                                  ORDER BY COALESCE(DeliveryDate, OrderDate) DESC";
                     }
 
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
@@ -262,6 +278,14 @@ namespace ITP4915M_Group11
                 // 🌟 當你點擊一張訂單，系統會解析訂單所在城市，並刷新 ComboBox 嘅司機名單！
                 string orderRegion = ExtractRegion(txtCurrentStatus.Text);
                 LoadDeliveryStaff(orderRegion);
+
+                // 同步將左邊卡片嘅 Schedule Date 設定為表格上顯示嘅送貨日期
+                if (row.Cells["Delivery Date"].Value != null && DateTime.TryParse(row.Cells["Delivery Date"].Value.ToString(), out DateTime parsedDate))
+                {
+                    // 防止設定咗以前嘅日期導致 Error，保證最小為今日
+                    if (parsedDate < DateTime.Today) dtpScheduleDate.Value = DateTime.Today;
+                    else dtpScheduleDate.Value = parsedDate;
+                }
 
                 try
                 {
@@ -313,10 +337,12 @@ namespace ITP4915M_Group11
                     {
                         try
                         {
-                            string updateSql = "UPDATE orders SET Status=@NewStatus WHERE OrderID=@OrderID";
+                            // 更新訂單狀態時，一併更新真實出貨日期 (以防有臨時更改)
+                            string updateSql = "UPDATE orders SET Status=@NewStatus, DeliveryDate=@dDate WHERE OrderID=@OrderID";
                             using (MySqlCommand cmd = new MySqlCommand(updateSql, conn, trans))
                             {
                                 cmd.Parameters.AddWithValue("@NewStatus", newStatus);
+                                cmd.Parameters.AddWithValue("@dDate", dtpScheduleDate.Value);
                                 cmd.Parameters.AddWithValue("@OrderID", orderID);
                                 cmd.ExecuteNonQuery();
                             }
@@ -351,6 +377,11 @@ namespace ITP4915M_Group11
                     MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private void LogisticsForm_Load(object sender, EventArgs e)
+        {
+
         }
 
         private void btnUpdateStatus_Click(object sender, EventArgs e)
