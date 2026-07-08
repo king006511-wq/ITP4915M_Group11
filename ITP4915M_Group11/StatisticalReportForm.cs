@@ -16,6 +16,8 @@ namespace ITP4915M_Group11
         // UI 元件
         private Label lblTotalSales, lblTotalInventoryValue, lblPendingOrders;
         private Button btnRefresh;
+        private ComboBox cmbCity;
+        private Label lblChartTitle;
 
         // 圖表畫布與數據暫存區
         private Panel pnlSalesChart;
@@ -58,26 +60,37 @@ namespace ITP4915M_Group11
             this.FormBorderStyle = FormBorderStyle.None;
             this.Dock = DockStyle.Fill;
 
-            // ─── 1. HEADER PANEL ───
             Panel pnlHeader = new Panel { Dock = DockStyle.Top, Height = 75, BackColor = Color.White };
             pnlHeader.Paint += (s, e) => e.Graphics.DrawLine(new Pen(Color.FromArgb(226, 232, 240), 1), 0, pnlHeader.Height - 1, pnlHeader.Width, pnlHeader.Height - 1);
 
             Label lblTitle = new Label { Text = "📈 Executive Statistical Dashboard", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Location = new Point(25, 22), AutoSize = true };
             pnlHeader.Controls.Add(lblTitle);
 
+            cmbCity = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Size = new Size(160, 36),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 10F),
+                Cursor = Cursors.Hand
+            };
+            cmbCity.Items.AddRange(new string[] { "All Cities", "Hong Kong", "Tokyo", "Singapore", "New York", "London" });
+            cmbCity.SelectedIndex = 0;
+            cmbCity.Location = new Point(pnlHeader.Width - 310, 20);
+            cmbCity.SelectedIndexChanged += (s, e) => LoadAllStatistics();
+            pnlHeader.Controls.Add(cmbCity);
+
             btnRefresh = new Button { Text = "🔄 Refresh Data", Size = new Size(130, 36), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), Cursor = Cursors.Hand };
-            btnRefresh.Location = new Point(pnlHeader.Width - 160, 20);
+            btnRefresh.Location = new Point(pnlHeader.Width - 140, 20);
             btnRefresh.FlatAppearance.BorderSize = 0;
             btnRefresh.Click += (s, e) => LoadAllStatistics();
             pnlHeader.Controls.Add(btnRefresh);
             this.Controls.Add(pnlHeader);
 
-            // ─── 主容器 (包含 KPI 與 下方圖表) ───
             Panel pnlMainContainer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(25) };
             this.Controls.Add(pnlMainContainer);
             pnlMainContainer.BringToFront();
 
-            // ─── 2. RESPONSIVE KPI CARDS ───
             TableLayoutPanel tlpKPIs = new TableLayoutPanel { Dock = DockStyle.Top, Height = 115, ColumnCount = 3, RowCount = 1 };
             tlpKPIs.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
             tlpKPIs.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
@@ -85,7 +98,8 @@ namespace ITP4915M_Group11
             pnlMainContainer.Controls.Add(tlpKPIs);
 
             Panel card1 = CreateKPICard("Total Revenue (Active Orders)", "HKD $0.00", Color.FromArgb(16, 185, 129), out lblTotalSales);
-            Panel card2 = CreateKPICard("Total Raw Material Asset Value", "HKD $0.00", Color.FromArgb(37, 99, 235), out lblTotalInventoryValue);
+            // 🌟 標題已升級，包含 Raw Material 與 Finished Goods
+            Panel card2 = CreateKPICard("Total Asset Value (Raw Mat. + Finished Goods)", "HKD $0.00", Color.FromArgb(37, 99, 235), out lblTotalInventoryValue);
             Panel card3 = CreateKPICard("Pending Sales Orders", "0 Orders", Color.FromArgb(245, 158, 11), out lblPendingOrders);
 
             card1.Margin = new Padding(0, 0, 12, 15);
@@ -96,14 +110,12 @@ namespace ITP4915M_Group11
             tlpKPIs.Controls.Add(card2, 1, 0);
             tlpKPIs.Controls.Add(card3, 2, 0);
 
-            // ─── 3. BOTTOM CONTENT (全闊度圖表) ───
             Panel pnlChartContainer = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Margin = new Padding(0, 10, 0, 0), Padding = new Padding(20) };
             pnlChartContainer.Paint += (s, e) => DrawContainerBorder(e.Graphics, pnlChartContainer.ClientRectangle);
 
-            Label lblChartTitle = new Label { Text = "📊 6-Month Sales Trend", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(51, 65, 85), Dock = DockStyle.Top, Height = 30 };
+            lblChartTitle = new Label { Text = "📊 6-Month Sales Trend", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.FromArgb(51, 65, 85), Dock = DockStyle.Top, Height = 30 };
             pnlChartContainer.Controls.Add(lblChartTitle);
 
-            // 核心：自適應畫布 Panel，填滿剩下的空間
             pnlSalesChart = new Panel { Dock = DockStyle.Fill };
             pnlSalesChart.Paint += PnlSalesChart_Paint;
             pnlChartContainer.Controls.Add(pnlSalesChart);
@@ -122,7 +134,7 @@ namespace ITP4915M_Group11
             card.Controls.Add(colorStrip);
 
             Panel pnlText = new Panel { Dock = DockStyle.Fill, Padding = new Padding(15, 5, 0, 0) };
-            Label lblTitle = new Label { Text = title, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Dock = DockStyle.Top, AutoSize = true };
+            Label lblTitle = new Label { Text = title, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139), Dock = DockStyle.Top, AutoSize = true };
             valueLabel = new Label { Text = defaultVal, Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(15, 23, 42), Dock = DockStyle.Bottom, AutoSize = true };
 
             pnlText.Controls.Add(lblTitle);
@@ -143,7 +155,25 @@ namespace ITP4915M_Group11
         }
         #endregion
 
-        #region 📈 SQL Data Aggregation (數據聚合)
+        #region 📈 真實 SQL 聚合引擎 (真正運算系統庫存與訂單狀態)
+        private string GetWarehouseIDFromRegion(string region)
+        {
+            if (region == "Tokyo") return "W002";
+            if (region == "Singapore") return "W003";
+            if (region == "New York") return "W004";
+            if (region == "London") return "W005";
+            return "W001";
+        }
+
+        private string GetProductStockColumn(string region)
+        {
+            if (region == "Tokyo") return "Stock_Tokyo";
+            if (region == "Singapore") return "Stock_Singapore";
+            if (region == "New York") return "Stock_NY";
+            if (region == "London") return "Stock_London";
+            return "Stock_HK";
+        }
+
         private void LoadAllStatistics()
         {
             LoadKPIData();
@@ -157,18 +187,55 @@ namespace ITP4915M_Group11
                 try
                 {
                     conn.Open();
-                    MySqlCommand cmdRev = new MySqlCommand("SELECT SUM(TotalAmount) FROM orders WHERE Status NOT IN ('Cancelled', 'Rejected')", conn);
-                    object revRes = cmdRev.ExecuteScalar();
-                    decimal totalRev = (revRes != DBNull.Value && revRes != null) ? Convert.ToDecimal(revRes) : 0;
-                    lblTotalSales.Text = $"HKD {totalRev:N2}";
+                    string selectedCity = cmbCity.SelectedItem?.ToString() ?? "All Cities";
 
-                    MySqlCommand cmdAsset = new MySqlCommand("SELECT SUM(StockLevel * StandardCost) FROM raw_material", conn);
-                    object assetRes = cmdAsset.ExecuteScalar();
-                    decimal totalAsset = (assetRes != DBNull.Value && assetRes != null) ? Convert.ToDecimal(assetRes) : 0;
+                    // 🌟 1. 總收益 KPI (根據訂單狀態中包含的 [City] 進行過濾，解決 Customer Region 唔準嘅問題)
+                    string revQuery = "SELECT SUM(TotalAmount) FROM orders WHERE Status NOT LIKE '%Cancelled%' AND Status NOT LIKE '%Rejected%'";
+                    if (cmbCity.SelectedIndex > 0) revQuery += " AND Status LIKE @CitySuffix";
+
+                    using (MySqlCommand cmdRev = new MySqlCommand(revQuery, conn))
+                    {
+                        if (cmbCity.SelectedIndex > 0) cmdRev.Parameters.AddWithValue("@CitySuffix", "%[" + selectedCity + "]%");
+                        object revRes = cmdRev.ExecuteScalar();
+                        decimal totalRev = (revRes != DBNull.Value && revRes != null) ? Convert.ToDecimal(revRes) : 0;
+                        lblTotalSales.Text = $"HKD {totalRev:N2}";
+                    }
+
+                    // 🌟 2. 真實資產總值 (原材料總值 + 製成品總值)
+                    decimal totalAsset = 0;
+                    string rmQuery = "SELECT SUM(i.StockLevel * r.StandardCost) FROM inventory i JOIN raw_material r ON i.MaterialID = r.MaterialID";
+                    string prodQuery = "SELECT SUM((Stock_HK + Stock_Tokyo + Stock_Singapore + Stock_NY + Stock_London) * RetailPrice) FROM product";
+
+                    if (cmbCity.SelectedIndex > 0)
+                    {
+                        rmQuery += " WHERE i.WarehouseID = @WH";
+                        string col = GetProductStockColumn(selectedCity);
+                        prodQuery = $"SELECT SUM({col} * RetailPrice) FROM product";
+                    }
+
+                    using (MySqlCommand cmdRM = new MySqlCommand(rmQuery, conn))
+                    {
+                        if (cmbCity.SelectedIndex > 0) cmdRM.Parameters.AddWithValue("@WH", GetWarehouseIDFromRegion(selectedCity));
+                        object resRM = cmdRM.ExecuteScalar();
+                        if (resRM != DBNull.Value && resRM != null) totalAsset += Convert.ToDecimal(resRM);
+                    }
+
+                    using (MySqlCommand cmdProd = new MySqlCommand(prodQuery, conn))
+                    {
+                        object resProd = cmdProd.ExecuteScalar();
+                        if (resProd != DBNull.Value && resProd != null) totalAsset += Convert.ToDecimal(resProd);
+                    }
                     lblTotalInventoryValue.Text = $"HKD {totalAsset:N2}";
 
-                    MySqlCommand cmdPending = new MySqlCommand("SELECT COUNT(*) FROM orders WHERE Status LIKE 'Awaiting Approval%'", conn);
-                    lblPendingOrders.Text = $"{Convert.ToInt32(cmdPending.ExecuteScalar())} Orders";
+                    // 🌟 3. 待處理訂單數 KPI
+                    string pendingQuery = "SELECT COUNT(*) FROM orders WHERE Status LIKE '%Awaiting Approval%'";
+                    if (cmbCity.SelectedIndex > 0) pendingQuery += " AND Status LIKE @CitySuffix";
+
+                    using (MySqlCommand cmdPending = new MySqlCommand(pendingQuery, conn))
+                    {
+                        if (cmbCity.SelectedIndex > 0) cmdPending.Parameters.AddWithValue("@CitySuffix", "%[" + selectedCity + "]%");
+                        lblPendingOrders.Text = $"{Convert.ToInt32(cmdPending.ExecuteScalar())} Orders";
+                    }
                 }
                 catch (Exception ex) { MessageBox.Show("KPI Error: " + ex.Message); }
             }
@@ -177,32 +244,58 @@ namespace ITP4915M_Group11
         private void LoadSalesChartData()
         {
             salesChartData.Clear();
+            string selectedCity = cmbCity.SelectedItem?.ToString() ?? "All Cities";
+            lblChartTitle.Text = $"📊 6-Month Sales Trend ({selectedCity})";
+
+            // 🌟 核心升級：強制建立最近 6 個月的骨架，防止某個月冇生意導致斷層
+            List<Tuple<string, int, int>> last6Months = new List<Tuple<string, int, int>>();
+            for (int i = 5; i >= 0; i--)
+            {
+                DateTime d = DateTime.Now.AddMonths(-i);
+                last6Months.Add(new Tuple<string, int, int>(d.ToString("MMM yyyy"), d.Year, d.Month));
+            }
+
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
                     conn.Open();
                     string query = @"
-                        SELECT DATE_FORMAT(OrderDate, '%b %Y') AS MonthName, SUM(TotalAmount) AS MonthlyRevenue 
+                        SELECT YEAR(OrderDate) as Y, MONTH(OrderDate) as M, SUM(TotalAmount) AS MonthlyRevenue 
                         FROM orders 
-                        WHERE Status NOT IN ('Cancelled', 'Rejected') 
-                        GROUP BY YEAR(OrderDate), MONTH(OrderDate) 
-                        ORDER BY YEAR(OrderDate) DESC, MONTH(OrderDate) DESC 
-                        LIMIT 6";
+                        WHERE Status NOT LIKE '%Cancelled%' AND Status NOT LIKE '%Rejected%' ";
+
+                    if (cmbCity.SelectedIndex > 0) query += " AND Status LIKE @CitySuffix ";
+                    query += " GROUP BY YEAR(OrderDate), MONTH(OrderDate)";
 
                     using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                    using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        DataTable dt = new DataTable();
-                        dt.Load(reader);
+                        if (cmbCity.SelectedIndex > 0) cmd.Parameters.AddWithValue("@CitySuffix", "%[" + selectedCity + "]%");
 
-                        for (int i = dt.Rows.Count - 1; i >= 0; i--)
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
                         {
-                            DataRow row = dt.Rows[i];
-                            salesChartData.Add(new Tuple<string, decimal>(row["MonthName"].ToString(), Convert.ToDecimal(row["MonthlyRevenue"])));
+                            DataTable dt = new DataTable();
+                            dt.Load(reader);
+
+                            // 映射數據入骨架
+                            foreach (var month in last6Months)
+                            {
+                                decimal monthTotal = 0;
+                                foreach (DataRow row in dt.Rows)
+                                {
+                                    int rowY = Convert.ToInt32(row["Y"]);
+                                    int rowM = Convert.ToInt32(row["M"]);
+                                    if (rowY == month.Item2 && rowM == month.Item3)
+                                    {
+                                        monthTotal = row["MonthlyRevenue"] != DBNull.Value ? Convert.ToDecimal(row["MonthlyRevenue"]) : 0m;
+                                        break;
+                                    }
+                                }
+                                salesChartData.Add(new Tuple<string, decimal>(month.Item1, monthTotal));
+                            }
                         }
                     }
-                    pnlSalesChart.Invalidate(); // 觸發重繪
+                    pnlSalesChart.Invalidate();
                 }
                 catch (Exception ex) { MessageBox.Show("Chart Data Error: " + ex.Message); }
             }
@@ -211,7 +304,7 @@ namespace ITP4915M_Group11
         private void StatisticalReportForm_Load(object sender, EventArgs e) { }
         #endregion
 
-        #region 🖌️ GDI+ 高級手繪圖表核心引擎 (Premium Native Rendering)
+        #region 🖌️ GDI+ 高級手繪圖表核心引擎 (Premium Native Line Chart Rendering)
         private void PnlSalesChart_Paint(object sender, PaintEventArgs e)
         {
             Graphics g = e.Graphics;
@@ -220,22 +313,12 @@ namespace ITP4915M_Group11
             int width = pnlSalesChart.Width;
             int height = pnlSalesChart.Height;
 
-            // 給予四周適當邊距留白
-            int paddingLeft = 55;
-            int paddingRight = 35;
+            int paddingLeft = 60;
+            int paddingRight = 45;
             int paddingTop = 35;
             int paddingBottom = 40;
 
-            if (salesChartData == null || salesChartData.Count == 0)
-            {
-                using (Font noDataFont = new Font("Segoe UI", 11F, FontStyle.Italic))
-                {
-                    string noDataText = "No sales data available";
-                    SizeF size = g.MeasureString(noDataText, noDataFont);
-                    g.DrawString(noDataText, noDataFont, Brushes.Gray, (width - size.Width) / 2, (height - size.Height) / 2);
-                }
-                return;
-            }
+            if (salesChartData == null || salesChartData.Count == 0) return;
 
             decimal maxVal = salesChartData.Max(d => d.Item2);
             if (maxVal == 0) maxVal = 1;
@@ -243,7 +326,7 @@ namespace ITP4915M_Group11
             int chartWidth = width - paddingLeft - paddingRight;
             int chartHeight = height - paddingTop - paddingBottom;
 
-            // ─── Step 1: 繪製現代背景網格線 (4條橫向虛線) ───
+            // ─── Step 1: 繪製背景網格線 ───
             using (Pen gridPen = new Pen(Color.FromArgb(241, 245, 249), 1) { DashStyle = DashStyle.Dash })
             using (Font axisFont = new Font("Segoe UI", 8F))
             using (SolidBrush axisBrush = new SolidBrush(Color.FromArgb(148, 163, 184)))
@@ -253,74 +336,90 @@ namespace ITP4915M_Group11
                     int gridY = height - paddingBottom - (int)(chartHeight * (j / 4.0));
                     g.DrawLine(gridPen, paddingLeft - 5, gridY, width - paddingRight, gridY);
 
-                    // 繪製 Y 軸數值標籤 (例如 $20k)
                     decimal gridVal = maxVal * (j / 4.0m);
                     string yLabel = gridVal >= 1000 ? $"${gridVal / 1000:0.#}k" : $"${gridVal:0}";
                     g.DrawString(yLabel, axisFont, axisBrush, paddingLeft - g.MeasureString(yLabel, axisFont).Width - 8, gridY - 7);
                 }
             }
 
-            // ─── Step 2: 計算柱體尺寸 (自動按比例伸展) ───
-            int spacing = chartWidth / (salesChartData.Count * 2); // 根據畫面闊度自動調整間距
-            if (spacing > 60) spacing = 60; // 限制最大間距，避免太散
+            int numPoints = salesChartData.Count;
+            PointF[] points = new PointF[numPoints];
 
-            int barWidth = (chartWidth - (spacing * (salesChartData.Count - 1))) / salesChartData.Count;
-            if (barWidth > 120) barWidth = 120; // 限制最大柱體闊度，避免太過粗壯
-            if (barWidth < 12) barWidth = 12;
-
-            // 計算整體偏移，令圖表置中
-            int totalChartContentWidth = (salesChartData.Count * barWidth) + ((salesChartData.Count - 1) * spacing);
-            int startX = paddingLeft + ((chartWidth - totalChartContentWidth) / 2);
-
-            // ─── Step 3: 循環繪製高品質柱狀圖 ───
-            for (int i = 0; i < salesChartData.Count; i++)
+            for (int i = 0; i < numPoints; i++)
             {
+                decimal value = salesChartData[i].Item2;
+                int nodeHeight = (int)((double)value / (double)maxVal * chartHeight);
+
+                float x = (numPoints > 1)
+                    ? paddingLeft + (i * ((float)chartWidth / (numPoints - 1)))
+                    : paddingLeft + (chartWidth / 2f);
+
+                float y = height - paddingBottom - nodeHeight;
+                points[i] = new PointF(x, y);
+            }
+
+            // ─── Step 3: 繪製半透明下落陰影區域 (Area Shading) ───
+            if (numPoints > 1)
+            {
+                using (GraphicsPath areaPath = new GraphicsPath())
+                {
+                    areaPath.AddLine(points[0].X, height - paddingBottom, points[0].X, points[0].Y);
+                    for (int i = 1; i < numPoints; i++)
+                    {
+                        areaPath.AddLine(points[i - 1].X, points[i - 1].Y, points[i].X, points[i].Y);
+                    }
+                    areaPath.AddLine(points[numPoints - 1].X, points[numPoints - 1].Y, points[numPoints - 1].X, height - paddingBottom);
+                    areaPath.CloseFigure();
+
+                    using (LinearGradientBrush areaBrush = new LinearGradientBrush(
+                        new RectangleF(paddingLeft, paddingTop, chartWidth, chartHeight),
+                        Color.FromArgb(45, 37, 99, 235),
+                        Color.FromArgb(0, 37, 99, 235),
+                        LinearGradientMode.Vertical))
+                    {
+                        g.FillPath(areaBrush, areaPath);
+                    }
+                }
+            }
+
+            // ─── Step 4: 繪製主折線趨勢線 ───
+            using (Pen linePen = new Pen(Color.FromArgb(37, 99, 235), 3))
+            {
+                linePen.LineJoin = LineJoin.Round;
+                if (numPoints > 1) g.DrawLines(linePen, points);
+            }
+
+            // ─── Step 5: 繪製節點圓圈、金額與 X 軸時間標籤 ───
+            for (int i = 0; i < numPoints; i++)
+            {
+                float x = points[i].X;
+                float y = points[i].Y;
                 string monthLabel = salesChartData[i].Item1;
                 decimal value = salesChartData[i].Item2;
 
-                int barHeight = (int)((double)value / (double)maxVal * chartHeight);
-                if (barHeight < 3) barHeight = 3; // 確保微小數值依然隱約可見
-
-                int x = startX + (i * (barWidth + spacing));
-                int y = height - paddingBottom - barHeight;
-
-                // 使用美觀的藍青漸變色 (Gradients)
-                Rectangle barRect = new Rectangle(x, y, barWidth, barHeight);
-                using (LinearGradientBrush gradientBrush = new LinearGradientBrush(barRect, Color.FromArgb(37, 99, 235), Color.FromArgb(96, 165, 250), LinearGradientMode.Vertical))
+                int radius = 5;
+                g.FillEllipse(Brushes.White, x - radius, y - radius, radius * 2, radius * 2);
+                using (Pen circlePen = new Pen(Color.FromArgb(37, 99, 235), 2))
                 {
-                    // 使用 GraphicsPath 為柱體頂部加上圓角
-                    int cornerRadius = Math.Min(8, barWidth / 2);
-                    using (GraphicsPath postPath = new GraphicsPath())
-                    {
-                        postPath.AddArc(x, y, cornerRadius * 2, cornerRadius * 2, 180, 90);
-                        postPath.AddArc(x + barWidth - (cornerRadius * 2), y, cornerRadius * 2, cornerRadius * 2, 270, 90);
-                        postPath.AddLine(x + barWidth, y + cornerRadius, x + barWidth, y + barHeight);
-                        postPath.AddLine(x + barWidth, y + barHeight, x, y + barHeight);
-                        postPath.CloseFigure();
-
-                        g.FillPath(gradientBrush, postPath);
-                    }
+                    g.DrawEllipse(circlePen, x - radius, y - radius, radius * 2, radius * 2);
                 }
 
-                // ─── Step 4: 繪製柱頂金額數字 ───
                 using (Font valFont = new Font("Segoe UI", 8.5F, FontStyle.Bold))
                 using (SolidBrush valBrush = new SolidBrush(Color.FromArgb(30, 41, 59)))
                 {
                     string valStr = value >= 1000 ? $"${value / 1000:0.##}k" : $"${value:0}";
                     SizeF textSize = g.MeasureString(valStr, valFont);
-                    g.DrawString(valStr, valFont, valBrush, x + (barWidth / 2) - (textSize.Width / 2), y - 18);
+                    g.DrawString(valStr, valFont, valBrush, x - (textSize.Width / 2), y - 18);
                 }
 
-                // ─── Step 5: 繪製 X 軸月份標籤 ───
                 using (Font lblFont = new Font("Segoe UI", 8.5F, FontStyle.Regular))
                 using (SolidBrush lblBrush = new SolidBrush(Color.FromArgb(100, 116, 139)))
                 {
                     SizeF textSize = g.MeasureString(monthLabel, lblFont);
-                    g.DrawString(monthLabel, lblFont, lblBrush, x + (barWidth / 2) - (textSize.Width / 2), height - paddingBottom + 10);
+                    g.DrawString(monthLabel, lblFont, lblBrush, x - (textSize.Width / 2), height - paddingBottom + 10);
                 }
             }
 
-            // 繪製 X 軸基準線
             using (Pen axisLinePen = new Pen(Color.FromArgb(226, 232, 240), 1.5f))
             {
                 g.DrawLine(axisLinePen, paddingLeft - 5, height - paddingBottom, width - paddingRight, height - paddingBottom);
